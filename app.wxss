@@ -1,0 +1,144 @@
+page {
+  --primary: #2563EB;
+  --primary-dark: #0F5BD8;
+  --bg: #F5F7FA;
+  --card-bg: #FFFFFF;
+  --text-primary: #1A1A1A;
+  --text-secondary: #666666;
+  --text-muted: #999999;
+  --border: #E5E7EB;
+  --success: #10B981;
+  --warning: #F59E0B;
+  --danger: #EF4444;
+  --tag-runerrand: #3B82F6;
+  --tag-shop: #8B5CF6;
+  --tag-stall: #F97316;
+  --tag-secondhand: #10B981;
+  --tag-carpool: #06B6D4;
+  --tag-other: #6B7280;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background-color: var(--bg);
+  color: var(--text-primary);
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+.container {
+  padding: 24rpx;
+  box-sizing: border-box;
+}
+
+.card {
+  background: var(--card-bg);
+  border-radius: 16rpx;
+  padding: 24rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+  color: #FFFFFF;
+  border: none;
+  border-radius: 12rpx;
+  padding: 20rpx 40rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.btn-primary::after {
+  border: none;
+}
+
+.btn-outline {
+  background: transparent;
+  color: var(--primary);
+  border: 2rpx solid var(--primary);
+  border-radius: 12rpx;
+  padding: 20rpx 40rpx;
+  font-size: 28rpx;
+  font-weight: 500;
+  text-align: center;
+  line-height: 1.5;
+}
+
+.btn-outline::after {
+  border: none;
+}
+
+.tag {
+  display: inline-block;
+  padding: 4rpx 16rpx;
+  border-radius: 8rpx;
+  font-size: 22rpx;
+  font-weight: 500;
+  color: #FFFFFF;
+}
+
+.tag-runerrand {
+  background-color: var(--tag-runerrand);
+}
+
+.tag-shop {
+  background-color: var(--tag-shop);
+}
+
+.tag-stall {
+  background-color: var(--tag-stall);
+}
+
+.tag-secondhand {
+  background-color: var(--tag-secondhand);
+}
+
+.tag-carpool {
+  background-color: var(--tag-carpool);
+}
+
+.tag-other {
+  background-color: var(--tag-other);
+}
+
+.section-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 24rpx;
+}
+
+.text-secondary {
+  color: var(--text-secondary);
+}
+
+.text-muted {
+  color: var(--text-muted);
+}
+
+.flex-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+}
+
+.flex-col {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-1 {
+  flex: 1;
+}
+
+.mb-16 {
+  margin-bottom: 16rpx;
+}
+
+.mb-24 {
+  margin-bottom: 24rpx;
+}
+
+.mt-24 {
+  margin-top: 24rpx;
+}

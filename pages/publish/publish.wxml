@@ -1,0 +1,110 @@
+<view class="container">
+  <view class="form-header">
+    <view class="form-title">发布信息</view>
+    <view class="form-subtitle">填写以下信息发布您的需求或分享</view>
+  </view>
+
+  <view class="form-card card">
+    <view class="form-item">
+      <view class="form-label">信息类型 <text class="required">*</text></view>
+      <picker bindchange="onTypeChange" value="{{typeIndex}}" range="{{types}}">
+        <view class="picker-value">
+          {{types[typeIndex]}}
+          <text class="picker-arrow">▼</text>
+        </view>
+      </picker>
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">标题 <text class="required">*</text></view>
+      <input
+        class="form-input"
+        placeholder="请输入标题，简要描述您的信息"
+        value="{{title}}"
+        bindinput="onTitleInput"
+        maxlength="50"
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">具体内容 <text class="required">*</text></view>
+      <textarea
+        class="form-textarea"
+        placeholder="请详细描述您的需求、物品信息等"
+        value="{{description}}"
+        bindinput="onDescriptionInput"
+        maxlength="500"
+        auto-height
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">地点</view>
+      <input
+        class="form-input"
+        placeholder="请输入相关地点"
+        value="{{location}}"
+        bindinput="onLocationInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">时间要求</view>
+      <input
+        class="form-input"
+        placeholder="请输入时间要求"
+        value="{{time}}"
+        bindinput="onTimeInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">预算价格</view>
+      <input
+        class="form-input"
+        placeholder="请输入价格或预算"
+        value="{{price}}"
+        bindinput="onPriceInput"
+      />
+    </view>
+
+    <view class="form-item">
+      <view class="form-label">联系方式 <text class="required">*</text></view>
+      <input
+        class="form-input"
+        placeholder="微信号、手机号或其他联系方式"
+        value="{{contact}}"
+        bindinput="onContactInput"
+      />
+    </view>
+
+    <view class="form-item switch-item">
+      <view class="form-label">公开联系方式</view>
+      <switch checked="{{allowPublicContact}}" bindchange="onAllowPublicChange" color="#2563EB" />
+    </view>
+    <view class="switch-hint">开启后其他用户可直接查看您的联系方式</view>
+
+    <view class="form-item">
+      <view class="form-label">备注</view>
+      <textarea
+        class="form-textarea"
+        placeholder="其他需要说明的事项"
+        value="{{remark}}"
+        bindinput="onRemarkInput"
+        maxlength="200"
+        auto-height
+      />
+    </view>
+  </view>
+
+  <view class="submit-section">
+    <button
+      class="btn-primary submit-btn"
+      bindtap="onSubmit"
+      disabled="{{submitting}}"
+    >
+      {{submitting ? '提交中...' : '提交信息'}}
+    </button>
+    <view class="submit-hint">提交后将进入审核，审核通过后自动展示</view>
+  </view>
+</view>

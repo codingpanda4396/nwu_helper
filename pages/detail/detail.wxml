@@ -1,0 +1,53 @@
+<view class="container" wx:if="{{post}}">
+  <view class="card">
+    <view class="header">
+      <view class="tag tag-{{post.type === '跑腿代办' ? 'runerrand' : post.type === '周边商家' ? 'shop' : post.type === '今日摊位' ? 'stall' : post.type === '二手闲置' ? 'secondhand' : post.type === '拼车拼单' ? 'carpool' : 'other'}}">
+        {{post.type}}
+      </view>
+      <view class="title">{{post.title}}</view>
+    </view>
+
+    <view class="section">
+      <view class="section-label">具体内容</view>
+      <view class="section-content">{{post.description}}</view>
+    </view>
+
+    <view class="info-grid">
+      <view class="info-item" wx:if="{{post.location}}">
+        <view class="info-label">地点</view>
+        <view class="info-value">{{post.location}}</view>
+      </view>
+      <view class="info-item" wx:if="{{post.time}}">
+        <view class="info-label">时间</view>
+        <view class="info-value">{{post.time}}</view>
+      </view>
+      <view class="info-item" wx:if="{{post.price}}">
+        <view class="info-label">价格</view>
+        <view class="info-value">{{post.price}}</view>
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{post.contact}}">
+      <view class="section-label">联系方式</view>
+      <view class="section-content" wx:if="{{post.allowPublicContact}}">{{post.contact}}</view>
+      <view class="section-content contact-hidden" wx:else>
+        该信息未公开联系方式，请通过平台负责人进一步确认
+      </view>
+    </view>
+
+    <view class="section" wx:if="{{post.remark}}">
+      <view class="section-label">备注</view>
+      <view class="section-content">{{post.remark}}</view>
+    </view>
+  </view>
+
+  <view class="safety-warning">
+    <view class="warning-title">安全提示</view>
+    <view class="warning-content">
+      1. 请仔细核实信息真实性，谨防诈骗
+      2. 交易时建议选择校内公共场所
+      3. 涉及金钱交易请谨慎，建议当面交易
+      4. 如遇可疑信息请及时向平台举报
+    </view>
+  </view>
+</view>

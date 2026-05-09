@@ -1,0 +1,49 @@
+<view class="container">
+  <view class="header">
+    <view class="logo">西大通</view>
+    <view class="version">试运营版本 {{version}}</view>
+    <view class="subtitle">西北大学学生自制校园生活信息平台</view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">平台介绍</view>
+    <view class="content">
+      西大通是西北大学学生自发创建的校园生活信息平台，旨在为同学们提供一个便捷的信息交流渠道。无论是跑腿代办、二手交易、周边商家推荐，还是拼车拼单，都可以在这里发布和查找。
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">使用须知</view>
+    <view class="content">
+      <view class="rule-item">1. 本平台为信息中介，不参与具体交易过程</view>
+      <view class="rule-item">2. 请仔细核实信息真实性，注意人身和财产安全</view>
+      <view class="rule-item">3. 交易时建议选择公共场所，避免单独前往陌生地点</view>
+      <view class="rule-item">4. 涉及金钱交易请谨慎，建议使用第三方担保支付</view>
+      <view class="rule-item">5. 如遇可疑信息请及时举报</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">禁止发布内容</view>
+    <view class="content">
+      <view class="forbidden-item">• 违法违规信息</view>
+      <view class="forbidden-item">• 虚假欺诈信息</view>
+      <view class="forbidden-item">• 代考、论文代写等学术不端信息</view>
+      <view class="forbidden-item">• 涉及人身攻击、骚扰的信息</view>
+      <view class="forbidden-item">• 违反学校规定的信息</view>
+      <view class="forbidden-item">• 商业广告（经平台审核的校园周边商家除外）</view>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="section-title">免责声明</view>
+    <view class="content">
+      本平台仅提供信息发布服务，不对信息的真实性、准确性、完整性负责。用户之间的交易行为与本平台无关，因交易产生的任何纠纷，本平台不承担责任。使用本平台即表示您已阅读并同意本声明。
+    </view>
+  </view>
+
+  <view class="footer">
+    <view class="footer-text">西大通 {{version}} · 试运营中</view>
+    <view class="footer-text">由西北大学学生团队开发维护</view>
+  </view>
+</view>

@@ -1,0 +1,99 @@
+<view class="page">
+  <view class="hero">
+    <view class="hero-content">
+      <view class="hero-title">西大通</view>
+      <view class="hero-badge">西北大学学生自制</view>
+      <view class="hero-subtitle">校园生活信息平台</view>
+      <view class="hero-desc">跑腿代办 · 二手闲置 · 周边商家 · 拼车拼单</view>
+      <view class="hero-buttons">
+        <button class="btn-primary" bindtap="onPublishTap">我要发布信息</button>
+        <button class="btn-outline" bindtap="onScrollToPosts">查看今日信息</button>
+      </view>
+    </view>
+  </view>
+
+  <view class="categories-section">
+    <scroll-view scroll-x class="categories-scroll">
+      <view class="categories-list">
+        <view
+          wx:for="{{categories}}"
+          wx:key="*this"
+          class="category-item {{activeCategory === item ? 'active' : ''}}"
+          bindtap="onCategoryTap"
+          data-category="{{item}}"
+        >
+          {{item}}
+        </view>
+      </view>
+    </scroll-view>
+  </view>
+
+  <view class="posts-section" id="posts-section">
+    <view class="section-header">
+      <view class="section-title">最新信息</view>
+      <view class="section-count">共 {{filteredPosts.length}} 条</view>
+    </view>
+
+    <view wx:if="{{filteredPosts.length === 0}}" class="empty-state">
+      <view class="empty-text">暂无相关信息</view>
+      <view class="empty-hint">试试切换其他分类，或发布一条新信息</view>
+    </view>
+
+    <view
+      wx:for="{{filteredPosts}}"
+      wx:key="_id"
+      class="post-card card"
+      bindtap="onPostTap"
+      data-post="{{item}}"
+    >
+      <view class="post-header">
+        <view class="tag tag-{{item.type === '跑腿代办' ? 'runerrand' : item.type === '周边商家' ? 'shop' : item.type === '今日摊位' ? 'stall' : item.type === '二手闲置' ? 'secondhand' : item.type === '拼车拼单' ? 'carpool' : 'other'}}">
+          {{item.type}}
+        </view>
+        <view class="post-time">{{item.createdAt}}</view>
+      </view>
+      <view class="post-title">{{item.title}}</view>
+      <view class="post-desc">{{item.description}}</view>
+      <view class="post-footer">
+        <view class="post-location" wx:if="{{item.location}}">📍 {{item.location}}</view>
+        <view class="post-price" wx:if="{{item.price}}">💰 {{item.price}}</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="why-section">
+    <view class="section-title">为什么使用西大通？</view>
+    <view class="why-grid">
+      <view class="why-item">
+        <view class="why-icon">🎯</view>
+        <view class="why-title">精准定位</view>
+        <view class="why-desc">只服务西大学生，信息更精准</view>
+      </view>
+      <view class="why-item">
+        <view class="why-icon">🛡️</view>
+        <view class="why-title">安全保障</view>
+        <view class="why-desc">信息审核机制，降低风险</view>
+      </view>
+      <view class="why-item">
+        <view class="why-icon">💡</view>
+        <view class="why-title">简单易用</view>
+        <view class="why-desc">一键发布，快速找到所需</view>
+      </view>
+      <view class="why-item">
+        <view class="why-icon">🤝</view>
+        <view class="why-title">互助社区</view>
+        <view class="why-desc">同学之间互帮互助</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="notice-section card">
+    <view class="notice-title">使用说明</view>
+    <view class="notice-content">
+      <view class="notice-item">1. 本平台为试运营阶段，功能将持续完善</view>
+      <view class="notice-item">2. 所有发布的信息需经审核后展示</view>
+      <view class="notice-item">3. 请遵守平台规则，发布真实有效信息</view>
+      <view class="notice-item">4. 如有问题或建议，请联系平台负责人</view>
+    </view>
+  </view>
+</view>

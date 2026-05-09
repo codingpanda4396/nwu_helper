@@ -1,0 +1,51 @@
+.header {
+  text-align: center;
+  padding: 60rpx 0 40rpx;
+}
+
+.logo {
+  font-size: 56rpx;
+  font-weight: 700;
+  color: var(--primary);
+  margin-bottom: 16rpx;
+}
+
+.version {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  background: var(--bg);
+  display: inline-block;
+  padding: 4rpx 20rpx;
+  border-radius: 20rpx;
+  margin-bottom: 16rpx;
+}
+
+.subtitle {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+}
+
+.content {
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  line-height: 1.8;
+}
+
+.rule-item,
+.forbidden-item {
+  margin-bottom: 16rpx;
+  font-size: 28rpx;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
+.footer {
+  text-align: center;
+  padding: 60rpx 0;
+}
+
+.footer-text {
+  font-size: 24rpx;
+  color: var(--text-muted);
+  margin-bottom: 8rpx;
+}
