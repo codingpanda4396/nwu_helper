@@ -104,6 +104,11 @@ jobs:
             } > deploy/production.env
           fi
 
+      - name: Build Docker images
+        run: |
+          docker compose -f docker-compose.prod.yml build api web
+          docker save nwu-helper-api:latest nwu-helper-web:latest | gzip > deploy/images.tar.gz
+
       - name: Upload bundle to ECS
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -133,4 +138,5 @@ jobs:
             RELEASE="${{ github.sha }}" \
             PACKAGE="$UPLOAD_DIR/nwu-helper.tar.gz" \
             ENV_FILE="$UPLOAD_DIR/production.env" \
+            IMAGES_PACKAGE="$UPLOAD_DIR/images.tar.gz" \
             sh "$UPLOAD_DIR/deploy.sh"

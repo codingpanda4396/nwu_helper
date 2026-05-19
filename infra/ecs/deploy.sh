@@ -5,6 +5,7 @@ APP_DIR="${APP_DIR:-/opt/nwu_helper}"
 RELEASE="${RELEASE:-manual}"
 PACKAGE="${PACKAGE:-/tmp/nwu-helper.tar.gz}"
 ENV_FILE="${ENV_FILE:-}"
+IMAGES_PACKAGE="${IMAGES_PACKAGE:-}"
 KEEP_RELEASES="${KEEP_RELEASES:-3}"
 
 log() {
@@ -53,8 +54,15 @@ cp "$APP_DIR/shared/.env" "$RELEASE_DIR/.env"
 ln -sfn "$RELEASE_DIR" "$APP_DIR/current"
 
 cd "$APP_DIR/current"
-log "Building and starting containers"
-run_compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
+if [ -n "$IMAGES_PACKAGE" ] && [ -f "$IMAGES_PACKAGE" ]; then
+  log "Loading Docker images from $IMAGES_PACKAGE"
+  gzip -dc "$IMAGES_PACKAGE" | docker load
+  log "Starting containers from prebuilt images"
+  run_compose -f docker-compose.prod.yml --env-file .env up -d --no-build --remove-orphans
+else
+  log "Building and starting containers"
+  run_compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
+fi
 
 log "Container status"
 run_compose -f docker-compose.prod.yml --env-file .env ps
