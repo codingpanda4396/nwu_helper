@@ -122,6 +122,7 @@ jobs:
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           port: ${{ secrets.ECS_SSH_PORT || '22' }}
+          command_timeout: 40m
           script: |
             set -eu
             UPLOAD_DIR="/tmp/nwu-helper-${{ github.sha }}"
