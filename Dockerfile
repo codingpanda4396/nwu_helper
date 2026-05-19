@@ -1,5 +1,5 @@
 FROM node:22-alpine AS base
-RUN corepack enable
+RUN corepack enable && corepack prepare pnpm@10.33.2 --activate
 WORKDIR /app
 
 FROM base AS deps
@@ -13,9 +13,7 @@ FROM deps AS build
 COPY . .
 RUN pnpm build
 
-FROM node:22-alpine AS api
-RUN corepack enable
-WORKDIR /app
+FROM base AS api
 ENV NODE_ENV=production
 COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
 COPY --from=build /app/node_modules ./node_modules
