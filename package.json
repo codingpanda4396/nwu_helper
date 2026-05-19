@@ -1,0 +1,29 @@
+{
+  "name": "nwu-helper",
+  "private": true,
+  "version": "0.1.0",
+  "description": "NWU local life growth platform for merchant discovery, coupon claiming, redemption attribution, and operations dashboards.",
+  "packageManager": "pnpm@10.33.2",
+  "scripts": {
+    "dev": "pnpm --parallel --filter @nwu-helper/api --filter @nwu-helper/web dev",
+    "build": "pnpm -r build",
+    "typecheck": "pnpm -r typecheck",
+    "test": "pnpm -r test",
+    "lint": "pnpm -r lint",
+    "db:generate": "pnpm --filter @nwu-helper/api db:generate",
+    "db:migrate": "pnpm --filter @nwu-helper/api db:migrate",
+    "db:seed": "pnpm --filter @nwu-helper/api db:seed"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@prisma/client",
+      "@prisma/engines",
+      "esbuild",
+      "prisma"
+    ]
+  }
+}

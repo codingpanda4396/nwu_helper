@@ -1,0 +1,41 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-nwu}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-nwu_password}
+      POSTGRES_DB: ${POSTGRES_DB:-nwu_helper}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nwu} -d ${POSTGRES_DB:-nwu_helper}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  api:
+    build:
+      context: .
+      target: api
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${API_BIND:-127.0.0.1:4000}:4000"
+
+  web:
+    build:
+      context: .
+      target: web
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${WEB_BIND:-0.0.0.0:8080}:80"
+
+volumes:
+  postgres_data:

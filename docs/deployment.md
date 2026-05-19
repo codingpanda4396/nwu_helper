@@ -1,0 +1,140 @@
+# ECS 一键 CI/CD
+
+这套部署面向阿里云 ECS：GitHub Actions 在 `main` 分支或手动触发时完成测试、构建、打包，然后通过 SSH/SCP 上传到 ECS，用 `docker compose` 启动 `postgres`、`api`、`web`。
+
+服务器不需要预先 clone 仓库，也不需要配置 git deploy key。
+
+## 1. ECS 前置条件
+
+最小要求：
+
+- ECS 开放 SSH 端口。
+- 安全组开放 Web 端口，默认 `8080`；如果用宿主机 Nginx/SLB 做 HTTPS，只需要内部反代到 `127.0.0.1:8080`。
+- SSH 用户可以执行 Docker；如果没有 Docker，流水线会尝试自动安装，需要该用户有 `sudo` 权限。
+
+如果你想手动初始化 Docker：
+
+```bash
+sudo sh -c "$(curl -fsSL https://get.docker.com)"
+sudo systemctl enable --now docker
+```
+
+## 2. GitHub Secrets
+
+在 GitHub 仓库 `Settings -> Secrets and variables -> Actions` 添加：
+
+必填：
+
+- `ECS_HOST`：ECS 公网 IP 或域名。
+- `ECS_USER`：SSH 用户，例如 `root`、`ubuntu`。
+- `ECS_SSH_KEY`：可登录 ECS 的 SSH 私钥内容。
+- `JWT_SECRET`：生产 JWT 密钥，至少 32 位随机字符串。
+
+推荐：
+
+- `ECS_APP_DIR`：部署目录，默认 `/opt/nwu_helper`。
+- `ECS_SSH_PORT`：SSH 端口，默认 `22`。
+- `WEB_ORIGIN`：前端访问地址，例如 `https://your-domain.com`。
+- `PUBLIC_WEB_URL`：公开前端地址，通常同 `WEB_ORIGIN`。
+- `POSTGRES_PASSWORD`：生产数据库密码。
+
+可选：
+
+- `DATABASE_URL`：自定义数据库连接。如果不填，默认使用 compose 内置 Postgres：`postgresql://nwu:${POSTGRES_PASSWORD}@postgres:5432/nwu_helper`。
+- `POSTGRES_USER`：默认 `nwu`。
+- `POSTGRES_DB`：默认 `nwu_helper`。
+- `API_BIND`：API 宿主机绑定，默认 `127.0.0.1:4000`。
+- `WEB_BIND`：Web 宿主机绑定，默认 `0.0.0.0:8080`。
+
+高级用法：
+
+- `ECS_ENV_FILE`：完整 `.env` 文件内容。配置它后会覆盖上面的分项环境变量生成方式。
+
+示例 `ECS_ENV_FILE`：
+
+```dotenv
+NODE_ENV=production
+DATABASE_URL=postgresql://nwu:strong-password@postgres:5432/nwu_helper
+POSTGRES_USER=nwu
+POSTGRES_PASSWORD=strong-password
+POSTGRES_DB=nwu_helper
+JWT_SECRET=replace-with-a-long-random-secret
+PORT=4000
+WEB_ORIGIN=https://your-domain.com
+PUBLIC_WEB_URL=https://your-domain.com
+API_BIND=127.0.0.1:4000
+WEB_BIND=0.0.0.0:8080
+```
+
+## 3. 一键部署
+
+有两种触发方式：
+
+1. push 到 `main`。
+2. GitHub Actions 页面选择 `CI/CD to Aliyun ECS`，点击 `Run workflow`。
+
+流水线会执行：
+
+1. `pnpm install --frozen-lockfile`
+2. `pnpm typecheck`
+3. `pnpm test`
+4. `pnpm build`
+5. 用 `git archive` 打包当前 commit
+6. SCP 上传到 ECS
+7. ECS 上解压到 `${ECS_APP_DIR}/releases/${GITHUB_SHA}`
+8. 复制生产 `.env`
+9. `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
+
+API 容器启动时会执行 `pnpm db:migrate && pnpm start`，所以 migration 会随部署自动应用。
+
+## 4. 首次 seed
+
+首次部署后，如需初始化演示数据：
+
+```bash
+cd /opt/nwu_helper/current
+docker compose -f docker-compose.prod.yml --env-file .env exec api pnpm db:seed
+```
+
+## 5. 查看状态和日志
+
+```bash
+cd /opt/nwu_helper/current
+docker compose -f docker-compose.prod.yml --env-file .env ps
+docker compose -f docker-compose.prod.yml --env-file .env logs -f api
+docker compose -f docker-compose.prod.yml --env-file .env logs -f web
+```
+
+## 6. 回滚
+
+部署目录保留最近 3 个 release。回滚到某个 release：
+
+```bash
+cd /opt/nwu_helper
+ls releases
+ln -sfn /opt/nwu_helper/releases/<release-sha> current
+cd current
+cp /opt/nwu_helper/shared/.env .env
+docker compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
+```
+
+## 7. HTTPS
+
+生产建议用宿主机 Nginx、阿里云 SLB 或 CDN 做 HTTPS 终止，再反代到 Web 容器。
+
+宿主机 Nginx 示例：
+
+```nginx
+server {
+  listen 80;
+  server_name your-domain.com;
+
+  location / {
+    proxy_pass http://127.0.0.1:8080;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+  }
+}
+```

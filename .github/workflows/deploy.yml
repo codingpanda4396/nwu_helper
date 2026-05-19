@@ -1,0 +1,132 @@
+name: CI/CD to Aliyun ECS
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ecs-production
+  cancel-in-progress: false
+
+jobs:
+  ci:
+    name: Test and build
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Test
+        run: pnpm test
+
+      - name: Build
+        run: pnpm build
+
+  deploy:
+    name: Deploy to ECS
+    needs: ci
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-latest
+    environment: production
+    env:
+      ECS_HOST: ${{ secrets.ECS_HOST }}
+      ECS_USER: ${{ secrets.ECS_USER }}
+      ECS_SSH_PORT: ${{ secrets.ECS_SSH_PORT || '22' }}
+      ECS_APP_DIR: ${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}
+      ECS_ENV_FILE: ${{ secrets.ECS_ENV_FILE }}
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER || 'nwu' }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD || 'nwu_password' }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB || 'nwu_helper' }}
+      JWT_SECRET: ${{ secrets.JWT_SECRET }}
+      WEB_ORIGIN: ${{ secrets.WEB_ORIGIN }}
+      PUBLIC_WEB_URL: ${{ secrets.PUBLIC_WEB_URL }}
+      API_BIND: ${{ secrets.API_BIND || '127.0.0.1:4000' }}
+      WEB_BIND: ${{ secrets.WEB_BIND || '0.0.0.0:8080' }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate deploy secrets
+        run: |
+          test -n "$ECS_HOST" || (echo "Missing ECS_HOST" && exit 1)
+          test -n "$ECS_USER" || (echo "Missing ECS_USER" && exit 1)
+          test -n "${{ secrets.ECS_SSH_KEY }}" || (echo "Missing ECS_SSH_KEY" && exit 1)
+          if [ -z "$ECS_ENV_FILE" ]; then
+            test -n "$JWT_SECRET" || (echo "Missing JWT_SECRET or ECS_ENV_FILE" && exit 1)
+          fi
+
+      - name: Create deploy bundle
+        run: |
+          mkdir -p deploy
+          git archive --format=tar.gz -o deploy/nwu-helper.tar.gz HEAD
+          cp infra/ecs/deploy.sh deploy/deploy.sh
+          cp infra/ecs/bootstrap.sh deploy/bootstrap.sh
+          if [ -n "$ECS_ENV_FILE" ]; then
+            printf '%s\n' "$ECS_ENV_FILE" > deploy/production.env
+          else
+            DATABASE_URL_VALUE="${DATABASE_URL:-postgresql://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}}"
+            WEB_ORIGIN_VALUE="${WEB_ORIGIN:-http://${ECS_HOST}:8080}"
+            PUBLIC_WEB_URL_VALUE="${PUBLIC_WEB_URL:-$WEB_ORIGIN_VALUE}"
+            {
+              printf 'NODE_ENV=production\n'
+              printf 'DATABASE_URL=%s\n' "$DATABASE_URL_VALUE"
+              printf 'POSTGRES_USER=%s\n' "$POSTGRES_USER"
+              printf 'POSTGRES_PASSWORD=%s\n' "$POSTGRES_PASSWORD"
+              printf 'POSTGRES_DB=%s\n' "$POSTGRES_DB"
+              printf 'JWT_SECRET=%s\n' "$JWT_SECRET"
+              printf 'PORT=4000\n'
+              printf 'WEB_ORIGIN=%s\n' "$WEB_ORIGIN_VALUE"
+              printf 'PUBLIC_WEB_URL=%s\n' "$PUBLIC_WEB_URL_VALUE"
+              printf 'API_BIND=%s\n' "$API_BIND"
+              printf 'WEB_BIND=%s\n' "$WEB_BIND"
+            } > deploy/production.env
+          fi
+
+      - name: Upload bundle to ECS
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          port: ${{ secrets.ECS_SSH_PORT || '22' }}
+          source: "deploy/*"
+          target: "/tmp/nwu-helper-${{ github.sha }}"
+          strip_components: 1
+
+      - name: Run deploy on ECS
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          port: ${{ secrets.ECS_SSH_PORT || '22' }}
+          script: |
+            set -eu
+            UPLOAD_DIR="/tmp/nwu-helper-${{ github.sha }}"
+            if ! command -v docker >/dev/null 2>&1 || ! docker compose version >/dev/null 2>&1; then
+              sh "$UPLOAD_DIR/bootstrap.sh"
+            fi
+            APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}" \
+            RELEASE="${{ github.sha }}" \
+            PACKAGE="$UPLOAD_DIR/nwu-helper.tar.gz" \
+            ENV_FILE="$UPLOAD_DIR/production.env" \
+            sh "$UPLOAD_DIR/deploy.sh"

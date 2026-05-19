@@ -1,0 +1,233 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  STUDENT
+  MERCHANT
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MerchantStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum CouponStatus {
+  ACTIVE
+  PAUSED
+  EXPIRED
+}
+
+enum UserCouponStatus {
+  CLAIMED
+  USED
+  EXPIRED
+}
+
+enum PricingMode {
+  MANUAL
+  CPC
+  CPA
+}
+
+enum PromotionSource {
+  MANUAL
+  CAMPAIGN
+  BIDDING_RESERVED
+}
+
+model User {
+  id              String             @id @default(cuid())
+  name            String
+  phone           String?            @unique
+  openid          String?            @unique
+  role            UserRole           @default(STUDENT)
+  passwordHash    String?
+  status          UserStatus         @default(ACTIVE)
+  merchantProfile Merchant?
+  userCoupons     UserCoupon[]       @relation("StudentCoupons")
+  redemptions     CouponRedemption[] @relation("StudentRedemptions")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+}
+
+model Category {
+  id          String     @id @default(cuid())
+  name        String     @unique
+  slug        String     @unique
+  icon        String?
+  sortOrder   Int        @default(100)
+  isActive    Boolean    @default(true)
+  merchants   Merchant[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+}
+
+model Merchant {
+  id            String             @id @default(cuid())
+  name          String
+  summary       String?
+  description   String?
+  categoryId    String
+  ownerUserId   String?            @unique
+  address       String
+  phone         String?
+  businessHours String?
+  coverImageUrl String?
+  status        MerchantStatus     @default(PENDING)
+  rating        Decimal            @default(4.8)
+  sortOrder     Int                @default(100)
+  platformBoost Int                @default(0)
+  category      Category           @relation(fields: [categoryId], references: [id])
+  ownerUser     User?              @relation(fields: [ownerUserId], references: [id])
+  coupons       Coupon[]
+  userCoupons   UserCoupon[]
+  redemptions   CouponRedemption[]
+  exposureLogs  ExposureLog[]
+  clickLogs     ClickLog[]
+  promotions    MerchantPromotion[]
+  createdAt     DateTime           @default(now())
+  updatedAt     DateTime           @updatedAt
+
+  @@index([categoryId])
+  @@index([status, platformBoost, sortOrder, rating, createdAt])
+}
+
+model Coupon {
+  id             String             @id @default(cuid())
+  merchantId     String
+  title          String
+  description    String?
+  threshold      Decimal?
+  discountValue  Decimal?
+  totalStock     Int
+  remainingStock Int
+  validFrom      DateTime           @default(now())
+  validTo        DateTime
+  status         CouponStatus       @default(ACTIVE)
+  merchant       Merchant           @relation(fields: [merchantId], references: [id])
+  userCoupons    UserCoupon[]
+  redemptions    CouponRedemption[]
+  promotions     MerchantPromotion[]
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@index([merchantId, status, validTo])
+}
+
+model UserCoupon {
+  id               String             @id @default(cuid())
+  userId           String
+  couponId         String
+  merchantId       String
+  code             String             @unique
+  status           UserCouponStatus   @default(CLAIMED)
+  claimedAt        DateTime           @default(now())
+  usedAt           DateTime?
+  source           String?
+  channel          String?
+  scene            String?
+  campaign         String?
+  claimedSessionId String?
+  user             User               @relation("StudentCoupons", fields: [userId], references: [id])
+  coupon           Coupon             @relation(fields: [couponId], references: [id])
+  merchant         Merchant           @relation(fields: [merchantId], references: [id])
+  redemption       CouponRedemption?
+
+  @@unique([userId, couponId])
+  @@index([merchantId, status, claimedAt])
+  @@index([merchantId, source, channel, claimedAt])
+}
+
+model CouponRedemption {
+  id               String     @id @default(cuid())
+  userCouponId     String     @unique
+  couponId         String
+  merchantId       String
+  studentId        String
+  amount           Decimal?
+  redeemedAt       DateTime   @default(now())
+  source           String?
+  channel          String?
+  scene            String?
+  campaign         String?
+  claimedSessionId String?
+  userCoupon       UserCoupon @relation(fields: [userCouponId], references: [id])
+  coupon           Coupon     @relation(fields: [couponId], references: [id])
+  merchant         Merchant   @relation(fields: [merchantId], references: [id])
+  student          User       @relation("StudentRedemptions", fields: [studentId], references: [id])
+
+  @@index([merchantId, redeemedAt])
+  @@index([merchantId, source, channel, redeemedAt])
+}
+
+model ExposureLog {
+  id         String   @id @default(cuid())
+  merchantId String
+  sessionId  String?
+  source     String?
+  channel    String?
+  scene      String?
+  campaign   String?
+  userAgent  String?
+  ip         String?
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([merchantId, source, channel, createdAt])
+}
+
+model ClickLog {
+  id         String   @id @default(cuid())
+  merchantId String
+  sessionId  String?
+  target     String?
+  source     String?
+  channel    String?
+  scene      String?
+  campaign   String?
+  userAgent  String?
+  ip         String?
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@index([merchantId, createdAt])
+  @@index([merchantId, source, channel, createdAt])
+}
+
+model MerchantPromotion {
+  id          String          @id @default(cuid())
+  merchantId  String
+  couponId    String?
+  name        String
+  source      PromotionSource @default(MANUAL)
+  pricingMode PricingMode     @default(MANUAL)
+  boostWeight Int             @default(0)
+  startAt     DateTime
+  endAt       DateTime
+  budget      Decimal?
+  cpc         Decimal?
+  cpa         Decimal?
+  isActive    Boolean         @default(true)
+  merchant    Merchant        @relation(fields: [merchantId], references: [id])
+  coupon      Coupon?         @relation(fields: [couponId], references: [id])
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([merchantId, isActive, startAt, endAt])
+  @@index([couponId])
+}
