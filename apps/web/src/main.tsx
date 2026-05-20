@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, Check, ClipboardCheck, Clock, Download, Edit3, LogOut, MapPin, Package, Phone, Plus, RefreshCw, Save, Search, Settings, ShieldCheck, Star, Store, Ticket, Utensils } from "lucide-react";
-import type { ApiResponse } from "@nwu-helper/shared";
+import { ArrowUpRight, BarChart3, Check, ClipboardCheck, Clock, Copy, Download, Edit3, LogOut, MapPin, Package, Phone, Plus, RefreshCw, Save, Search, Settings, ShieldCheck, Sparkles, Star, Store, Ticket, Users, Utensils } from "lucide-react";
+import type { ActivityPricingMode, ActivityStatus, ActivityType, ApiResponse } from "@nwu-helper/shared";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE_URL ?? "";
@@ -25,6 +25,26 @@ type Merchant = {
   coupons: Coupon[];
 };
 type User = { id: string; name: string; username?: string; phone?: string; role: "STUDENT" | "MERCHANT" | "ADMIN"; merchantId?: string };
+type Activity = {
+  id: string;
+  title: string;
+  subtitle?: string;
+  description?: string;
+  type: ActivityType;
+  merchantId: string;
+  couponId?: string | null;
+  coverImage?: string;
+  startAt: string;
+  endAt: string;
+  manualWeight: number;
+  sortOrder: number;
+  pricingMode: ActivityPricingMode;
+  status: ActivityStatus;
+  merchant: Merchant;
+  coupon?: Coupon | null;
+};
+type HomeActivities = { dailyDeals: Activity[]; femaleSelected: Activity[]; groupDeals: Activity[]; general: Activity[] };
+type ShareLink = { id: string; token: string; url: string; source?: string; channel?: string; scene?: string; campaign?: string; referrerId?: string };
 
 function getToken() {
   return localStorage.getItem("token");
@@ -41,10 +61,10 @@ async function api<T>(path: string, options: RequestInit = {}) {
   return payload.data;
 }
 
-type Attribution = { source?: string; channel?: string; scene?: string; campaign?: string };
+type Attribution = { source?: string; channel?: string; scene?: string; campaign?: string; activityId?: string; shareLinkId?: string; referrerId?: string };
 
 function getAttribution(): Attribution {
-  const keys = ["source", "channel", "scene", "campaign"] as const;
+  const keys = ["source", "channel", "scene", "campaign", "activityId", "shareLinkId", "referrerId"] as const;
   const params = new URLSearchParams(window.location.search);
   const stored = JSON.parse(sessionStorage.getItem("attribution") ?? "{}") as Attribution;
   const attribution: Attribution = { ...stored };
@@ -77,16 +97,42 @@ function StudentApp() {
   const [keyword, setKeyword] = useState("");
   const [merchants, setMerchants] = useState<Merchant[]>([]);
   const [selected, setSelected] = useState<Merchant | null>(null);
+  const [homeActivities, setHomeActivities] = useState<HomeActivities>({ dailyDeals: [], femaleSelected: [], groupDeals: [], general: [] });
+  const [selectedActivity, setSelectedActivity] = useState<Activity | null>(null);
   const [claiming, setClaiming] = useState<string | null>(null);
   const [claimForm, setClaimForm] = useState({ phone: "", studentName: "" });
   const [claimResult, setClaimResult] = useState<any>(null);
+  const [shareLink, setShareLink] = useState("");
   const sessionId = useMemo(() => localStorage.getItem("sessionId") ?? crypto.randomUUID(), []);
-  const attribution = useMemo(() => getAttribution(), []);
+  const [attribution, setAttribution] = useState<Attribution>(() => getAttribution());
 
   useEffect(() => {
     localStorage.setItem("sessionId", sessionId);
     api<Category[]>("/api/public/categories").then(setCategories);
-  }, [sessionId]);
+    api<HomeActivities>("/api/public/activities/home").then((data) => {
+      setHomeActivities(data);
+      [...data.dailyDeals, ...data.femaleSelected, ...data.groupDeals, ...data.general].forEach((activity) => {
+        void api(`/api/public/activities/${activity.id}/exposures`, { method: "POST", body: JSON.stringify({ sessionId, source: "student-home", activityId: activity.id, ...attribution }) });
+      });
+    });
+  }, [attribution, sessionId]);
+
+  useEffect(() => {
+    const shareMatch = window.location.pathname.match(/^\/share\/([^/]+)/);
+    if (!shareMatch) return;
+    api<{ shareLink: ShareLink & { activityId?: string; targetId: string }; targetPath: string }>(`/api/public/share/${shareMatch[1]}/open`, { method: "POST", body: JSON.stringify({ sessionId, ...attribution }) }).then((data) => {
+      const nextAttribution = { ...attribution, shareLinkId: data.shareLink.id, referrerId: data.shareLink.referrerId, source: data.shareLink.source ?? attribution.source, channel: data.shareLink.channel ?? attribution.channel, scene: data.shareLink.scene ?? attribution.scene, campaign: data.shareLink.campaign ?? attribution.campaign, activityId: data.shareLink.activityId ?? data.shareLink.targetId };
+      sessionStorage.setItem("attribution", JSON.stringify(nextAttribution));
+      setAttribution(nextAttribution);
+      window.history.replaceState(null, "", data.targetPath);
+      void openActivity(data.shareLink.targetId, nextAttribution);
+    }).catch((error) => window.alert(error instanceof Error ? error.message : "分享链接无效"));
+  }, []);
+
+  useEffect(() => {
+    const activityMatch = window.location.pathname.match(/^\/activities\/([^/]+)/);
+    if (activityMatch) void openActivity(activityMatch[1], attribution);
+  }, []);
 
   useEffect(() => {
     const params = new URLSearchParams();
@@ -100,10 +146,22 @@ function StudentApp() {
     });
   }, [attribution, categoryId, keyword, sessionId]);
 
-  async function openMerchant(id: string) {
-    await api("/api/public/clicks", { method: "POST", body: JSON.stringify({ merchantId: id, sessionId, target: "detail", ...attribution }) });
+  async function openMerchant(id: string, extra: Attribution = attribution) {
+    await api("/api/public/clicks", { method: "POST", body: JSON.stringify({ merchantId: id, sessionId, target: "detail", ...extra }) });
     setClaimResult(null);
+    setSelectedActivity(null);
+    setShareLink("");
     setSelected(await api<Merchant>(`/api/public/merchants/${id}`));
+  }
+
+  async function openActivity(id: string, extra: Attribution = attribution) {
+    await api(`/api/public/activities/${id}/clicks`, { method: "POST", body: JSON.stringify({ sessionId, target: "activity-detail", activityId: id, ...extra }) });
+    setClaimResult(null);
+    setSelected(null);
+    setShareLink("");
+    const activity = await api<Activity>(`/api/public/activities/${id}`);
+    setSelectedActivity(activity);
+    window.history.replaceState(null, "", `/activities/${id}`);
   }
 
   async function claim(couponId: string) {
@@ -113,7 +171,8 @@ function StudentApp() {
     }
     setClaiming(couponId);
     try {
-      const result = await api<any>(`/api/public/coupons/${couponId}/claim`, { method: "POST", body: JSON.stringify({ phone: claimForm.phone.trim(), studentName: claimForm.studentName.trim() || "西大学生", sessionId, ...attribution }) });
+      const activityContext = selectedActivity ? { activityId: selectedActivity.id } : {};
+      const result = await api<any>(`/api/public/coupons/${couponId}/claim`, { method: "POST", body: JSON.stringify({ phone: claimForm.phone.trim(), studentName: claimForm.studentName.trim() || "西大学生", sessionId, ...attribution, ...activityContext }) });
       setClaimResult(result);
     } catch (error) {
       window.alert(error instanceof Error ? error.message : "领取失败");
@@ -122,16 +181,36 @@ function StudentApp() {
     }
   }
 
+  async function shareActivity(activity: Activity) {
+    const result = await api<ShareLink>(`/api/public/activities/${activity.id}/share-links`, { method: "POST", body: JSON.stringify({ source: "share", channel: "student", scene: "activity-detail", campaign: activity.type, referrerId: claimForm.phone.trim() || undefined, sessionId }) });
+    const url = `${window.location.origin}${result.url}`;
+    setShareLink(url);
+    await navigator.clipboard?.writeText(url).catch(() => undefined);
+  }
+
+  function closeDrawers() {
+    setSelected(null);
+    setSelectedActivity(null);
+    setClaimResult(null);
+    setShareLink("");
+    if (window.location.pathname.startsWith("/activities/")) window.history.replaceState(null, "", "/");
+  }
+
+  const activeCoupon = selectedActivity?.coupon ?? selectedActivity?.merchant.coupons?.[0];
+
   return (
     <main className="student-shell">
       <section className="student-hero">
         <div>
           <p className="eyebrow">西大圈</p>
-          <h1>校门口吃喝玩乐优惠</h1>
-          <p>找附近靠谱商家，领学生专属券，到店出示核销码即可使用。</p>
+          <h1>今天值得去的校门口优惠</h1>
+          <p>精选西北大学周边活动，领券后到店出示核销码。少一点选择成本，多一点确定性。</p>
         </div>
       </section>
       <section className="student-content">
+        <ActivitySection title="今日爆品" hint="高价值活动优先看" icon={<Sparkles size={18} />} items={homeActivities.dailyDeals} onOpen={openActivity} />
+        <ActivitySection title="女生精选" hint="环境、口碑和体验更友好" icon={<Star size={18} />} items={homeActivities.femaleSelected} onOpen={openActivity} />
+        <ActivitySection title="宿舍拼团" hint="先组团领券，暂不接支付" icon={<Users size={18} />} items={homeActivities.groupDeals} onOpen={openActivity} />
         <div className="searchbar"><Search size={18} /><input placeholder="搜索美食、打印、驾校" value={keyword} onChange={(event) => setKeyword(event.target.value)} /></div>
         <div className="category-tabs">
           <button className={!categoryId ? "active" : ""} onClick={() => setCategoryId("")}>全部</button>
@@ -151,7 +230,30 @@ function StudentApp() {
           ))}
         </div>
       </section>
-      {selected && <div className="drawer-backdrop" onClick={() => setSelected(null)}><section className="merchant-drawer" onClick={(event) => event.stopPropagation()}>
+      {selectedActivity && <div className="drawer-backdrop" onClick={closeDrawers}><section className="merchant-drawer activity-drawer" onClick={(event) => event.stopPropagation()}>
+        <img src={selectedActivity.coverImage || selectedActivity.merchant.coverImageUrl} alt="" className="cover" />
+        <div className="drawer-body">
+          <div className="drawer-title-row"><span className="pill">{activityTypeLabel(selectedActivity.type)}</span><button className="icon-button" onClick={() => shareActivity(selectedActivity)}><Copy size={16} /></button></div>
+          <h2>{selectedActivity.title}</h2>
+          <p className="lead">{selectedActivity.subtitle}</p>
+          <div className="trust-strip"><span><Store size={16} />{selectedActivity.merchant.name}</span><span><Star size={16} />{selectedActivity.merchant.rating} 分</span><span><Clock size={16} />至 {formatCell(selectedActivity.endAt)}</span></div>
+          <p>{selectedActivity.description}</p>
+          <p><MapPin size={16} />{selectedActivity.merchant.address}</p>
+          <div className="claim-form">
+            <input placeholder="手机号，用于领取和核销" value={claimForm.phone} onChange={(event) => setClaimForm({ ...claimForm, phone: event.target.value })} />
+            <input placeholder="昵称，可选" value={claimForm.studentName} onChange={(event) => setClaimForm({ ...claimForm, studentName: event.target.value })} />
+          </div>
+          {claimResult && <div className="success-code"><span>领取成功</span><strong>{claimResult.code}</strong><small>到店向商家出示该核销码使用优惠。</small></div>}
+          {shareLink && <div className="share-box"><span>分享链接已生成</span><small>{shareLink}</small></div>}
+          {activeCoupon ? <article className="coupon">
+            <span><strong>{activeCoupon.title}</strong><small>{activeCoupon.description}</small><small>有效期至 {formatCell(activeCoupon.validTo)} · 剩余 {activeCoupon.remainingStock}/{activeCoupon.totalStock} 张</small></span>
+            <button className="primary" disabled={claiming === activeCoupon.id || activeCoupon.remainingStock <= 0 || activeCoupon.status !== "ACTIVE"} onClick={() => claim(activeCoupon.id)}>
+              <Ticket size={16} />{activeCoupon.remainingStock <= 0 ? "已领完" : "领取"}
+            </button>
+          </article> : <p>当前活动暂无可领取优惠券。</p>}
+        </div>
+      </section></div>}
+      {selected && <div className="drawer-backdrop" onClick={closeDrawers}><section className="merchant-drawer" onClick={(event) => event.stopPropagation()}>
         <img src={selected.coverImageUrl} alt="" className="cover" />
         <div className="drawer-body">
           <h2>{selected.name}</h2>
@@ -179,6 +281,24 @@ function StudentApp() {
       </section></div>}
     </main>
   );
+}
+
+function ActivitySection({ title, hint, icon, items, onOpen }: { title: string; hint: string; icon: React.ReactNode; items: Activity[]; onOpen: (id: string) => void }) {
+  if (!items.length) return null;
+  return <section className="activity-section">
+    <div className="section-heading"><span>{icon}<strong>{title}</strong></span><small>{hint}</small></div>
+    <div className="activity-rail">
+      {items.map((activity) => (
+        <button className="activity-card" key={activity.id} onClick={() => onOpen(activity.id)}>
+          <img src={activity.coverImage || activity.merchant.coverImageUrl} alt="" />
+          <span className="pill">{activityTypeLabel(activity.type)}</span>
+          <strong>{activity.title}</strong>
+          <small>{activity.subtitle ?? activity.merchant.summary}</small>
+          <b>{activity.coupon?.title ?? activity.merchant.name}<ArrowUpRight size={15} /></b>
+        </button>
+      ))}
+    </div>
+  </section>;
 }
 
 function MerchantPortal() {
@@ -232,6 +352,7 @@ function MerchantDashboard() {
   const [summary, setSummary] = useState<any>(null);
   const [sourceRows, setSourceRows] = useState<any[]>([]);
   const [couponRows, setCouponRows] = useState<any[]>([]);
+  const [activityRows, setActivityRows] = useState<any[]>([]);
   const [trendRows, setTrendRows] = useState<any[]>([]);
   const [code, setCode] = useState("");
   const [amount, setAmount] = useState("");
@@ -269,6 +390,7 @@ function MerchantDashboard() {
     api(`/api/merchant/analytics/summary?${query}`).then(setSummary);
     api<any[]>(`/api/merchant/analytics/by-source?${query}`).then(setSourceRows);
     api<any[]>(`/api/merchant/coupon-performance?${query}`).then(setCouponRows);
+    api<any[]>(`/api/merchant/reports/activities?${query}`).then(setActivityRows);
     api<any[]>(`/api/merchant/trends?${query}`).then(setTrendRows);
   };
   useEffect(() => {
@@ -329,6 +451,7 @@ function MerchantDashboard() {
     {tab === "workbench" && <>
       <section className="work-panel"><div className="form-row two"><select value={range} onChange={(e) => setRange(e.target.value)}><option value="today">今日</option><option value="7d">近 7 天</option><option value="30d">近 30 天</option><option value="custom">自定义</option></select><input type="date" disabled={range !== "custom"} value={startDate} onChange={(e) => setStartDate(e.target.value)} /><input type="date" disabled={range !== "custom"} value={endDate} onChange={(e) => setEndDate(e.target.value)} /></div></section>
       <MetricGrid data={[["今日待核销", todayClaims.filter((item) => item.status === "CLAIMED").length], ["优惠券库存", overview?.coupons?.reduce((sum: number, item: Coupon) => sum + item.remainingStock, 0) ?? 0], ["领取", summary?.claimCount ?? 0], ["核销", summary?.redemptionCount ?? 0], ["点击率", pct(summary?.clickRate)], ["核销率", pct(summary?.redemptionRate)], ["核销金额", `¥${overview?.stats.redemptionAmount ?? 0}`]]} />
+      <Table title="活动效果" rows={activityRows} columns={["title", "type", "exposureCount", "clickCount", "claimCount", "redemptionCount", "clickRate", "redemptionRate"]} />
       <Table title="渠道转化" rows={sourceRows} columns={["source", "channel", "exposureCount", "clickCount", "claimCount", "redemptionCount", "clickRate", "redemptionRate"]} />
       <Table title="最近领券记录" rows={claims.slice(0, 8)} columns={["user.name", "user.phone", "coupon.title", "code", "status", "claimedAt"]} />
     </>}
@@ -337,14 +460,15 @@ function MerchantDashboard() {
     </section>}
     {tab === "profile" && <section className="work-panel"><h2>店铺资料</h2><div className="edit-grid"><label>店铺名称<input value={profileForm.name} onChange={(e) => setProfileForm({ ...profileForm, name: e.target.value })} /></label><label>一句话介绍<input value={profileForm.summary} onChange={(e) => setProfileForm({ ...profileForm, summary: e.target.value })} /></label><label>门店地址<input value={profileForm.address} onChange={(e) => setProfileForm({ ...profileForm, address: e.target.value })} /></label><label>联系电话<input value={profileForm.phone} onChange={(e) => setProfileForm({ ...profileForm, phone: e.target.value })} /></label><label>营业时间<input value={profileForm.businessHours} onChange={(e) => setProfileForm({ ...profileForm, businessHours: e.target.value })} /></label><label>封面图 URL<input value={profileForm.coverImageUrl} onChange={(e) => setProfileForm({ ...profileForm, coverImageUrl: e.target.value })} /></label><label className="span-2">详细介绍<textarea value={profileForm.description} onChange={(e) => setProfileForm({ ...profileForm, description: e.target.value })} /></label></div><button className="primary" onClick={saveProfile}><Save size={16} />保存店铺资料</button></section>}
     {tab === "coupons" && <><section className="work-panel"><h2>{couponForm.id ? "修改优惠券" : "新建优惠券"}</h2><div className="edit-grid"><label>优惠标题<input value={couponForm.title} onChange={(e) => setCouponForm({ ...couponForm, title: e.target.value })} /></label><label>总库存<input type="number" value={couponForm.totalStock} onChange={(e) => setCouponForm({ ...couponForm, totalStock: Number(e.target.value) })} /></label><label>剩余库存<input type="number" value={couponForm.remainingStock} onChange={(e) => setCouponForm({ ...couponForm, remainingStock: Number(e.target.value) })} /></label><label>门槛金额<input value={couponForm.threshold} onChange={(e) => setCouponForm({ ...couponForm, threshold: e.target.value })} /></label><label>优惠金额<input value={couponForm.discountValue} onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })} /></label><label>有效期至<input type="date" value={couponForm.validTo} onChange={(e) => setCouponForm({ ...couponForm, validTo: e.target.value })} /></label><label>状态<select value={couponForm.status} onChange={(e) => setCouponForm({ ...couponForm, status: e.target.value })}><option value="ACTIVE">上架</option><option value="PAUSED">暂停</option><option value="EXPIRED">过期</option></select></label><label className="span-2">使用说明<textarea value={couponForm.description} onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })} /></label></div><div className="button-row"><button className="primary" disabled={!couponForm.title || !couponForm.validTo} onClick={saveCoupon}><Save size={16} />保存优惠券</button><button className="icon-button wide" onClick={() => setCouponForm({ id: "", title: "", description: "", threshold: "", discountValue: "", totalStock: 100, remainingStock: 100, validTo: "2026-12-31", status: "ACTIVE" })}><Plus size={16} />新建</button></div></section><div className="coupon-grid">{overview?.coupons?.map((coupon: Coupon) => <article className="coupon-card" key={coupon.id}><strong>{coupon.title}</strong><span>{coupon.description}</span><small>库存 {coupon.remainingStock}/{coupon.totalStock} · 有效期至 {formatCell(coupon.validTo)} · {formatStatus(coupon.status)}</small><button className="icon-button wide" onClick={() => editCoupon(coupon)}><Edit3 size={16} />编辑</button></article>)}</div></>}
-    {tab === "records" && <><Table title="领券记录" rows={claims} columns={["user.name", "user.phone", "coupon.title", "code", "status", "claimedAt"]} /><Table title="优惠券效果" rows={couponRows} columns={["couponTitle", "exposureCount", "clickCount", "claimCount", "redemptionCount", "clickRate", "redemptionRate"]} /><Table title="趋势" rows={trendRows} columns={["date", "exposureCount", "clickCount", "claimCount", "redemptionCount"]} /></>}
+    {tab === "records" && <><Table title="领券记录" rows={claims} columns={["user.name", "user.phone", "coupon.title", "code", "status", "claimedAt"]} /><Table title="活动效果" rows={activityRows} columns={["title", "type", "status", "couponTitle", "exposureCount", "clickCount", "claimCount", "redemptionCount", "redemptionRate"]} /><Table title="优惠券效果" rows={couponRows} columns={["couponTitle", "exposureCount", "clickCount", "claimCount", "redemptionCount", "clickRate", "redemptionRate"]} /><Table title="趋势" rows={trendRows} columns={["date", "exposureCount", "clickCount", "claimCount", "redemptionCount"]} /></>}
   </Shell>;
 }
 
 function AdminDashboard() {
   const [tab, setTab] = useState("overview");
-  return <Shell brand="西大圈平台" nav={<><Nav id="overview" tab={tab} setTab={setTab} icon={<BarChart3 />} label="看板" /><Nav id="merchants" tab={tab} setTab={setTab} icon={<Store />} label="商家" /><Nav id="coupons" tab={tab} setTab={setTab} icon={<Ticket />} label="优惠券" /><Nav id="promotions" tab={tab} setTab={setTab} icon={<ClipboardCheck />} label="推广" /><Nav id="categories" tab={tab} setTab={setTab} icon={<Settings />} label="类目" /><Logout /></>}>
+  return <Shell brand="西大圈平台" nav={<><Nav id="overview" tab={tab} setTab={setTab} icon={<BarChart3 />} label="看板" /><Nav id="activities" tab={tab} setTab={setTab} icon={<Sparkles />} label="活动" /><Nav id="merchants" tab={tab} setTab={setTab} icon={<Store />} label="商家" /><Nav id="coupons" tab={tab} setTab={setTab} icon={<Ticket />} label="优惠券" /><Nav id="promotions" tab={tab} setTab={setTab} icon={<ClipboardCheck />} label="推广" /><Nav id="categories" tab={tab} setTab={setTab} icon={<Settings />} label="类目" /><Logout /></>}>
     {tab === "overview" && <AdminOverview />}
+    {tab === "activities" && <ActivityAdmin />}
     {tab === "merchants" && <MerchantAdmin />}
     {tab === "coupons" && <CouponAdmin />}
     {tab === "promotions" && <PromotionAdmin />}
@@ -375,6 +499,43 @@ function AdminOverview() {
     URL.revokeObjectURL(url);
   }
   return <><Header title="平台总览" action={<button className="primary" onClick={exportCsv}><Download size={16} />导出 CSV</button>} /><MetricGrid data={[["商家数", data?.merchantCount ?? 0], ["已上架", data?.approvedMerchantCount ?? 0], ["优惠券", data?.couponCount ?? 0], ["曝光", summary?.exposureCount ?? 0], ["点击", summary?.clickCount ?? 0], ["领取", summary?.claimCount ?? 0], ["核销", summary?.redemptionCount ?? 0], ["点击率", pct(summary?.clickRate)], ["核销率", pct(summary?.redemptionRate)]]} /><Table title="渠道转化" rows={sourceRows} columns={["source", "channel", "exposureCount", "clickCount", "claimCount", "redemptionCount", "clickRate", "redemptionRate"]} /><Table title="商家转化" rows={rows} columns={["name", "category", "status", "exposures", "clicks", "claims", "redemptions", "redemptionAmount"]} /></>;
+}
+
+function ActivityAdmin() {
+  const [items, setItems] = useState<any[]>([]);
+  const [merchants, setMerchants] = useState<Merchant[]>([]);
+  const [coupons, setCoupons] = useState<any[]>([]);
+  const [form, setForm] = useState({ title: "", subtitle: "", description: "", type: "DAILY_DEAL", merchantId: "", couponId: "", coverImage: "", startAt: "2026-05-20", endAt: "2026-12-31", manualWeight: 50, sortOrder: 100, pricingMode: "FREE", status: "ACTIVE" });
+  const refresh = () => api<any[]>("/api/admin/activities").then(setItems);
+  useEffect(() => {
+    refresh();
+    api<{ items: Merchant[] }>("/api/admin/merchants?pageSize=100").then((data) => setMerchants(data.items));
+    api<any[]>("/api/admin/coupons").then(setCoupons);
+  }, []);
+  async function create() {
+    await api("/api/admin/activities", { method: "POST", body: JSON.stringify({ ...form, startAt: new Date(form.startAt).toISOString(), endAt: new Date(form.endAt).toISOString(), manualWeight: Number(form.manualWeight), sortOrder: Number(form.sortOrder), couponId: form.couponId || undefined, coverImage: form.coverImage || undefined }) });
+    setForm({ title: "", subtitle: "", description: "", type: "DAILY_DEAL", merchantId: "", couponId: "", coverImage: "", startAt: "2026-05-20", endAt: "2026-12-31", manualWeight: 50, sortOrder: 100, pricingMode: "FREE", status: "ACTIVE" });
+    refresh();
+  }
+  async function toggle(item: any) {
+    await api(`/api/admin/activities/${item.id}/status`, { method: "PATCH", body: JSON.stringify({ status: item.status === "ACTIVE" ? "PAUSED" : "ACTIVE" }) });
+    refresh();
+  }
+  return <><Header title="活动管理" /><section className="work-panel"><div className="edit-grid">
+    <label>活动标题<input value={form.title} onChange={(e) => setForm({ ...form, title: e.target.value })} /></label>
+    <label>副标题<input value={form.subtitle} onChange={(e) => setForm({ ...form, subtitle: e.target.value })} /></label>
+    <label>商家<select value={form.merchantId} onChange={(e) => setForm({ ...form, merchantId: e.target.value, couponId: "" })}><option value="">选择商家</option>{merchants.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}</select></label>
+    <label>绑定优惠券<select value={form.couponId} onChange={(e) => setForm({ ...form, couponId: e.target.value })}><option value="">不绑定</option>{coupons.filter((c) => !form.merchantId || c.merchantId === form.merchantId).map((c) => <option key={c.id} value={c.id}>{c.title}</option>)}</select></label>
+    <label>类型<select value={form.type} onChange={(e) => setForm({ ...form, type: e.target.value })}><option value="DAILY_DEAL">今日爆品</option><option value="FEMALE_SELECTED">女生精选</option><option value="GROUP_DEAL">宿舍拼团</option><option value="NIGHT_FOOD">夜宵活动</option><option value="GENERAL">推荐</option></select></label>
+    <label>状态<select value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value })}><option value="ACTIVE">上架</option><option value="DRAFT">草稿</option><option value="PAUSED">暂停</option><option value="ENDED">结束</option></select></label>
+    <label>权重<input type="number" value={form.manualWeight} onChange={(e) => setForm({ ...form, manualWeight: Number(e.target.value) })} /></label>
+    <label>排序<input type="number" value={form.sortOrder} onChange={(e) => setForm({ ...form, sortOrder: Number(e.target.value) })} /></label>
+    <label>开始日期<input type="date" value={form.startAt} onChange={(e) => setForm({ ...form, startAt: e.target.value })} /></label>
+    <label>结束日期<input type="date" value={form.endAt} onChange={(e) => setForm({ ...form, endAt: e.target.value })} /></label>
+    <label className="span-2">封面图 URL<input value={form.coverImage} onChange={(e) => setForm({ ...form, coverImage: e.target.value })} /></label>
+    <label className="span-2">活动说明<textarea value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></label>
+  </div><button className="primary" onClick={create} disabled={!form.title || !form.merchantId}><Plus size={16} />新建活动</button></section>
+  <div className="table-wrap"><h2>活动列表</h2><table><thead><tr>{["标题", "类型", "商家", "优惠券", "状态", "权重", "排序", "结束", "操作"].map((col) => <th key={col}>{col}</th>)}</tr></thead><tbody>{items.map((item) => <tr key={item.id}><td>{item.title}</td><td>{activityTypeLabel(item.type)}</td><td>{item.merchant?.name}</td><td>{item.coupon?.title ?? "-"}</td><td>{formatStatus(item.status)}</td><td>{item.manualWeight}</td><td>{item.sortOrder}</td><td>{formatCell(item.endAt)}</td><td><button className="icon-button wide" onClick={() => toggle(item)}>{item.status === "ACTIVE" ? "暂停" : "上架"}</button></td></tr>)}</tbody></table></div></>;
 }
 
 function MerchantAdmin() {
@@ -476,7 +637,11 @@ function formatCell(value: unknown) {
 }
 
 function formatStatus(value: string) {
-  return ({ ACTIVE: "上架", PAUSED: "暂停", EXPIRED: "过期", CLAIMED: "待核销", USED: "已核销", PENDING: "待审核", APPROVED: "已上架", REJECTED: "已驳回", SUSPENDED: "已停用" } as Record<string, string>)[value] ?? value;
+  return ({ ACTIVE: "上架", PAUSED: "暂停", EXPIRED: "过期", CLAIMED: "待核销", USED: "已核销", PENDING: "待审核", APPROVED: "已上架", REJECTED: "已驳回", SUSPENDED: "已停用", DRAFT: "草稿", ENDED: "已结束" } as Record<string, string>)[value] ?? value;
+}
+
+function activityTypeLabel(value: string) {
+  return ({ DAILY_DEAL: "今日爆品", FEMALE_SELECTED: "女生精选", GROUP_DEAL: "宿舍拼团", NIGHT_FOOD: "夜宵活动", GENERAL: "推荐" } as Record<string, string>)[value] ?? value;
 }
 
 function columnLabel(key: string) {
@@ -516,7 +681,10 @@ function columnLabel(key: string) {
     redemptions: "核销",
     redemptionAmount: "核销金额",
     slug: "标识",
-    isActive: "启用"
+    isActive: "启用",
+    type: "类型",
+    activityId: "活动",
+    merchantName: "商家"
   } as Record<string, string>)[key] ?? key;
 }
 

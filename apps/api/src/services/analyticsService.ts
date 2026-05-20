@@ -5,6 +5,7 @@ import { unknownAttributionGroup } from "./attributionService.js";
 export type AnalyticsScope = {
   merchantId?: string;
   couponId?: string;
+  activityId?: string;
   startDate?: Date;
   endDate?: Date;
 };
@@ -33,6 +34,7 @@ export function parseAnalyticsScope(query: unknown, forcedMerchantId?: string): 
   return {
     merchantId: forcedMerchantId ?? input.merchantId,
     couponId: input.couponId,
+    activityId: input.activityId,
     startDate,
     endDate
   };
@@ -41,6 +43,7 @@ export function parseAnalyticsScope(query: unknown, forcedMerchantId?: string): 
 function merchantWhere(scope: AnalyticsScope, field: "createdAt" | "claimedAt" | "redeemedAt") {
   return {
     merchantId: scope.merchantId,
+    activityId: scope.activityId,
     ...dateFilter(field, scope)
   };
 }
@@ -49,6 +52,7 @@ function couponWhere(scope: AnalyticsScope, field: "claimedAt" | "redeemedAt") {
   return {
     merchantId: scope.merchantId,
     couponId: scope.couponId,
+    activityId: scope.activityId,
     ...dateFilter(field, scope)
   };
 }
@@ -122,6 +126,30 @@ export async function getCouponPerformance(scope: AnalyticsScope) {
 
 export async function getChannelPerformance(scope: AnalyticsScope) {
   return getBySource(scope);
+}
+
+export async function getActivityPerformance(scope: AnalyticsScope) {
+  const activities = await prisma.activity.findMany({
+    where: { merchantId: scope.merchantId },
+    include: { merchant: true, coupon: true },
+    orderBy: [{ manualWeight: "desc" }, { sortOrder: "asc" }, { startAt: "desc" }]
+  });
+  const rows = [];
+  for (const activity of activities) {
+    const summary = await getSummary({ ...scope, activityId: activity.id, couponId: undefined });
+    rows.push({
+      activityId: activity.id,
+      title: activity.title,
+      type: activity.type,
+      status: activity.status,
+      merchantId: activity.merchantId,
+      merchantName: activity.merchant.name,
+      couponId: activity.couponId,
+      couponTitle: activity.coupon?.title ?? "",
+      ...summary
+    });
+  }
+  return rows;
 }
 
 function day(value: Date) {

@@ -60,6 +60,9 @@ describe("attributionService", () => {
       channel: null,
       scene: "table_qr_01",
       campaign: null,
+      activityId: null,
+      shareLinkId: null,
+      referrerId: null,
       sessionId: null
     });
     expect(unknownAttributionGroup(null)).toBe("unknown");

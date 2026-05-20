@@ -12,6 +12,9 @@ export const attributionSchema = z.object({
   channel: attributionField,
   scene: attributionField,
   campaign: attributionField,
+  activityId: z.string().trim().max(128).transform((value) => value || null).nullish(),
+  shareLinkId: z.string().trim().max(128).transform((value) => value || null).nullish(),
+  referrerId: z.string().trim().max(128).transform((value) => value || null).nullish(),
   sessionId: z.string().trim().max(128).transform((value) => value || null).nullish()
 });
 
@@ -24,6 +27,9 @@ export function normalizeAttribution(input: AttributionInput = {}) {
     channel: parsed.channel ?? null,
     scene: parsed.scene ?? null,
     campaign: parsed.campaign ?? null,
+    activityId: parsed.activityId ?? null,
+    shareLinkId: parsed.shareLinkId ?? null,
+    referrerId: parsed.referrerId ?? null,
     sessionId: parsed.sessionId ?? null
   };
 }
@@ -34,7 +40,10 @@ export function attributionData(input: AttributionInput = {}) {
     source: attribution.source,
     channel: attribution.channel,
     scene: attribution.scene,
-    campaign: attribution.campaign
+    campaign: attribution.campaign,
+    activityId: attribution.activityId,
+    shareLinkId: attribution.shareLinkId,
+    referrerId: attribution.referrerId
   };
 }
 

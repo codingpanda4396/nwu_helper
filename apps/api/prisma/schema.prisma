@@ -43,10 +43,42 @@ enum PricingMode {
   CPA
 }
 
+enum ActivityType {
+  DAILY_DEAL
+  FEMALE_SELECTED
+  GROUP_DEAL
+  NIGHT_FOOD
+  GENERAL
+}
+
+enum ActivityStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ENDED
+}
+
+enum ActivityPricingMode {
+  FREE
+  CPC
+  CPA
+  FIXED
+}
+
 enum PromotionSource {
   MANUAL
   CAMPAIGN
   BIDDING_RESERVED
+}
+
+enum ShareTargetType {
+  MERCHANT
+  COUPON
+  ACTIVITY
+}
+
+enum ShareEventType {
+  SHARE_OPEN
 }
 
 model User {
@@ -61,6 +93,7 @@ model User {
   merchantProfile Merchant?
   userCoupons     UserCoupon[]       @relation("StudentCoupons")
   redemptions     CouponRedemption[] @relation("StudentRedemptions")
+  shareLinks      ShareLink[]
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
 }
@@ -100,6 +133,9 @@ model Merchant {
   exposureLogs  ExposureLog[]
   clickLogs     ClickLog[]
   promotions    MerchantPromotion[]
+  activities    Activity[]
+  shareLinks    ShareLink[]
+  shareEvents   ShareEvent[]
   createdAt     DateTime           @default(now())
   updatedAt     DateTime           @updatedAt
 
@@ -123,6 +159,9 @@ model Coupon {
   userCoupons    UserCoupon[]
   redemptions    CouponRedemption[]
   promotions     MerchantPromotion[]
+  activities     Activity[]
+  shareLinks     ShareLink[]
+  shareEvents    ShareEvent[]
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
 
@@ -142,15 +181,23 @@ model UserCoupon {
   channel          String?
   scene            String?
   campaign         String?
+  activityId       String?
+  shareLinkId      String?
+  referrerId       String?
   claimedSessionId String?
   user             User               @relation("StudentCoupons", fields: [userId], references: [id])
   coupon           Coupon             @relation(fields: [couponId], references: [id])
   merchant         Merchant           @relation(fields: [merchantId], references: [id])
+  activity         Activity?          @relation(fields: [activityId], references: [id])
+  shareLink        ShareLink?         @relation(fields: [shareLinkId], references: [id])
   redemption       CouponRedemption?
 
   @@unique([userId, couponId])
   @@index([merchantId, status, claimedAt])
   @@index([merchantId, source, channel, claimedAt])
+  @@index([activityId, claimedAt])
+  @@index([shareLinkId])
+  @@index([referrerId])
 }
 
 model CouponRedemption {
@@ -165,14 +212,22 @@ model CouponRedemption {
   channel          String?
   scene            String?
   campaign         String?
+  activityId       String?
+  shareLinkId      String?
+  referrerId       String?
   claimedSessionId String?
   userCoupon       UserCoupon @relation(fields: [userCouponId], references: [id])
   coupon           Coupon     @relation(fields: [couponId], references: [id])
   merchant         Merchant   @relation(fields: [merchantId], references: [id])
   student          User       @relation("StudentRedemptions", fields: [studentId], references: [id])
+  activity         Activity?  @relation(fields: [activityId], references: [id])
+  shareLink        ShareLink? @relation(fields: [shareLinkId], references: [id])
 
   @@index([merchantId, redeemedAt])
   @@index([merchantId, source, channel, redeemedAt])
+  @@index([activityId, redeemedAt])
+  @@index([shareLinkId])
+  @@index([referrerId])
 }
 
 model ExposureLog {
@@ -183,13 +238,20 @@ model ExposureLog {
   channel    String?
   scene      String?
   campaign   String?
+  activityId String?
+  shareLinkId String?
+  referrerId String?
   userAgent  String?
   ip         String?
   merchant   Merchant @relation(fields: [merchantId], references: [id])
+  activity   Activity? @relation(fields: [activityId], references: [id])
+  shareLink  ShareLink? @relation(fields: [shareLinkId], references: [id])
   createdAt  DateTime @default(now())
 
   @@index([merchantId, createdAt])
   @@index([merchantId, source, channel, createdAt])
+  @@index([activityId, createdAt])
+  @@index([shareLinkId])
 }
 
 model ClickLog {
@@ -201,13 +263,110 @@ model ClickLog {
   channel    String?
   scene      String?
   campaign   String?
+  activityId String?
+  shareLinkId String?
+  referrerId String?
   userAgent  String?
   ip         String?
   merchant   Merchant @relation(fields: [merchantId], references: [id])
+  activity   Activity? @relation(fields: [activityId], references: [id])
+  shareLink  ShareLink? @relation(fields: [shareLinkId], references: [id])
   createdAt  DateTime @default(now())
 
   @@index([merchantId, createdAt])
   @@index([merchantId, source, channel, createdAt])
+  @@index([activityId, createdAt])
+  @@index([shareLinkId])
+}
+
+model Activity {
+  id            String              @id @default(cuid())
+  title         String
+  subtitle      String?
+  description   String?
+  type          ActivityType        @default(GENERAL)
+  merchantId    String
+  couponId      String?
+  coverImage    String?
+  startAt       DateTime
+  endAt         DateTime
+  manualWeight  Int                 @default(0)
+  sortOrder     Int                 @default(100)
+  budget        Decimal?
+  pricingMode   ActivityPricingMode @default(FREE)
+  status        ActivityStatus      @default(DRAFT)
+  merchant      Merchant            @relation(fields: [merchantId], references: [id])
+  coupon        Coupon?             @relation(fields: [couponId], references: [id])
+  shareLinks    ShareLink[]
+  shareEvents   ShareEvent[]
+  exposureLogs  ExposureLog[]
+  clickLogs     ClickLog[]
+  userCoupons   UserCoupon[]
+  redemptions   CouponRedemption[]
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  @@index([status, type, startAt, endAt, manualWeight, sortOrder])
+  @@index([merchantId])
+  @@index([couponId])
+}
+
+model ShareLink {
+  id           String          @id @default(cuid())
+  userId       String?
+  merchantId   String?
+  couponId     String?
+  activityId   String?
+  targetType   ShareTargetType
+  targetId     String
+  source       String?
+  channel      String?
+  scene        String?
+  campaign     String?
+  referrerId   String?
+  token        String          @unique
+  createdAt    DateTime        @default(now())
+  user         User?           @relation(fields: [userId], references: [id])
+  merchant     Merchant?       @relation(fields: [merchantId], references: [id])
+  coupon       Coupon?         @relation(fields: [couponId], references: [id])
+  activity     Activity?       @relation(fields: [activityId], references: [id])
+  events       ShareEvent[]
+  exposureLogs ExposureLog[]
+  clickLogs    ClickLog[]
+  userCoupons  UserCoupon[]
+  redemptions  CouponRedemption[]
+
+  @@index([targetType, targetId])
+  @@index([activityId])
+  @@index([merchantId])
+  @@index([couponId])
+  @@index([referrerId])
+}
+
+model ShareEvent {
+  id          String         @id @default(cuid())
+  shareLinkId String
+  activityId  String?
+  merchantId  String?
+  couponId    String?
+  eventType   ShareEventType @default(SHARE_OPEN)
+  sessionId   String?
+  source      String?
+  channel     String?
+  scene       String?
+  campaign    String?
+  referrerId  String?
+  ip          String?
+  userAgent   String?
+  createdAt   DateTime       @default(now())
+  shareLink   ShareLink      @relation(fields: [shareLinkId], references: [id])
+  activity    Activity?      @relation(fields: [activityId], references: [id])
+  merchant    Merchant?      @relation(fields: [merchantId], references: [id])
+  coupon      Coupon?        @relation(fields: [couponId], references: [id])
+
+  @@index([activityId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([source, channel, createdAt])
 }
 
 model MerchantPromotion {

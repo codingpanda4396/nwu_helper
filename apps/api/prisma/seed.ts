@@ -150,6 +150,87 @@ async function main() {
     });
   }
 
+  const [foodCoupon, printCoupon, drivingCoupon] = await Promise.all([
+    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-food" }, orderBy: { createdAt: "asc" } }),
+    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-print" }, orderBy: { createdAt: "asc" } }),
+    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-driving" }, orderBy: { createdAt: "asc" } })
+  ]);
+
+  const activityWindow = {
+    startAt: new Date("2026-05-20T00:00:00.000Z"),
+    endAt: new Date("2026-12-31T15:59:59.000Z")
+  };
+  const activities = [
+    {
+      id: "seed-activity-daily-food",
+      title: "今日爆品：饭点小馆满 30 减 8",
+      subtitle: "下课 20 分钟到店吃上热炒",
+      description: "适合宿舍聚餐和课后快餐，凭核销码到店使用。平台推荐活动，库存有限。",
+      type: "DAILY_DEAL" as const,
+      merchantId: "seed-merchant-food",
+      couponId: foodCoupon?.id,
+      coverImage: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
+      manualWeight: 100,
+      sortOrder: 10,
+      pricingMode: "FIXED" as const,
+      status: "ACTIVE" as const,
+      ...activityWindow
+    },
+    {
+      id: "seed-activity-female-nails",
+      title: "女生精选：周末轻松变美清单",
+      subtitle: "美甲、拍照、甜品先从靠谱门店开始",
+      description: "精选适合女生周末结伴去的门店活动，优先展示环境、口碑和到店体验。",
+      type: "FEMALE_SELECTED" as const,
+      merchantId: "seed-merchant-food",
+      couponId: foodCoupon?.id,
+      coverImage: "https://images.unsplash.com/photo-1515377905703-c4788e51af15?auto=format&fit=crop&w=1200&q=80",
+      manualWeight: 80,
+      sortOrder: 20,
+      pricingMode: "FREE" as const,
+      status: "ACTIVE" as const,
+      ...activityWindow
+    },
+    {
+      id: "seed-activity-group-print",
+      title: "宿舍拼团：资料打印一起省",
+      subtitle: "同宿舍凑单打印更划算",
+      description: "先组团领券，到店或到柜台出示核销码使用。MVP 阶段不接支付。",
+      type: "GROUP_DEAL" as const,
+      merchantId: "seed-merchant-print",
+      couponId: printCoupon?.id,
+      coverImage: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=1200&q=80",
+      manualWeight: 70,
+      sortOrder: 30,
+      pricingMode: "FREE" as const,
+      status: "ACTIVE" as const,
+      ...activityWindow
+    },
+    {
+      id: "seed-activity-driving",
+      title: "本周榜单：长安校园驾培报名优惠",
+      subtitle: "校车接送，适合假期集中训练",
+      description: "到店咨询后核销，帮助商家判断校园渠道报名转化。",
+      type: "GENERAL" as const,
+      merchantId: "seed-merchant-driving",
+      couponId: drivingCoupon?.id,
+      coverImage: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      manualWeight: 50,
+      sortOrder: 40,
+      pricingMode: "CPA" as const,
+      status: "ACTIVE" as const,
+      ...activityWindow
+    }
+  ];
+
+  for (const activity of activities) {
+    await prisma.activity.upsert({
+      where: { id: activity.id },
+      update: activity,
+      create: activity
+    });
+  }
+
   console.log("Seed completed.");
   console.log("Admin: 18800000000 / admin123456");
   console.log("Merchant demo: panda / 123456");

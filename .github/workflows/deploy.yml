@@ -20,10 +20,32 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
+permissions:
+  contents: read
+
 jobs:
   ci:
     name: Test and build
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: nwu
+          POSTGRES_PASSWORD: nwu_password
+          POSTGRES_DB: nwu_helper_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U nwu -d nwu_helper_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    env:
+      DATABASE_URL: postgresql://nwu:nwu_password@localhost:5432/nwu_helper_ci
+      JWT_SECRET: ci-secret
+      WEB_ORIGIN: http://localhost:5173
+      PUBLIC_WEB_URL: http://localhost:5173
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -45,6 +67,12 @@ jobs:
       - name: Generate Prisma Client
         run: pnpm db:generate
 
+      - name: Validate database migrations
+        run: pnpm db:migrate
+
+      - name: Validate seed data
+        run: pnpm db:seed
+
       - name: Typecheck
         run: pnpm typecheck
 
@@ -53,6 +81,11 @@ jobs:
 
       - name: Build
         run: pnpm build
+
+      - name: Build production Docker images
+        run: |
+          docker build --target api -t nwu-helper-api:${{ github.sha }} .
+          docker build --target web -t nwu-helper-web:${{ github.sha }} .
 
   deploy:
     name: Deploy to ECS
@@ -162,14 +195,19 @@ jobs:
             fi
             cd "$APP_DIR/current"
             docker compose -f docker-compose.prod.yml --env-file .env ps
+            HEALTH_OK=0
             for i in $(seq 1 30); do
               if docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/health').then(async r => { if (!r.ok) throw new Error(await r.text()); console.log(await r.text()); })"; then
-                exit 0
+                HEALTH_OK=1
+                break
               fi
               sleep 2
             done
-            docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api
-            exit 1
+            if [ "$HEALTH_OK" != "1" ]; then
+              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api
+              exit 1
+            fi
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/public/activities/home').then(async r => { const text = await r.text(); if (!r.ok) throw new Error(text); const body = JSON.parse(text); if (!body.success) throw new Error(text); console.log('activity api ok'); })"
 
       - name: Seed demo data
         if: github.event.inputs.seed == 'true'

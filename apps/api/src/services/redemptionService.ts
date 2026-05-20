@@ -53,6 +53,9 @@ export async function redeemCouponCode(merchantId: string, code: string, amount?
           channel: userCoupon.channel,
           scene: userCoupon.scene,
           campaign: userCoupon.campaign,
+          activityId: userCoupon.activityId,
+          shareLinkId: userCoupon.shareLinkId,
+          referrerId: userCoupon.referrerId,
           claimedSessionId: userCoupon.claimedSessionId
         },
         include: { coupon: true, student: true, userCoupon: true }

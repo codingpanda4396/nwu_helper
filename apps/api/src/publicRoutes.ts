@@ -4,6 +4,8 @@ import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
 import { claimCoupon } from "./services/couponService.js";
 import { compareMerchants } from "./services/rankingService.js";
+import { getHomeActivities, getPublicActivity, listPublicActivities } from "./services/activityService.js";
+import { createShareLink, openShareLink } from "./services/shareService.js";
 
 const listQuery = z.object({
   categoryId: z.string().optional(),
@@ -19,7 +21,14 @@ const logSchema = z.object({
   channel: z.string().optional(),
   scene: z.string().optional(),
   campaign: z.string().optional(),
+  activityId: z.string().optional(),
+  shareLinkId: z.string().optional(),
+  referrerId: z.string().optional(),
   target: z.string().optional()
+});
+
+const activityLogSchema = logSchema.omit({ merchantId: true }).extend({
+  merchantId: z.string().optional()
 });
 
 const claimSchema = z.object({
@@ -30,7 +39,25 @@ const claimSchema = z.object({
   source: z.string().optional(),
   channel: z.string().optional(),
   scene: z.string().optional(),
-  campaign: z.string().optional()
+  campaign: z.string().optional(),
+  activityId: z.string().optional(),
+  shareLinkId: z.string().optional(),
+  referrerId: z.string().optional()
+});
+
+const activityListQuery = z.object({
+  type: z.enum(["DAILY_DEAL", "FEMALE_SELECTED", "GROUP_DEAL", "NIGHT_FOOD", "GENERAL"]).optional(),
+  page: z.coerce.number().int().positive().default(1),
+  pageSize: z.coerce.number().int().positive().max(50).default(20)
+});
+
+const shareSchema = z.object({
+  source: z.string().optional(),
+  channel: z.string().optional(),
+  scene: z.string().optional(),
+  campaign: z.string().optional(),
+  referrerId: z.string().optional(),
+  sessionId: z.string().optional()
 });
 
 export async function publicRoutes(app: FastifyInstance) {
@@ -40,6 +67,102 @@ export async function publicRoutes(app: FastifyInstance) {
       orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
     });
     return ok(reply, items);
+  });
+
+  app.get("/api/public/activities", async (request, reply) => {
+    const query = activityListQuery.parse(request.query);
+    return ok(reply, await listPublicActivities(query));
+  });
+
+  app.get("/api/public/activities/home", async (_request, reply) => {
+    return ok(reply, await getHomeActivities());
+  });
+
+  app.get("/api/public/activities/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const activity = await getPublicActivity(id);
+    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在或已结束", 404);
+    return ok(reply, activity);
+  });
+
+  app.post("/api/public/activities/:id/exposures", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = activityLogSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动曝光参数错误");
+    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
+    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
+    const log = await prisma.exposureLog.create({
+      data: {
+        merchantId: activity.merchantId,
+        sessionId: parsed.data.sessionId,
+        source: parsed.data.source,
+        channel: parsed.data.channel,
+        scene: parsed.data.scene,
+        campaign: parsed.data.campaign,
+        activityId: activity.id,
+        shareLinkId: parsed.data.shareLinkId,
+        referrerId: parsed.data.referrerId,
+        ip: request.ip,
+        userAgent: request.headers["user-agent"]
+      }
+    });
+    return ok(reply, log);
+  });
+
+  app.post("/api/public/activities/:id/clicks", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = activityLogSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动点击参数错误");
+    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
+    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
+    const log = await prisma.clickLog.create({
+      data: {
+        merchantId: activity.merchantId,
+        sessionId: parsed.data.sessionId,
+        target: parsed.data.target ?? "activity-detail",
+        source: parsed.data.source,
+        channel: parsed.data.channel,
+        scene: parsed.data.scene,
+        campaign: parsed.data.campaign,
+        activityId: activity.id,
+        shareLinkId: parsed.data.shareLinkId,
+        referrerId: parsed.data.referrerId,
+        ip: request.ip,
+        userAgent: request.headers["user-agent"]
+      }
+    });
+    return ok(reply, log);
+  });
+
+  app.post("/api/public/activities/:id/share-links", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = shareSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "分享参数错误");
+    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
+    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
+    const shareLink = await createShareLink({
+      ...parsed.data,
+      activityId: activity.id,
+      merchantId: activity.merchantId,
+      couponId: activity.couponId,
+      targetType: "ACTIVITY",
+      targetId: activity.id
+    });
+    return ok(reply, { ...shareLink, url: `/share/${shareLink.token}` });
+  });
+
+  app.post("/api/public/share/:token/open", async (request, reply) => {
+    const { token } = z.object({ token: z.string().min(1) }).parse(request.params);
+    const parsed = shareSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "分享打开参数错误");
+    try {
+      const shareLink = await openShareLink(token, { ...parsed.data, ip: request.ip, userAgent: request.headers["user-agent"] });
+      const targetPath = shareLink.targetType === "ACTIVITY" ? `/activities/${shareLink.targetId}` : shareLink.targetType === "MERCHANT" ? `/merchants/${shareLink.targetId}` : `/coupons/${shareLink.targetId}`;
+      return ok(reply, { shareLink, targetPath });
+    } catch (error) {
+      if (error instanceof Error && error.message === "SHARE_LINK_NOT_FOUND") return fail(reply, "NOT_FOUND", "分享链接不存在", 404);
+      throw error;
+    }
   });
 
   app.get("/api/public/merchants", async (request, reply) => {
@@ -98,6 +221,9 @@ export async function publicRoutes(app: FastifyInstance) {
         channel: parsed.data.channel,
         scene: parsed.data.scene,
         campaign: parsed.data.campaign,
+        activityId: parsed.data.activityId,
+        shareLinkId: parsed.data.shareLinkId,
+        referrerId: parsed.data.referrerId,
         ip: request.ip,
         userAgent: request.headers["user-agent"]
       }
@@ -117,6 +243,9 @@ export async function publicRoutes(app: FastifyInstance) {
         channel: parsed.data.channel,
         scene: parsed.data.scene,
         campaign: parsed.data.campaign,
+        activityId: parsed.data.activityId,
+        shareLinkId: parsed.data.shareLinkId,
+        referrerId: parsed.data.referrerId,
         ip: request.ip,
         userAgent: request.headers["user-agent"]
       }

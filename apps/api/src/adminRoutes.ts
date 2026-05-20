@@ -2,7 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
-import { getBySource, getChannelPerformance, getCouponPerformance, getSummary, getTrends, parseAnalyticsScope } from "./services/analyticsService.js";
+import { getActivityPerformance, getBySource, getChannelPerformance, getCouponPerformance, getSummary, getTrends, parseAnalyticsScope } from "./services/analyticsService.js";
 import { buildAnalyticsCsv } from "./services/exportService.js";
 import { previewRedemptionCode, redeemCouponCode } from "./services/redemptionService.js";
 
@@ -97,6 +97,23 @@ const promotionSchema = z.object({
   isActive: z.boolean().default(true)
 });
 
+const activitySchema = z.object({
+  title: z.string().min(1),
+  subtitle: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  type: z.enum(["DAILY_DEAL", "FEMALE_SELECTED", "GROUP_DEAL", "NIGHT_FOOD", "GENERAL"]).default("GENERAL"),
+  merchantId: z.string().min(1),
+  couponId: z.string().nullable().optional(),
+  coverImage: z.string().nullable().optional(),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date(),
+  manualWeight: z.coerce.number().int().default(0),
+  sortOrder: z.coerce.number().int().default(100),
+  budget: z.coerce.number().nullable().optional(),
+  pricingMode: z.enum(["FREE", "CPC", "CPA", "FIXED"]).default("FREE"),
+  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT")
+});
+
 function authUser(request: { user?: unknown }) {
   return request.user as { sub: string; role: "STUDENT" | "MERCHANT" | "ADMIN"; name: string };
 }
@@ -142,6 +159,24 @@ export async function adminRoutes(app: FastifyInstance) {
       prisma.couponRedemption.aggregate({ where: { merchantId }, _sum: { amount: true } })
     ]);
     return ok(reply, { merchant, coupons, stats: { claims, used, exposureCount, clickCount, redemptionAmount: redemptionAmount._sum.amount ?? 0 } });
+  });
+
+  app.get("/api/merchant/coupons", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    return ok(reply, await prisma.coupon.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" } }));
+  });
+
+  app.get("/api/merchant/activities", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    return ok(reply, await prisma.activity.findMany({
+      where: { merchantId },
+      include: { coupon: true },
+      orderBy: [{ status: "asc" }, { manualWeight: "desc" }, { sortOrder: "asc" }]
+    }));
   });
 
   app.patch("/api/merchant/profile", async (request, reply) => {
@@ -259,6 +294,27 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, await getChannelPerformance(parseAnalyticsScope(request.query, merchantId)));
   });
 
+  app.get("/api/merchant/reports/overview", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    return ok(reply, await getSummary(parseAnalyticsScope(request.query, merchantId)));
+  });
+
+  app.get("/api/merchant/reports/activities", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    return ok(reply, await getActivityPerformance(parseAnalyticsScope(request.query, merchantId)));
+  });
+
+  app.get("/api/merchant/reports/channels", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    return ok(reply, await getBySource(parseAnalyticsScope(request.query, merchantId)));
+  });
+
   app.get("/api/merchant/trends", async (request, reply) => {
     const auth = authUser(request);
     const merchantId = await merchantIdForUser(auth.sub);
@@ -335,6 +391,45 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, await prisma.coupon.findMany({ include: { merchant: true }, orderBy: { createdAt: "desc" } }));
   });
 
+  app.get("/api/admin/activities", async (_request, reply) => {
+    return ok(reply, await prisma.activity.findMany({
+      include: { merchant: true, coupon: true },
+      orderBy: [{ status: "asc" }, { manualWeight: "desc" }, { sortOrder: "asc" }, { startAt: "desc" }]
+    }));
+  });
+
+  app.post("/api/admin/activities", async (request, reply) => {
+    const parsed = activitySchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
+    if (parsed.data.couponId) {
+      const coupon = await prisma.coupon.findFirst({ where: { id: parsed.data.couponId, merchantId: parsed.data.merchantId } });
+      if (!coupon) return fail(reply, "VALIDATION_ERROR", "优惠券不属于所选商家");
+    }
+    return ok(reply, await prisma.activity.create({ data: { ...parsed.data, couponId: parsed.data.couponId || null } }));
+  });
+
+  app.patch("/api/admin/activities/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = activitySchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
+    const current = await prisma.activity.findUnique({ where: { id } });
+    if (!current) return fail(reply, "NOT_FOUND", "活动不存在", 404);
+    const merchantId = parsed.data.merchantId ?? current.merchantId;
+    if (parsed.data.couponId) {
+      const coupon = await prisma.coupon.findFirst({ where: { id: parsed.data.couponId, merchantId } });
+      if (!coupon) return fail(reply, "VALIDATION_ERROR", "优惠券不属于所选商家");
+    }
+    const data = { ...parsed.data };
+    if ("couponId" in data) data.couponId = data.couponId || null;
+    return ok(reply, await prisma.activity.update({ where: { id }, data }));
+  });
+
+  app.patch("/api/admin/activities/:id/status", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const { status } = z.object({ status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]) }).parse(request.body);
+    return ok(reply, await prisma.activity.update({ where: { id }, data: { status } }));
+  });
+
   app.post("/api/admin/coupons", async (request, reply) => {
     const parsed = couponSchema.safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
@@ -371,6 +466,37 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/api/admin/analytics/by-source", async (request, reply) => {
     return ok(reply, await getBySource(parseAnalyticsScope(request.query)));
+  });
+
+  app.get("/api/admin/reports/overview", async (request, reply) => {
+    return ok(reply, await getSummary(parseAnalyticsScope(request.query)));
+  });
+
+  app.get("/api/admin/reports/channels", async (request, reply) => {
+    return ok(reply, await getBySource(parseAnalyticsScope(request.query)));
+  });
+
+  app.get("/api/admin/reports/activities", async (request, reply) => {
+    return ok(reply, await getActivityPerformance(parseAnalyticsScope(request.query)));
+  });
+
+  app.get("/api/admin/reports/merchants", async (_request, reply) => {
+    const merchants = await prisma.merchant.findMany({
+      include: { category: true, userCoupons: true, redemptions: true, exposureLogs: true, clickLogs: true },
+      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
+    });
+    return ok(reply, merchants.map((merchant) => ({
+      id: merchant.id,
+      name: merchant.name,
+      category: merchant.category.name,
+      status: merchant.status,
+      exposures: merchant.exposureLogs.length,
+      clicks: merchant.clickLogs.length,
+      claims: merchant.userCoupons.length,
+      redemptions: merchant.redemptions.length,
+      redemptionRate: merchant.userCoupons.length ? Number((merchant.redemptions.length / merchant.userCoupons.length).toFixed(4)) : 0,
+      redemptionAmount: merchant.redemptions.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+    })));
   });
 
   app.get("/api/admin/analytics/export.csv", async (request, reply) => {
