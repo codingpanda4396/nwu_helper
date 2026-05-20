@@ -1,12 +1,23 @@
 name: CI/CD to Aliyun ECS
 
 on:
+  pull_request:
+    branches: [main]
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      seed:
+        description: "Run pnpm db:seed after deployment"
+        required: false
+        default: "false"
+        type: choice
+        options:
+          - "false"
+          - "true"
 
 concurrency:
-  group: ecs-production
+  group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: false
 
 jobs:
@@ -46,7 +57,7 @@ jobs:
   deploy:
     name: Deploy to ECS
     needs: ci
-    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    if: github.event_name != 'pull_request' && (github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch')
     runs-on: ubuntu-latest
     environment: production
     env:
@@ -134,3 +145,33 @@ jobs:
             PACKAGE="$UPLOAD_DIR/nwu-helper.tar.gz" \
             ENV_FILE="$UPLOAD_DIR/production.env" \
             sh "$UPLOAD_DIR/deploy.sh"
+
+      - name: Verify deployment health
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          port: ${{ secrets.ECS_SSH_PORT || '22' }}
+          command_timeout: 5m
+          script: |
+            set -eu
+            APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
+            cd "$APP_DIR/current"
+            docker compose -f docker-compose.prod.yml --env-file .env ps
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/health').then(async r => { if (!r.ok) throw new Error(await r.text()); console.log(await r.text()); })"
+
+      - name: Seed demo data
+        if: github.event.inputs.seed == 'true'
+        uses: appleboy/ssh-action@v1.2.0
+        with:
+          host: ${{ secrets.ECS_HOST }}
+          username: ${{ secrets.ECS_USER }}
+          key: ${{ secrets.ECS_SSH_KEY }}
+          port: ${{ secrets.ECS_SSH_PORT || '22' }}
+          command_timeout: 10m
+          script: |
+            set -eu
+            APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
+            cd "$APP_DIR/current"
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed

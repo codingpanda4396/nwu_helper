@@ -38,6 +38,7 @@ h1, h2, h3, p { margin-top: 0; letter-spacing: 0; }
 .primary { padding: 0 14px; background: #0b7a75; color: #fff; }
 .primary:disabled { opacity: 0.55; cursor: not-allowed; }
 .icon-button { width: 42px; background: #e5edf5; color: #243447; }
+.icon-button.wide { width: auto; padding: 0 12px; }
 .error { color: #b42318; }
 
 .student-shell { min-height: 100vh; background: #f5f7fa; }
@@ -108,7 +109,7 @@ h1, h2, h3, p { margin-top: 0; letter-spacing: 0; }
 }
 .merchant-row span { min-width: 0; display: grid; gap: 6px; align-content: start; }
 .merchant-row strong { font-size: 18px; }
-.merchant-row small { color: #667085; line-height: 1.45; }
+.merchant-row small { color: #667085; line-height: 1.45; display: flex; align-items: center; gap: 4px; }
 .merchant-row b { color: #b54708; font-size: 14px; }
 
 .drawer-backdrop {
@@ -130,6 +131,38 @@ h1, h2, h3, p { margin-top: 0; letter-spacing: 0; }
 .cover { width: 100%; height: 220px; object-fit: cover; }
 .drawer-body { padding: 18px; display: grid; gap: 10px; }
 .drawer-body p { display: flex; gap: 8px; align-items: center; color: #475467; line-height: 1.55; }
+.trust-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.trust-strip span {
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #cfd8e3;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #344054;
+  font-weight: 750;
+  background: #f8fafc;
+}
+.claim-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.success-code {
+  padding: 12px;
+  border: 1px solid #9fd3c7;
+  border-radius: 8px;
+  display: grid;
+  gap: 4px;
+  background: #eefbf6;
+}
+.success-code strong { font-size: 28px; letter-spacing: 0; color: #075f5a; }
+.success-code small { color: #475467; }
 .coupon {
   padding: 12px;
   border: 1px solid #d9e2ec;
@@ -219,6 +252,19 @@ aside {
 .metric strong { font-size: 25px; overflow-wrap: anywhere; }
 .work-panel { margin: 18px 0; padding: 16px; }
 .work-panel h2 { font-size: 18px; }
+.redeem-panel h2 { font-size: 22px; }
+.redeem-row {
+  display: grid;
+  grid-template-columns: minmax(280px, 2fr) minmax(160px, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+.redeem-row input:first-child {
+  min-height: 58px;
+  font-size: 22px;
+  font-weight: 850;
+  text-transform: uppercase;
+}
 .preview-panel {
   margin-top: 12px;
   padding: 12px;
@@ -230,7 +276,36 @@ aside {
   align-items: center;
   color: #475467;
 }
+.preview-panel.ready { border-color: #9fd3c7; background: #f3fcf8; }
+.preview-panel.blocked { border-color: #fecaca; background: #fff5f5; }
 .preview-panel strong { color: #101828; }
+.edit-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(220px, 1fr));
+  gap: 12px;
+}
+.edit-grid textarea { min-height: 96px; resize: vertical; }
+.span-2 { grid-column: span 2; }
+.button-row {
+  margin-top: 12px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+.coupon-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 12px;
+}
+.coupon-card {
+  padding: 14px;
+  border: 1px solid #d9e2ec;
+  border-radius: 8px;
+  display: grid;
+  gap: 8px;
+  background: #fff;
+}
+.coupon-card span, .coupon-card small { color: #667085; line-height: 1.5; }
 .form-row {
   display: grid;
   grid-template-columns: repeat(5, minmax(140px, 1fr));
@@ -257,6 +332,7 @@ th { color: #667085; font-size: 13px; }
   .brand { flex: 0 0 auto; margin: 0 8px 0 0; }
   .nav-button { flex: 0 0 auto; width: auto; margin-bottom: 0; }
   .admin-main { padding: 16px; }
-  .form-row, .form-row.two { grid-template-columns: 1fr; }
+  .form-row, .form-row.two, .redeem-row, .edit-grid, .claim-form { grid-template-columns: 1fr; }
+  .span-2 { grid-column: span 1; }
   .coupon { grid-template-columns: 1fr; }
 }

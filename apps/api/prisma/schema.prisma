@@ -52,6 +52,7 @@ enum PromotionSource {
 model User {
   id              String             @id @default(cuid())
   name            String
+  username        String?            @unique
   phone           String?            @unique
   openid          String?            @unique
   role            UserRole           @default(STUDENT)

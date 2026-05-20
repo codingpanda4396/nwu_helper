@@ -16,6 +16,7 @@ const categories = [
 async function main() {
   const adminPassword = await bcrypt.hash("admin123456", 10);
   const merchantPassword = await bcrypt.hash("merchant123456", 10);
+  const demoMerchantPassword = await bcrypt.hash("123456", 10);
 
   await prisma.user.upsert({
     where: { phone: "18800000000" },
@@ -36,8 +37,8 @@ async function main() {
   const merchantOwners = await Promise.all([
     prisma.user.upsert({
       where: { phone: "18800000011" },
-      update: { name: "饭点小馆店长", role: "MERCHANT", passwordHash: merchantPassword },
-      create: { name: "饭点小馆店长", phone: "18800000011", role: "MERCHANT", passwordHash: merchantPassword }
+      update: { name: "饭点小馆店长", username: "panda", role: "MERCHANT", passwordHash: demoMerchantPassword },
+      create: { name: "饭点小馆店长", username: "panda", phone: "18800000011", role: "MERCHANT", passwordHash: demoMerchantPassword }
     }),
     prisma.user.upsert({
       where: { phone: "18800000012" },
@@ -151,7 +152,7 @@ async function main() {
 
   console.log("Seed completed.");
   console.log("Admin: 18800000000 / admin123456");
-  console.log("Merchant demo: 18800000011 / merchant123456");
+  console.log("Merchant demo: panda / 123456");
 }
 
 main()

@@ -5,16 +5,25 @@ import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
 
 const loginSchema = z.object({
-  phone: z.string().min(1),
+  phone: z.string().min(1).optional(),
+  username: z.string().min(1).optional(),
+  account: z.string().min(1).optional(),
   password: z.string().min(1)
-});
+}).refine((data) => data.phone || data.username || data.account, "账号不能为空");
 
 export async function authRoutes(app: FastifyInstance) {
   app.post("/api/auth/login", async (request, reply) => {
     const parsed = loginSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "手机号和密码不能为空");
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "账号和密码不能为空");
 
-    const user = await prisma.user.findUnique({ where: { phone: parsed.data.phone } });
+    const account = parsed.data.account ?? parsed.data.username ?? parsed.data.phone;
+    const accountWhere = [];
+    if (parsed.data.username || parsed.data.account) accountWhere.push({ username: account });
+    if (parsed.data.phone || parsed.data.account) accountWhere.push({ phone: account });
+    const user = await prisma.user.findFirst({
+      where: { OR: accountWhere },
+      include: { merchantProfile: true }
+    });
     if (!user || user.status !== "ACTIVE" || !user.passwordHash) return fail(reply, "AUTH_FAILED", "账号或密码错误", 401);
 
     const matched = await bcrypt.compare(parsed.data.password, user.passwordHash);
@@ -23,7 +32,7 @@ export async function authRoutes(app: FastifyInstance) {
     const token = app.jwt.sign({ sub: user.id, role: user.role, name: user.name });
     return ok(reply, {
       token,
-      user: { id: user.id, name: user.name, phone: user.phone, role: user.role }
+      user: { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role, merchantId: user.merchantProfile?.id }
     });
   });
 }

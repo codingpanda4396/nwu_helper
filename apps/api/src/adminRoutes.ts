@@ -48,8 +48,31 @@ const couponSchema = z.object({
   status: z.enum(["ACTIVE", "PAUSED", "EXPIRED"]).default("ACTIVE")
 });
 
+const merchantProfileSchema = z.object({
+  name: z.string().min(1).optional(),
+  summary: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  address: z.string().min(1).optional(),
+  phone: z.string().nullable().optional(),
+  businessHours: z.string().nullable().optional(),
+  coverImageUrl: z.string().nullable().optional()
+});
+
+const merchantCouponSchema = z.object({
+  title: z.string().min(1),
+  description: z.string().nullable().optional(),
+  threshold: z.coerce.number().nullable().optional(),
+  discountValue: z.coerce.number().nullable().optional(),
+  totalStock: z.coerce.number().int().positive(),
+  remainingStock: z.coerce.number().int().nonnegative().optional(),
+  validFrom: z.coerce.date().optional(),
+  validTo: z.coerce.date(),
+  status: z.enum(["ACTIVE", "PAUSED", "EXPIRED"]).default("ACTIVE")
+});
+
 const merchantUserSchema = z.object({
   name: z.string().min(1),
+  username: z.string().min(1).optional(),
   phone: z.string().min(5),
   passwordHash: z.string().optional()
 });
@@ -101,7 +124,7 @@ export async function adminRoutes(app: FastifyInstance) {
       include: { merchantProfile: true }
     });
     if (!user) return fail(reply, "NOT_FOUND", "用户不存在", 404);
-    return ok(reply, { id: user.id, name: user.name, phone: user.phone, role: user.role, merchantId: user.merchantProfile?.id });
+    return ok(reply, { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role, merchantId: user.merchantProfile?.id });
   });
 
   app.get("/api/merchant/overview", async (request, reply) => {
@@ -119,6 +142,37 @@ export async function adminRoutes(app: FastifyInstance) {
       prisma.couponRedemption.aggregate({ where: { merchantId }, _sum: { amount: true } })
     ]);
     return ok(reply, { merchant, coupons, stats: { claims, used, exposureCount, clickCount, redemptionAmount: redemptionAmount._sum.amount ?? 0 } });
+  });
+
+  app.patch("/api/merchant/profile", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    const parsed = merchantProfileSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "店铺资料参数错误");
+    return ok(reply, await prisma.merchant.update({ where: { id: merchantId }, data: parsed.data, include: { category: true } }));
+  });
+
+  app.post("/api/merchant/coupons", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    const parsed = merchantCouponSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
+    const totalStock = parsed.data.totalStock;
+    return ok(reply, await prisma.coupon.create({ data: { ...parsed.data, merchantId, remainingStock: parsed.data.remainingStock ?? totalStock } }));
+  });
+
+  app.patch("/api/merchant/coupons/:id", async (request, reply) => {
+    const auth = authUser(request);
+    const merchantId = await merchantIdForUser(auth.sub);
+    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const existing = await prisma.coupon.findFirst({ where: { id, merchantId } });
+    if (!existing) return fail(reply, "NOT_FOUND", "优惠券不存在", 404);
+    const parsed = merchantCouponSchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
+    return ok(reply, await prisma.coupon.update({ where: { id }, data: parsed.data }));
   });
 
   app.get("/api/merchant/claims", async (request, reply) => {
@@ -252,8 +306,8 @@ export async function adminRoutes(app: FastifyInstance) {
     const passwordHash = await bcrypt.hash(parsed.data.passwordHash ?? "merchant123456", 10);
     const user = await prisma.user.upsert({
       where: { phone: parsed.data.phone },
-      update: { name: parsed.data.name, role: "MERCHANT", passwordHash },
-      create: { name: parsed.data.name, phone: parsed.data.phone, role: "MERCHANT", passwordHash }
+      update: { name: parsed.data.name, username: parsed.data.username, role: "MERCHANT", passwordHash },
+      create: { name: parsed.data.name, username: parsed.data.username, phone: parsed.data.phone, role: "MERCHANT", passwordHash }
     });
     return ok(reply, user);
   });

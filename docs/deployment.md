@@ -1,6 +1,6 @@
 # ECS 一键 CI/CD
 
-这套部署面向阿里云 ECS：GitHub Actions 在 `main` 分支或手动触发时完成测试、构建、打包，然后通过 SSH/SCP 上传到 ECS，用 `docker compose` 启动 `postgres`、`api`、`web`。
+这套部署面向阿里云 ECS：GitHub Actions 在 PR 时执行 CI，在 `main` 分支或手动触发时完成测试、构建、打包，然后通过 SSH/SCP 上传到 ECS，用 `docker compose` 启动 `postgres`、`api`、`web`，最后检查 API 健康状态。
 
 服务器不需要预先 clone 仓库，也不需要配置 git deploy key。
 
@@ -68,10 +68,11 @@ WEB_BIND=0.0.0.0:8080
 
 ## 3. 一键部署
 
-有两种触发方式：
+有三种触发方式：
 
-1. push 到 `main`。
-2. GitHub Actions 页面选择 `CI/CD to Aliyun ECS`，点击 `Run workflow`。
+1. PR 到 `main`：只跑安装、类型检查、测试和构建，不部署。
+2. push 到 `main`：自动部署到 ECS。
+3. GitHub Actions 页面选择 `CI/CD to Aliyun ECS`，点击 `Run workflow` 手动部署。
 
 流水线会执行：
 
@@ -84,12 +85,13 @@ WEB_BIND=0.0.0.0:8080
 7. ECS 上解压到 `${ECS_APP_DIR}/releases/${GITHUB_SHA}`
 8. 复制生产 `.env`
 9. `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
+10. 在 API 容器内请求 `http://127.0.0.1:4000/api/health` 验证部署健康。
 
 API 容器启动时会执行 `pnpm db:migrate && pnpm start`，所以 migration 会随部署自动应用。
 
 ## 4. 首次 seed
 
-首次部署后，如需初始化演示数据：
+首次部署后，如需初始化演示数据，可以在手动触发 workflow 时把 `Run pnpm db:seed after deployment` 选为 `true`。也可以在 ECS 上手动执行：
 
 ```bash
 cd /opt/nwu_helper/current

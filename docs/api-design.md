@@ -24,12 +24,15 @@
 
 ## Auth API
 
-- `POST /api/auth/login`：管理员或商家登录，返回 JWT。
+- `POST /api/auth/login`：管理员或商家登录，支持 `{ phone, password }`、`{ username, password }` 或 `{ account, password }`，返回 JWT。
 - `GET /api/users/me`：读取当前账号和商家绑定信息。
 
 ## Merchant API
 
 - `GET /api/merchant/overview`：本店资料、优惠券和基础转化统计。
+- `PATCH /api/merchant/profile`：当前商家维护本店名称、简介、地址、电话、营业时间和封面图。
+- `POST /api/merchant/coupons`：当前商家创建本店优惠券。
+- `PATCH /api/merchant/coupons/:id`：当前商家修改本店优惠券。
 - `GET /api/merchant/claims`：本店领券记录。
 - `GET /api/merchant/redemptions`：本店核销记录。
 - `POST /api/merchant/redeem`：输入核销码完成核销。
