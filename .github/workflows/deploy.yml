@@ -157,9 +157,19 @@ jobs:
           script: |
             set -eu
             APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
+            if [ ! -d "$APP_DIR/current" ] && [ -d /opt/nwu_helper/current ]; then
+              APP_DIR="/opt/nwu_helper"
+            fi
             cd "$APP_DIR/current"
             docker compose -f docker-compose.prod.yml --env-file .env ps
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/health').then(async r => { if (!r.ok) throw new Error(await r.text()); console.log(await r.text()); })"
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/health').then(async r => { if (!r.ok) throw new Error(await r.text()); console.log(await r.text()); })"; then
+                exit 0
+              fi
+              sleep 2
+            done
+            docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api
+            exit 1
 
       - name: Seed demo data
         if: github.event.inputs.seed == 'true'
@@ -173,5 +183,8 @@ jobs:
           script: |
             set -eu
             APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
+            if [ ! -d "$APP_DIR/current" ] && [ -d /opt/nwu_helper/current ]; then
+              APP_DIR="/opt/nwu_helper"
+            fi
             cd "$APP_DIR/current"
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed

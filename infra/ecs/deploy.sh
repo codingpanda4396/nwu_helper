@@ -71,6 +71,10 @@ log "Pruning old Docker layers"
 docker image prune -f >/dev/null 2>&1 || true
 
 log "Keeping latest $KEEP_RELEASES releases"
-find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d | sort -r | awk "NR>$KEEP_RELEASES" | xargs rm -rf 2>/dev/null || true
+CURRENT_TARGET="$(readlink -f "$APP_DIR/current" 2>/dev/null || true)"
+find "$APP_DIR/releases" -mindepth 1 -maxdepth 1 -type d ! -path "$CURRENT_TARGET" -printf '%T@ %p\n' \
+  | sort -rn \
+  | awk "NR>$KEEP_RELEASES {print \$2}" \
+  | xargs -r rm -rf 2>/dev/null || true
 
 log "Done"
