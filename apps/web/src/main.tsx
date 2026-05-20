@@ -200,11 +200,11 @@ function Authed({ children, requiredRole, title, defaultAccount, defaultPassword
     api<User>("/api/users/me").then(setUser).finally(() => setChecked(true));
   }, []);
   if (!checked) return <main className="center-page">加载中...</main>;
-  if (!user || user.role !== requiredRole) return <Login title={title} defaultAccount={defaultAccount} defaultPassword={defaultPassword} accountLabel={accountLabel} onLogin={setUser} />;
+  if (!user || user.role !== requiredRole) return <Login title={title} requiredRole={requiredRole} defaultAccount={defaultAccount} defaultPassword={defaultPassword} accountLabel={accountLabel} onLogin={setUser} />;
   return <>{children}</>;
 }
 
-function Login({ title, defaultAccount, defaultPassword, accountLabel, onLogin }: { title: string; defaultAccount: string; defaultPassword: string; accountLabel: string; onLogin: (user: User) => void }) {
+function Login({ title, requiredRole, defaultAccount, defaultPassword, accountLabel, onLogin }: { title: string; requiredRole: User["role"]; defaultAccount: string; defaultPassword: string; accountLabel: string; onLogin: (user: User) => void }) {
   const [account, setAccount] = useState(defaultAccount);
   const [password, setPassword] = useState(defaultPassword);
   const [error, setError] = useState("");
@@ -213,6 +213,10 @@ function Login({ title, defaultAccount, defaultPassword, accountLabel, onLogin }
     try {
       const data = await api<{ token: string; user: User }>("/api/auth/login", { method: "POST", body: JSON.stringify({ account, password }) });
       localStorage.setItem("token", data.token);
+      if (data.user.role !== requiredRole) {
+        location.href = data.user.role === "MERCHANT" ? "/merchant" : data.user.role === "ADMIN" ? "/admin" : "/";
+        return;
+      }
       onLogin(data.user);
     } catch (err) {
       setError(err instanceof Error ? err.message : "登录失败");
