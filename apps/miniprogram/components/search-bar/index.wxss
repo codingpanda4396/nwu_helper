@@ -1,0 +1,23 @@
+.search {
+  display: flex;
+  align-items: center;
+  height: 78rpx;
+  padding: 0 26rpx;
+  border-radius: 18rpx;
+  background: #ffffff;
+  box-shadow: 0 10rpx 30rpx rgba(31, 41, 51, 0.08);
+}
+
+.icon {
+  width: 36rpx;
+  color: #19b36b;
+  font-size: 36rpx;
+  line-height: 1;
+}
+
+input {
+  flex: 1;
+  height: 78rpx;
+  color: #1f2933;
+  font-size: 27rpx;
+}

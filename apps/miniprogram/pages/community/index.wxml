@@ -1,0 +1,18 @@
+<view class="page community">
+  <view class="top card">
+    <view>
+      <view class="title">西小北北</view>
+      <view class="desc">校园墙、求助、拼饭、二手和校园信息</view>
+    </view>
+    <button bindtap="publish">发布</button>
+  </view>
+
+  <scroll-view class="tabs" scroll-x enable-flex>
+    <button wx:for="{{types}}" wx:key="*this" class="tab {{activeType === item ? 'active' : ''}}" data-type="{{item}}" bindtap="setType">{{item}}</button>
+  </scroll-view>
+
+  <view class="notice">发言内容需遵守校园社区规范</view>
+
+  <community-post-card wx:for="{{list}}" wx:key="id" post="{{item}}" bind:open="openPost" />
+  <empty-state wx:if="{{!list.length}}" title="暂无帖子" desc="换个分类看看，或稍后再来。" />
+</view>

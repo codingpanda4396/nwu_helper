@@ -1,0 +1,11 @@
+{
+  "navigationBarTitleText": "西大圈",
+  "usingComponents": {
+    "search-bar": "/components/search-bar/index",
+    "section-title": "/components/section-title/index",
+    "banner-swiper": "/components/banner-swiper/index",
+    "quick-grid": "/components/quick-grid/index",
+    "activity-card": "/components/activity-card/index",
+    "qrcode-block": "/components/qrcode-block/index"
+  }
+}

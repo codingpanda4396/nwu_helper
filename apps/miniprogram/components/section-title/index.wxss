@@ -1,0 +1,27 @@
+.section-title {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 20rpx;
+  margin: 34rpx 0 18rpx;
+}
+
+.title {
+  color: #1f2933;
+  font-size: 34rpx;
+  font-weight: 800;
+  line-height: 1.25;
+}
+
+.hint {
+  margin-top: 6rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+}
+
+.action {
+  flex: 0 0 auto;
+  color: #19b36b;
+  font-size: 25rpx;
+  line-height: 1.4;
+}

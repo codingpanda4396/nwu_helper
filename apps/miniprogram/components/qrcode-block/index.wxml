@@ -1,0 +1,8 @@
+<view class="qr card">
+  <image src="{{image}}" mode="aspectFill" />
+  <view class="copy">
+    <view class="title">{{title}}</view>
+    <view class="desc">{{desc}}</view>
+    <button class="ghost" bindtap="onTap">扫码咨询</button>
+  </view>
+</view>

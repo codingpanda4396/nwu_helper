@@ -1,0 +1,74 @@
+.merchant {
+  display: flex;
+  gap: 18rpx;
+  padding: 18rpx;
+  margin-bottom: 18rpx;
+  overflow: hidden;
+}
+
+image {
+  width: 180rpx;
+  height: 150rpx;
+  flex: 0 0 auto;
+  border-radius: 16rpx;
+  background: #eef2f7;
+}
+
+.content {
+  flex: 1;
+  min-width: 0;
+}
+
+.top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14rpx;
+}
+
+.name {
+  min-width: 0;
+  color: #1f2933;
+  font-size: 31rpx;
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.rating {
+  flex: 0 0 auto;
+  color: #ff8a1f;
+  font-size: 23rpx;
+  font-weight: 800;
+}
+
+.meta,
+.desc {
+  margin-top: 8rpx;
+  color: #6b7280;
+  font-size: 23rpx;
+  line-height: 1.35;
+}
+
+.tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8rpx;
+  margin-top: 10rpx;
+}
+
+.tags text {
+  padding: 3rpx 10rpx;
+  border-radius: 999rpx;
+  color: #53606f;
+  background: #f2f4f7;
+  font-size: 20rpx;
+}
+
+.discount {
+  margin-top: 10rpx;
+  color: #ff8a1f;
+  font-size: 25rpx;
+  font-weight: 900;
+}

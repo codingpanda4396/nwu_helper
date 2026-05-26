@@ -1,0 +1,10 @@
+<view class="page">
+  <scroll-view class="tabs" scroll-x enable-flex>
+    <button wx:for="{{categories}}" wx:key="id" class="tab {{activeCategory === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="setCategory">{{item.name}}</button>
+  </scroll-view>
+
+  <view class="list" wx:if="{{list.length}}">
+    <merchant-card wx:for="{{list}}" wx:key="id" merchant="{{item}}" bind:open="openMerchant" />
+  </view>
+  <empty-state wx:else title="这个分类还在招募商家" desc="你也可以把常去的小店推荐给西大圈。" action-text="推荐商家" bind:action="recommendMerchant" />
+</view>

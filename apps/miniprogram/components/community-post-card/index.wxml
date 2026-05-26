@@ -1,0 +1,12 @@
+<button class="post card" bindtap="onTap">
+  <view class="head">
+    <text class="type">{{post.type}}</text>
+    <text class="time">{{post.time}}</text>
+  </view>
+  <view class="title">{{post.title}}</view>
+  <view class="summary">{{post.summary}}</view>
+  <view class="foot">
+    <text>赞 {{post.likeCount}}</text>
+    <text>评论 {{post.commentCount}}</text>
+  </view>
+</button>

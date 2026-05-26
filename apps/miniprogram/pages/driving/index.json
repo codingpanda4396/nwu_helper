@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "驾校",
+  "usingComponents": {
+    "section-title": "/components/section-title/index",
+    "qrcode-block": "/components/qrcode-block/index"
+  }
+}

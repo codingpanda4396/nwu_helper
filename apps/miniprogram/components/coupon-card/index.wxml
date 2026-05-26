@@ -1,0 +1,8 @@
+<view class="coupon">
+  <view class="left">
+    <view class="title">{{coupon.title}}</view>
+    <view class="desc">{{coupon.description}}</view>
+    <view class="meta">{{coupon.stockText}} · 有效期至 {{coupon.validTo}}</view>
+  </view>
+  <button class="claim" bindtap="onTap">领取</button>
+</view>

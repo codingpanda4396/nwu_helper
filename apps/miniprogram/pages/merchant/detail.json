@@ -1,0 +1,9 @@
+{
+  "navigationBarTitleText": "商家详情",
+  "usingComponents": {
+    "section-title": "/components/section-title/index",
+    "coupon-card": "/components/coupon-card/index",
+    "qrcode-block": "/components/qrcode-block/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}

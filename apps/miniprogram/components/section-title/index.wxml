@@ -1,0 +1,7 @@
+<view class="section-title">
+  <view>
+    <view class="title">{{title}}</view>
+    <view wx:if="{{hint}}" class="hint">{{hint}}</view>
+  </view>
+  <button wx:if="{{actionText}}" class="action" bindtap="onAction">{{actionText}}</button>
+</view>

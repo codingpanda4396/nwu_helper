@@ -1,0 +1,7 @@
+{
+  "navigationBarTitleText": "讨论区",
+  "usingComponents": {
+    "community-post-card": "/components/community-post-card/index",
+    "empty-state": "/components/empty-state/index"
+  }
+}
