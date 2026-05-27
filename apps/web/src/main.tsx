@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, ChevronLeft, Clock, Gift, Image, ListChecks, LogOut, MapPin, MessageSquareText, Shuffle, Sparkles, Store, Ticket, Utensils, Wrench } from "lucide-react";
+import { BarChart3, BadgePercent, CalendarDays, Car, ChevronLeft, ChevronRight, Clock, Coffee, Gift, Heart, Home, Image, Info, ListChecks, LogOut, MapPin, Megaphone, MessageCircle, MessageSquareText, Phone, Plus, QrCode, Send, ShieldCheck, Shuffle, Sparkles, Star, Store, Ticket, ThumbsUp, Utensils, Wrench } from "lucide-react";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -72,22 +72,92 @@ function menuText(value: unknown) {
 }
 
 function webImage(value?: string) {
-  return value && /^(https?:|data:|\/api\/)/.test(value) ? value : "";
+  return value && /^(https?:|data:|\/api\/|\/assets\/)/.test(value) ? value : "";
 }
 
+type H5Tab = "home" | "food" | "driving" | "services" | "community" | "about";
+
+const asset = (name: string) => `/assets/images/${name}`;
+const qrPlaceholder = asset("qr-placeholder.jpg");
+const h5Tabs: { id: H5Tab; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
+  { id: "home", label: "首页", Icon: Home },
+  { id: "food", label: "美食", Icon: Utensils },
+  { id: "driving", label: "驾校", Icon: Car },
+  { id: "services", label: "生活服务", Icon: Wrench },
+  { id: "community", label: "讨论区", Icon: MessageCircle },
+  { id: "about", label: "关于", Icon: Info }
+];
+
 function StudentHome() {
+  const [activeTab, setActiveTab] = useState<H5Tab>(() => {
+    const hash = window.location.hash.replace("#", "");
+    return h5Tabs.some((item) => item.id === hash) ? hash as H5Tab : "home";
+  });
   const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[] }>({ banners: [], activities: [] });
   const [randomFood, setRandomFood] = useState<Dict | null>(null);
   const [selectedMerchantId, setSelectedMerchantId] = useState(initialMerchantId);
   const [merchant, setMerchant] = useState<Dict | null>(null);
   const [loadingMerchant, setLoadingMerchant] = useState(false);
   const [homeError, setHomeError] = useState("");
+  const [foodCategories, setFoodCategories] = useState<Dict[]>([{ id: "all", name: "全部" }]);
+  const [foodCategory, setFoodCategory] = useState("all");
+  const [foodMerchants, setFoodMerchants] = useState<Dict[]>([]);
+  const [foodError, setFoodError] = useState("");
+  const [serviceCategories, setServiceCategories] = useState<Dict[]>([]);
+  const [serviceKey, setServiceKey] = useState("");
+  const [serviceMerchants, setServiceMerchants] = useState<Dict[]>([]);
+  const [serviceError, setServiceError] = useState("");
+  const [communityTypes, setCommunityTypes] = useState<string[]>(["全部"]);
+  const [communityType, setCommunityType] = useState("全部");
+  const [communityPosts, setCommunityPosts] = useState<Dict[]>([]);
+  const [communityError, setCommunityError] = useState("");
+  const [toast, setToast] = useState("");
 
   useEffect(() => {
     publicApi<{ banners: Dict[]; activities: Dict[] }>("/api/public/home")
       .then((data) => setHome({ banners: data.banners || [], activities: data.activities || [] }))
       .catch(() => setHomeError("校园福利暂时加载失败，请稍后再试。"));
   }, []);
+
+  useEffect(() => {
+    publicApi<Dict[]>("/api/public/food/categories")
+      .then((data) => setFoodCategories(data.length ? data : [{ id: "all", name: "全部" }]))
+      .catch(() => setFoodError("美食分类暂时加载失败。"));
+  }, []);
+
+  useEffect(() => {
+    publicApi<Dict[]>(`/api/public/food/merchants?categoryId=${encodeURIComponent(foodCategory)}`)
+      .then((data) => { setFoodMerchants(data || []); setFoodError(""); })
+      .catch(() => { setFoodMerchants([]); setFoodError("美食商家暂时加载失败。"); });
+  }, [foodCategory]);
+
+  useEffect(() => {
+    publicApi<Dict[]>("/api/public/services/categories")
+      .then((data) => {
+        setServiceCategories(data || []);
+        if (!serviceKey && data?.[0]?.key) setServiceKey(data[0].key);
+      })
+      .catch(() => setServiceError("服务分类暂时加载失败。"));
+  }, []);
+
+  useEffect(() => {
+    if (!serviceKey) return;
+    publicApi<Dict[]>(`/api/public/services/merchants?serviceKey=${encodeURIComponent(serviceKey)}`)
+      .then((data) => { setServiceMerchants(data || []); setServiceError(""); })
+      .catch(() => { setServiceMerchants([]); setServiceError("生活服务暂时加载失败。"); });
+  }, [serviceKey]);
+
+  useEffect(() => {
+    publicApi<string[]>("/api/public/community/types")
+      .then((data) => setCommunityTypes(data.length ? data : ["全部"]))
+      .catch(() => setCommunityError("讨论区分类暂时加载失败。"));
+  }, []);
+
+  useEffect(() => {
+    publicApi<Dict[]>(`/api/public/community/posts?type=${encodeURIComponent(communityType)}`)
+      .then((data) => { setCommunityPosts(data || []); setCommunityError(""); })
+      .catch(() => { setCommunityPosts([]); setCommunityError("讨论区暂时加载失败。"); });
+  }, [communityType]);
 
   useEffect(() => {
     if (!selectedMerchantId) {
@@ -109,6 +179,12 @@ function StudentHome() {
     }
   }
 
+  function switchTab(id: H5Tab) {
+    setActiveTab(id);
+    setSelectedMerchantId("");
+    window.history.replaceState(null, "", id === "home" ? (window.location.pathname === "/" ? "/" : "/student") : `${window.location.pathname === "/" ? "/" : "/student"}#${id}`);
+  }
+
   function openMerchant(id?: string) {
     if (!id) return;
     setSelectedMerchantId(id);
@@ -120,105 +196,346 @@ function StudentHome() {
     window.history.replaceState(null, "", window.location.pathname === "/" ? "/" : "/student");
   }
 
-  const leadImage = webImage(home.banners[0]?.image) || webImage(home.activities[0]?.image);
+  function showWechatToast() {
+    setToast("请添加西大圈微信，活动报名、反馈合作和发帖入口都会优先开放。");
+    window.setTimeout(() => setToast(""), 2600);
+  }
+
+  const fallbackHero = asset("h5-hero-campus-life.png");
+  const heroBanners = [
+    ...home.banners.map((item) => ({ ...item, image: webImage(item.image) })),
+    { id: "brand-hero", title: "摸摸圈圈头，万事不用愁", subtitle: "西大圈校园生活入口", image: fallbackHero, targetType: "about" }
+  ].filter((item) => item.image);
 
   if (selectedMerchantId) {
     return (
       <main className="student-page">
-        <section className="student-shell">
-          <button className="back-btn" onClick={closeMerchant}><ChevronLeft size={18} />返回</button>
+        <section className="h5-shell">
+          <button className="h5-back" onClick={closeMerchant}><ChevronLeft size={18} />返回美食</button>
           {loadingMerchant && <div className="empty-card">商家信息加载中...</div>}
           {!loadingMerchant && !merchant && <div className="empty-card">商家暂时不可查看。</div>}
           {merchant && <MerchantDetail merchant={merchant} />}
         </section>
+        <TabBar active={activeTab} onChange={switchTab} />
       </main>
     );
   }
 
   return (
     <main className="student-page">
-      <section className="student-shell">
-        <div className="mobile-hero">
-          <div>
-            <span className="hero-kicker"><Sparkles size={15} />西大圈</span>
-            <h1>发现西北大学周边好店与校园福利</h1>
-            <p>优惠、拼饭、生活服务和今日推荐，先从这里逛起。</p>
-          </div>
-          {leadImage && <img src={leadImage} alt="校园福利" />}
-        </div>
-
-        <section className="student-section">
-          <div className="section-title"><h2>今日校园福利</h2><span>优惠和周边好店</span></div>
-          {homeError && <p className="muted-line">{homeError}</p>}
-          <div className="activity-list">
-            {home.activities.map((item) => (
-              <button className={`activity-card ${webImage(item.image) ? "has-image" : ""}`} key={item.id} onClick={() => openMerchant(item.merchantId)}>
-                {webImage(item.image) && <img src={webImage(item.image)} alt={item.title} />}
-                <span><Gift size={14} />{item.discount || "校园福利"}</span>
-                <strong>{item.title}</strong>
-              </button>
-            ))}
-            {!home.activities.length && !homeError && <div className="empty-card">今天暂无上架福利。</div>}
-          </div>
-        </section>
-
-        <section className="food-picker">
-          <div>
-            <span><Utensils size={16} />今天吃什么</span>
-            <strong>{randomFood ? randomFood.name : "帮我选一家"}</strong>
-            <p>{randomFood ? randomFood.recommendation || randomFood.discount || "这家今天值得试试。" : "选择困难时，让西大圈随机推荐一家。 "}</p>
-          </div>
-          <button onClick={chooseFood}><Shuffle size={18} />帮我选</button>
-        </section>
-
-        <section className="student-section">
-          <div className="section-title"><h2>推荐入口</h2><span>从活动进入商家详情</span></div>
-          <div className="banner-list">
-            {home.banners.map((item) => (
-              <button className={`banner-card ${webImage(item.image) ? "has-image" : ""}`} key={item.id} onClick={() => item.targetType === "activity" && openMerchant(home.activities.find((activity) => activity.id === item.targetId)?.merchantId)}>
-                {webImage(item.image) && <img src={webImage(item.image)} alt={item.title} />}
-                <strong>{item.title}</strong>
-                <span>{item.subtitle || "校园生活服务"}</span>
-              </button>
-            ))}
-            {!home.banners.length && <div className="empty-card">暂无轮播内容。</div>}
-          </div>
-        </section>
+      <section className="h5-shell">
+        {activeTab === "home" && <HomeTab banners={heroBanners} activities={home.activities} homeError={homeError} randomFood={randomFood} onChooseFood={chooseFood} onOpenMerchant={openMerchant} onWechat={showWechatToast} />}
+        {activeTab === "food" && <FoodTab categories={foodCategories} activeCategory={foodCategory} merchants={foodMerchants} error={foodError} onCategory={setFoodCategory} onOpenMerchant={openMerchant} />}
+        {activeTab === "driving" && <DrivingTab onWechat={showWechatToast} />}
+        {activeTab === "services" && <ServicesTab categories={serviceCategories} activeKey={serviceKey} merchants={serviceMerchants} error={serviceError} onCategory={setServiceKey} onOpenMerchant={openMerchant} />}
+        {activeTab === "community" && <CommunityTab types={communityTypes} activeType={communityType} posts={communityPosts} error={communityError} onType={setCommunityType} onWechat={showWechatToast} />}
+        {activeTab === "about" && <AboutTab onWechat={showWechatToast} />}
       </section>
+      <TabBar active={activeTab} onChange={switchTab} />
+      {toast && <div className="h5-toast">{toast}</div>}
     </main>
+  );
+}
+
+function TabBar({ active, onChange }: { active: H5Tab; onChange: (id: H5Tab) => void }) {
+  return (
+    <div className="h5-tabbar">
+      {h5Tabs.map(({ id, label, Icon }) => (
+        <button key={id} className={active === id ? "active" : ""} onClick={() => onChange(id)}>
+          <Icon size={20} />
+          <span>{label}</span>
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function HomeTab({ banners, activities, homeError, randomFood, onChooseFood, onOpenMerchant, onWechat }: {
+  banners: Dict[]; activities: Dict[]; homeError: string; randomFood: Dict | null;
+  onChooseFood: () => void; onOpenMerchant: (id?: string) => void; onWechat: () => void;
+}) {
+  return (
+    <>
+      <section className="h5-hero">
+        <div className="h5-carousel">
+          {banners.slice(0, 4).map((item) => (
+            <button key={item.id} className="h5-slide" onClick={() => {
+              if (item.targetType === "activity") onOpenMerchant(activities.find((activity) => activity.id === item.targetId)?.merchantId);
+            }}>
+              <img src={item.image} alt={item.title || "西大圈校园生活"} />
+              <div className="h5-slide-copy">
+                <span><Sparkles size={14} />西大圈</span>
+                <h1>{item.title || "摸摸圈圈头，万事不用愁"}</h1>
+                <p>{item.subtitle || "校园吃喝玩乐和生活服务，一个入口就够。"}</p>
+              </div>
+            </button>
+          ))}
+        </div>
+      </section>
+
+      <section className="h5-section">
+        <SectionTitle title="今日活动" desc="校园福利和周边好店" />
+        {homeError && <p className="muted-line">{homeError}</p>}
+        <div className="h5-activity-list">
+          {activities.map((item) => <ActivityCard key={item.id} activity={item} onOpen={onOpenMerchant} />)}
+          {!activities.length && !homeError && <EmptyCard title="今天暂无上架活动" text="先加入西大圈微信，第一时间接收新福利。" />}
+        </div>
+      </section>
+
+      <WechatBlock onWechat={onWechat} />
+
+      <section className="h5-slot">
+        <div>
+          <span><Utensils size={16} />抽签吃饭</span>
+          <strong>{randomFood ? randomFood.name : "今天交给西大圈"}</strong>
+          <p>{randomFood ? randomFood.recommendation || randomFood.discount || "这家今天值得试试。" : "选择困难时，随机抽一家校边美食。"}</p>
+        </div>
+        <button onClick={onChooseFood}><Shuffle size={18} />开抽</button>
+      </section>
+    </>
+  );
+}
+
+function FoodTab({ categories, activeCategory, merchants, error, onCategory, onOpenMerchant }: {
+  categories: Dict[]; activeCategory: string; merchants: Dict[]; error: string;
+  onCategory: (id: string) => void; onOpenMerchant: (id?: string) => void;
+}) {
+  return (
+    <>
+      <PageHero icon={<Coffee size={18} />} title="今天吃什么" text="按分类找附近好吃的，优惠、人均和距离一眼扫完。" />
+      <ChipRow items={categories.map((item) => ({ id: item.id, label: item.name }))} active={activeCategory} onChange={onCategory} />
+      {error && <p className="muted-line">{error}</p>}
+      <div className="h5-list">
+        {merchants.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
+        {!merchants.length && !error && <EmptyCard title="这个分类正在招募" text="你推荐的宝藏店，可以通过西大圈微信告诉我们。" />}
+      </div>
+    </>
+  );
+}
+
+function DrivingTab({ onWechat }: { onWechat: () => void }) {
+  return (
+    <>
+      <section className="h5-driving">
+        <img src={asset("h5-driving-promo.png")} alt="校园驾校" />
+        <div>
+          <span><Car size={15} />西大圈严选驾校</span>
+          <h1>课少也能稳稳学车</h1>
+          <p>就近练车、灵活约课、流程透明，适合西大学生从报名到拿证一路跟进。</p>
+        </div>
+      </section>
+      <InfoBand items={[
+        ["练车环境", "标准场地、路线清晰，训练节奏适合学生时间。"],
+        ["模式优点", "小班沟通、预约灵活、费用明细提前确认。"],
+        ["报名流程", "微信咨询、确认班型、提交资料、安排体检与练车。"]
+      ]} />
+      <section className="h5-qr-panel">
+        <img src={qrPlaceholder} alt="咨询二维码占位图" />
+        <div>
+          <h2>扫码咨询班型</h2>
+          <p>报名优惠、练车时间和接送安排，以西大圈微信咨询为准。</p>
+          <button onClick={onWechat}><Phone size={17} />联系西大圈</button>
+        </div>
+      </section>
+    </>
+  );
+}
+
+function ServicesTab({ categories, activeKey, merchants, error, onCategory, onOpenMerchant }: {
+  categories: Dict[]; activeKey: string; merchants: Dict[]; error: string;
+  onCategory: (key: string) => void; onOpenMerchant: (id?: string) => void;
+}) {
+  const fallbackCategories = categories.length ? categories : [
+    { key: "print", name: "打印复印" },
+    { key: "repair", name: "维修" },
+    { key: "photo", name: "证件照" },
+    { key: "ktv", name: "娱乐" }
+  ];
+  const effectiveKey = activeKey || fallbackCategories[0]?.key || "";
+  return (
+    <>
+      <PageHero icon={<Wrench size={18} />} title="生活服务" text="打印、维修、证件照、娱乐，校园周边刚需服务集中找。" />
+      <ChipRow items={fallbackCategories.map((item) => ({ id: item.key, label: item.name || item.key }))} active={effectiveKey} onChange={onCategory} />
+      {error && <p className="muted-line">{error}</p>}
+      <div className="h5-list">
+        {merchants.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
+        {!merchants.length && !error && <EmptyCard title="该分类正在招募商家" text="欢迎周边优质服务商入驻西大圈。" />}
+      </div>
+    </>
+  );
+}
+
+function CommunityTab({ types, activeType, posts, error, onType, onWechat }: {
+  types: string[]; activeType: string; posts: Dict[]; error: string; onType: (type: string) => void; onWechat: () => void;
+}) {
+  return (
+    <>
+      <PageHero icon={<MessageCircle size={18} />} title="校园讨论区" text="只读开放中，先看看大家关心的活动、拼单和校园问题。" action={<button onClick={onWechat}><Plus size={16} />发布</button>} />
+      <ChipRow items={types.map((type) => ({ id: type, label: type }))} active={activeType} onChange={onType} />
+      {error && <p className="muted-line">{error}</p>}
+      <div className="h5-post-list">
+        {posts.map((post) => (
+          <article className="h5-post" key={post.id}>
+            <span>{post.type}</span>
+            <h2>{post.title}</h2>
+            <p>{post.summary}</p>
+            <div><CalendarDays size={14} />{post.time}<ThumbsUp size={14} />{post.likeCount ?? 0}<MessageCircle size={14} />{post.commentCount ?? 0}</div>
+          </article>
+        ))}
+        {!posts.length && !error && <EmptyCard title="还没有内容" text="讨论区发布能力即将开放，当前可通过微信投稿。" />}
+      </div>
+    </>
+  );
+}
+
+function AboutTab({ onWechat }: { onWechat: () => void }) {
+  return (
+    <>
+      <section className="h5-about-hero">
+        <img src={asset("h5-wechat-promo.png")} alt="西大圈微信社区" />
+        <div>
+          <span><Heart size={15} />西大圈</span>
+          <h1>摸摸圈圈头，万事不用愁</h1>
+          <p>我们把西大周边的吃喝玩乐、活动福利、驾校服务和生活刚需整理到一个手机入口里。</p>
+        </div>
+      </section>
+      <InfoBand items={[
+        ["找福利", "活动、优惠券、团购和新品体验统一整理。"],
+        ["找服务", "校园周边商家先筛选，再持续补充真实信息。"],
+        ["找反馈", "好店推荐、商家合作、问题反馈都从微信入口开始。"]
+      ]} />
+      <section className="h5-qr-panel">
+        <img src={qrPlaceholder} alt="西大圈微信二维码占位图" />
+        <div>
+          <h2>加入西大圈微信</h2>
+          <p>合作、反馈、活动报名和讨论区发布入口，优先在微信处理。</p>
+          <button onClick={onWechat}><Send size={17} />添加微信</button>
+        </div>
+      </section>
+    </>
   );
 }
 
 function MerchantDetail({ merchant }: { merchant: Dict }) {
   const coupons = Array.isArray(merchant.coupons) ? merchant.coupons : [];
+  const menu = Array.isArray(merchant.menu) ? merchant.menu : [];
+  const cover = webImage(merchant.image) || asset("h5-hero-campus-life.png");
+  const qr = webImage(merchant.qrImage || merchant.qrImageUrl) || qrPlaceholder;
   return (
     <article className="merchant-detail">
-      {webImage(merchant.image) && <img className="merchant-cover" src={webImage(merchant.image)} alt={merchant.name} />}
-      <div className="merchant-head">
-        <span>{merchant.foodCategory || merchant.serviceId || "校园商家"}</span>
-        <h1>{merchant.name}</h1>
-        <p>{merchant.recommendation || "西大圈推荐商家"}</p>
+      <section className="merchant-cover-wrap">
+        <img className="merchant-cover" src={cover} alt={merchant.name} />
+        <div className="merchant-head">
+          <span>{merchant.foodCategory || merchant.serviceId || "校园商家"}</span>
+          <h1>{merchant.name}</h1>
+          <p>{merchant.recommendation || "西大圈推荐商家"}</p>
+        </div>
+      </section>
+      <div className="merchant-metrics">
+        <div><Star size={15} />{merchant.rating ? `${merchant.rating} 分` : "口碑推荐"}</div>
+        <div><BadgePercent size={15} />{merchant.discount || "到店咨询优惠"}</div>
+        <div><MapPin size={15} />{merchant.distance || merchant.distanceText || "校边商圈"}</div>
       </div>
-      <div className="info-grid">
-        <div><MapPin size={17} /><span>{merchant.address || "地址待补充"}</span></div>
-        <div><Clock size={17} /><span>{merchant.businessHours || "营业时间待补充"}</span></div>
-      </div>
-      <section>
+      <section className="detail-block">
+        <h2>菜单推荐</h2>
+        <div className="menu-list">
+          {menu.map((item: Dict, index: number) => <div key={`${item.name}-${index}`}><span>{item.name}</span><strong>{item.price ? `¥${item.price}` : "到店咨询"}</strong></div>)}
+          {!menu.length && <EmptyCard title="菜单待补充" text="可以先看优惠和推荐理由。" />}
+        </div>
+      </section>
+      <section className="detail-block">
+        <h2>到店信息</h2>
+        <div className="info-grid">
+          <div><MapPin size={17} /><span>{merchant.address || "地址待补充"}</span></div>
+          <div><Clock size={17} /><span>{merchant.businessHours || "营业时间待补充"}</span></div>
+        </div>
+      </section>
+      <section className="detail-block">
         <h2>优惠券</h2>
         <div className="coupon-list">
           {coupons.map((coupon: Dict) => <div className="coupon-card" key={coupon.id}><strong>{coupon.title}</strong><span>{coupon.description || "到店使用请咨询商家"}</span></div>)}
-          {!coupons.length && <div className="empty-card">暂无可领取优惠券。</div>}
+          {!coupons.length && <EmptyCard title="暂无可领取优惠券" text="进群咨询可能有隐藏福利。" />}
         </div>
       </section>
       {Array.isArray(merchant.highlights) && merchant.highlights.length > 0 && (
-        <section>
+        <section className="detail-block">
           <h2>推荐理由</h2>
           <div className="tag-row">{merchant.highlights.map((item: string) => <span key={item}>{item}</span>)}</div>
         </section>
       )}
+      <section className="h5-qr-panel">
+        <img src={qr} alt="商家群二维码占位图" />
+        <div>
+          <h2>进群问福利</h2>
+          <p>二维码暂用占位图，真实商家群后续由后台素材替换。</p>
+        </div>
+      </section>
+      <WechatBlock />
     </article>
   );
 }
+
+function SectionTitle({ title, desc }: { title: string; desc?: string }) {
+  return <div className="section-title"><h2>{title}</h2>{desc && <span>{desc}</span>}</div>;
+}
+
+function PageHero({ icon, title, text, action }: { icon: React.ReactNode; title: string; text: string; action?: React.ReactNode }) {
+  return <section className="h5-page-hero"><div><span>{icon}西大圈</span><h1>{title}</h1><p>{text}</p></div>{action}</section>;
+}
+
+function ChipRow({ items, active, onChange }: { items: { id: string; label: string }[]; active: string; onChange: (id: string) => void }) {
+  return <div className="h5-chip-row">{items.map((item) => <button key={item.id} className={active === item.id ? "active" : ""} onClick={() => onChange(item.id)}>{item.label}</button>)}</div>;
+}
+
+function ActivityCard({ activity, onOpen }: { activity: Dict; onOpen: (id?: string) => void }) {
+  return (
+    <button className={`h5-activity-card ${webImage(activity.image) ? "has-image" : ""}`} onClick={() => onOpen(activity.merchantId)}>
+      {webImage(activity.image) && <img src={webImage(activity.image)} alt={activity.title} />}
+      <div>
+        <span><Gift size={14} />{activity.discount || "校园福利"}</span>
+        <strong>{activity.title}</strong>
+        <em>{activity.cta || "去看看"}<ChevronRight size={14} /></em>
+      </div>
+    </button>
+  );
+}
+
+function MerchantCard({ merchant, onOpen }: { merchant: Dict; onOpen: (id?: string) => void }) {
+  return (
+    <button className="h5-merchant-card" onClick={() => onOpen(merchant.id)}>
+      <img src={webImage(merchant.image) || asset("banner-campus.jpg")} alt={merchant.name} />
+      <div>
+        <div className="merchant-card-head"><strong>{merchant.name}</strong><span>{merchant.avgPrice ? `¥${merchant.avgPrice}/人` : "价格待补"}</span></div>
+        <p>{merchant.recommendation || "西大圈推荐商家"}</p>
+        <div className="merchant-card-meta"><span><BadgePercent size={13} />{merchant.discount || "到店咨询优惠"}</span><span>{merchant.distance || merchant.distanceText || "校边"}</span></div>
+        {Array.isArray(merchant.tags) && <div className="mini-tags">{merchant.tags.slice(0, 3).map((tag: string) => <span key={tag}>{tag}</span>)}</div>}
+      </div>
+    </button>
+  );
+}
+
+function WechatBlock({ onWechat }: { onWechat?: () => void }) {
+  return (
+    <section className="h5-wechat">
+      <img src={asset("h5-wechat-promo.png")} alt="西大圈微信" />
+      <div>
+        <span><QrCode size={15} />微信入口</span>
+        <h2>加入西大圈微信</h2>
+        <p>领活动、问优惠、推荐好店、反馈问题，都从这里开始。</p>
+        {onWechat && <button onClick={onWechat}><Send size={16} />添加微信</button>}
+      </div>
+    </section>
+  );
+}
+
+function InfoBand({ items }: { items: string[][] }) {
+  return <section className="h5-info-band">{items.map(([title, text]) => <div key={title}><ShieldCheck size={18} /><strong>{title}</strong><p>{text}</p></div>)}</section>;
+}
+
+function EmptyCard({ title, text }: { title: string; text: string }) {
+  return <div className="empty-card"><strong>{title}</strong><span>{text}</span></div>;
+}
+
 
 function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
   const [account, setAccount] = useState("");
