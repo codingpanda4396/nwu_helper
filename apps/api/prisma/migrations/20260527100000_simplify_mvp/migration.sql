@@ -79,6 +79,33 @@ ALTER TABLE "MerchantPromotion" DROP CONSTRAINT IF EXISTS "MerchantPromotion_mer
 -- DropForeignKey
 ALTER TABLE "MerchantPromotion" DROP CONSTRAINT IF EXISTS "MerchantPromotion_couponId_fkey";
 
+-- AlterTable: Merchant - remove unused columns first
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "description";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "ownerUserId";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "foodCategory";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "avgPrice";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "distanceText";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "tags";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "highlights";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "menu";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "randomWeight";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "isFoodRecommendation";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "isServicePublished";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "rating";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "platformBoost";
+ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "recommendation";
+
+-- AlterTable: Activity - remove unused columns that use enums first
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "subtitle";
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "type";
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "couponId";
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "manualWeight";
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "budget";
+ALTER TABLE "Activity" DROP COLUMN IF EXISTS "pricingMode";
+
+-- DropIndex
+DROP INDEX IF EXISTS "Merchant_foodCategory_isFoodRecommendation_status_idx";
+
 -- DropTable
 DROP TABLE IF EXISTS "Coupon";
 
@@ -100,7 +127,7 @@ DROP TABLE IF EXISTS "ShareEvent";
 -- DropTable
 DROP TABLE IF EXISTS "MerchantPromotion";
 
--- DropEnum
+-- DropEnum (now safe since columns are dropped)
 DROP TYPE IF EXISTS "CouponStatus";
 
 -- DropEnum
@@ -123,36 +150,6 @@ DROP TYPE IF EXISTS "ShareTargetType";
 
 -- DropEnum
 DROP TYPE IF EXISTS "ShareEventType";
-
--- AlterTable: Merchant - remove unused columns
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "description";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "ownerUserId";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "foodCategory";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "avgPrice";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "distanceText";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "tags";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "highlights";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "menu";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "randomWeight";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "isFoodRecommendation";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "isServicePublished";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "rating";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "platformBoost";
-ALTER TABLE "Merchant" DROP COLUMN IF EXISTS "recommendation";
-
--- AlterTable: Activity - remove unused columns
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "subtitle";
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "type";
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "couponId";
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "manualWeight";
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "budget";
-ALTER TABLE "Activity" DROP COLUMN IF EXISTS "pricingMode";
-
--- DropIndex
-DROP INDEX IF EXISTS "Merchant_foodCategory_isFoodRecommendation_status_idx";
-
--- AlterTable: User - remove MERCHANT role (will be handled by data migration)
--- Note: We'll keep existing users but they can be cleaned up manually
 
 -- CreateIndex
 CREATE INDEX IF NOT EXISTS "Merchant_status_sortOrder_idx" ON "Merchant"("status", "sortOrder");
