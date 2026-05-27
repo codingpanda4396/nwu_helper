@@ -684,7 +684,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/api/admin/dashboard/merchants", async (_request, reply) => {
     const merchants = await prisma.merchant.findMany({
-      include: { category: true, userCoupons: true, redemptions: true, exposureLogs: true, clickLogs: true },
+      include: { category: true, userCoupons: true, exposureLogs: true, clickLogs: true },
       orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
     });
     return ok(reply, merchants.map((merchant) => ({
@@ -694,9 +694,7 @@ export async function adminRoutes(app: FastifyInstance) {
       status: merchant.status,
       exposures: merchant.exposureLogs.length,
       clicks: merchant.clickLogs.length,
-      claims: merchant.userCoupons.length,
-      redemptions: merchant.redemptions.length,
-      redemptionAmount: merchant.redemptions.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+      claims: merchant.userCoupons.length
     })));
   });
 }
