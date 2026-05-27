@@ -55,6 +55,52 @@
   line-height: 66rpx;
 }
 
+.feature-grid {
+  display: grid;
+  gap: 16rpx;
+}
+
+.feature-food {
+  display: grid;
+  grid-template-columns: 136rpx 1fr;
+  gap: 18rpx;
+  padding: 18rpx;
+  text-align: left;
+}
+
+.feature-food image {
+  width: 136rpx;
+  height: 110rpx;
+  border-radius: 12rpx;
+}
+
+.feature-post {
+  display: block;
+  margin-bottom: 16rpx;
+  padding: 22rpx;
+  text-align: left;
+}
+
+.feature-type {
+  color: #19b36b;
+  font-size: 23rpx;
+  font-weight: 900;
+}
+
+.feature-title {
+  color: #1f2933;
+  font-size: 29rpx;
+  font-weight: 900;
+  line-height: 1.35;
+}
+
+.feature-desc {
+  margin-top: 8rpx;
+  color: #6b7280;
+  font-size: 24rpx;
+  line-height: 1.45;
+}
+
 .feedback {
   display: grid;
   grid-template-columns: 1fr 1fr;

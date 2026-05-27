@@ -37,11 +37,26 @@ async function publicApi<T>(path: string): Promise<T> {
   return body.data;
 }
 
+async function publicWrite<T>(path: string, body: Dict): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+  const payload = await res.json().catch(() => ({}));
+  if (!res.ok || payload.success === false) throw new Error(payload.message || "请求失败");
+  return payload.data;
+}
+
 function initialMerchantId() {
   const params = new URLSearchParams(window.location.search);
   const fromQuery = params.get("merchantId");
   if (fromQuery) return fromQuery;
   const match = window.location.hash.match(/merchant=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
+}
+
+function initialPostId() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("postId");
+  if (fromQuery) return fromQuery;
+  const match = window.location.hash.match(/post=([^&]+)/);
   return match ? decodeURIComponent(match[1]) : "";
 }
 
@@ -93,10 +108,13 @@ function StudentHome() {
     const hash = window.location.hash.replace("#", "");
     return h5Tabs.some((item) => item.id === hash) ? hash as H5Tab : "home";
   });
-  const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[] }>({ banners: [], activities: [] });
+  const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[] }>({ banners: [], activities: [], featuredFoods: [], featuredPosts: [] });
   const [randomFood, setRandomFood] = useState<Dict | null>(null);
   const [selectedMerchantId, setSelectedMerchantId] = useState(initialMerchantId);
   const [merchant, setMerchant] = useState<Dict | null>(null);
+  const [selectedPostId, setSelectedPostId] = useState(initialPostId);
+  const [postDetail, setPostDetail] = useState<Dict | null>(null);
+  const [loadingPost, setLoadingPost] = useState(false);
   const [loadingMerchant, setLoadingMerchant] = useState(false);
   const [homeError, setHomeError] = useState("");
   const [foodCategories, setFoodCategories] = useState<Dict[]>([{ id: "all", name: "全部" }]);
@@ -114,8 +132,8 @@ function StudentHome() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    publicApi<{ banners: Dict[]; activities: Dict[] }>("/api/public/home")
-      .then((data) => setHome({ banners: data.banners || [], activities: data.activities || [] }))
+    publicApi<{ banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[] }>("/api/public/home")
+      .then((data) => setHome({ banners: data.banners || [], activities: data.activities || [], featuredFoods: data.featuredFoods || [], featuredPosts: data.featuredPosts || [] }))
       .catch(() => setHomeError("校园福利暂时加载失败，请稍后再试。"));
   }, []);
 
@@ -171,6 +189,18 @@ function StudentHome() {
       .finally(() => setLoadingMerchant(false));
   }, [selectedMerchantId]);
 
+  useEffect(() => {
+    if (!selectedPostId) {
+      setPostDetail(null);
+      return;
+    }
+    setLoadingPost(true);
+    publicApi<Dict>(`/api/public/community/posts/${encodeURIComponent(selectedPostId)}`)
+      .then(setPostDetail)
+      .catch(() => setPostDetail(null))
+      .finally(() => setLoadingPost(false));
+  }, [selectedPostId]);
+
   async function chooseFood() {
     try {
       setRandomFood(await publicApi<Dict | null>("/api/public/food/random"));
@@ -182,6 +212,7 @@ function StudentHome() {
   function switchTab(id: H5Tab) {
     setActiveTab(id);
     setSelectedMerchantId("");
+    setSelectedPostId("");
     window.history.replaceState(null, "", id === "home" ? (window.location.pathname === "/" ? "/" : "/student") : `${window.location.pathname === "/" ? "/" : "/student"}#${id}`);
   }
 
@@ -191,9 +222,29 @@ function StudentHome() {
     window.history.replaceState(null, "", `/student?merchantId=${encodeURIComponent(id)}`);
   }
 
+  function openPost(id?: string) {
+    if (!id) return;
+    setSelectedPostId(id);
+    window.history.replaceState(null, "", `/student?postId=${encodeURIComponent(id)}`);
+  }
+
   function closeMerchant() {
     setSelectedMerchantId("");
     window.history.replaceState(null, "", window.location.pathname === "/" ? "/" : "/student");
+  }
+
+  function closePost() {
+    setSelectedPostId("");
+    window.history.replaceState(null, "", window.location.pathname === "/" ? "/" : "/student#community");
+  }
+
+  async function likePost(id: string) {
+    const key = "nwuSessionId";
+    const sessionId = localStorage.getItem(key) || `h5-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    localStorage.setItem(key, sessionId);
+    const result = await publicWrite<{ likeCount: number }>(`/api/public/community/posts/${encodeURIComponent(id)}/like`, { sessionId });
+    setPostDetail((current) => current && current.id === id ? { ...current, likeCount: result.likeCount } : current);
+    setCommunityPosts((items) => items.map((item) => item.id === id ? { ...item, likeCount: result.likeCount } : item));
   }
 
   function showWechatToast() {
@@ -221,14 +272,31 @@ function StudentHome() {
     );
   }
 
+  if (selectedPostId) {
+    return (
+      <main className="student-page">
+        <section className="h5-shell">
+          <button className="h5-back" onClick={closePost}><ChevronLeft size={18} />返回讨论区</button>
+          {loadingPost && <div className="empty-card">帖子加载中...</div>}
+          {!loadingPost && !postDetail && <div className="empty-card">帖子暂时不可查看。</div>}
+          {postDetail && <PostDetail post={postDetail} onLike={likePost} />}
+        </section>
+        <TabBar active="community" onChange={switchTab} />
+      </main>
+    );
+  }
+
   return (
     <main className="student-page">
       <section className="h5-shell">
-        {activeTab === "home" && <HomeTab banners={heroBanners} activities={home.activities} homeError={homeError} randomFood={randomFood} onChooseFood={chooseFood} onOpenMerchant={openMerchant} onWechat={showWechatToast} />}
+        {activeTab === "home" && <HomeTab banners={heroBanners} activities={home.activities} featuredFoods={home.featuredFoods} featuredPosts={home.featuredPosts} homeError={homeError} randomFood={randomFood} onChooseFood={chooseFood} onOpenMerchant={openMerchant} onOpenPost={openPost} onTab={switchTab} onWechat={showWechatToast} />}
         {activeTab === "food" && <FoodTab categories={foodCategories} activeCategory={foodCategory} merchants={foodMerchants} error={foodError} onCategory={setFoodCategory} onOpenMerchant={openMerchant} />}
         {activeTab === "driving" && <DrivingTab onWechat={showWechatToast} />}
         {activeTab === "services" && <ServicesTab categories={serviceCategories} activeKey={serviceKey} merchants={serviceMerchants} error={serviceError} onCategory={setServiceKey} onOpenMerchant={openMerchant} />}
-        {activeTab === "community" && <CommunityTab types={communityTypes} activeType={communityType} posts={communityPosts} error={communityError} onType={setCommunityType} onWechat={showWechatToast} />}
+        {activeTab === "community" && <CommunityTab types={communityTypes} activeType={communityType} posts={communityPosts} error={communityError} onType={setCommunityType} onOpenPost={openPost} onSubmitted={() => {
+          publicApi<string[]>("/api/public/community/types").then((data) => setCommunityTypes(data.length ? data : ["全部"])).catch(() => undefined);
+          publicApi<Dict[]>(`/api/public/community/posts?type=${encodeURIComponent(communityType)}`).then((data) => setCommunityPosts(data || [])).catch(() => undefined);
+        }} />}
         {activeTab === "about" && <AboutTab onWechat={showWechatToast} />}
       </section>
       <TabBar active={activeTab} onChange={switchTab} />
@@ -250,18 +318,24 @@ function TabBar({ active, onChange }: { active: H5Tab; onChange: (id: H5Tab) => 
   );
 }
 
-function HomeTab({ banners, activities, homeError, randomFood, onChooseFood, onOpenMerchant, onWechat }: {
-  banners: Dict[]; activities: Dict[]; homeError: string; randomFood: Dict | null;
-  onChooseFood: () => void; onOpenMerchant: (id?: string) => void; onWechat: () => void;
+function HomeTab({ banners, activities, featuredFoods, featuredPosts, homeError, randomFood, onChooseFood, onOpenMerchant, onOpenPost, onTab, onWechat }: {
+  banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[]; homeError: string; randomFood: Dict | null;
+  onChooseFood: () => void; onOpenMerchant: (id?: string) => void; onOpenPost: (id?: string) => void; onTab: (id: H5Tab) => void; onWechat: () => void;
 }) {
+  function handleBanner(item: Dict) {
+    if (item.targetType === "activity") onOpenMerchant(activities.find((activity) => activity.id === item.targetId)?.merchantId);
+    if (item.targetType === "tab" && item.targetId && h5Tabs.some((tab) => tab.id === item.targetId)) onTab(item.targetId as H5Tab);
+    if (item.targetType === "service") onTab("services");
+    if (item.targetType === "about") onTab("about");
+    if (item.targetType === "url" && item.url) window.location.href = item.url;
+  }
+
   return (
     <>
       <section className="h5-hero">
         <div className="h5-carousel">
           {banners.slice(0, 4).map((item) => (
-            <button key={item.id} className="h5-slide" onClick={() => {
-              if (item.targetType === "activity") onOpenMerchant(activities.find((activity) => activity.id === item.targetId)?.merchantId);
-            }}>
+            <button key={item.id} className="h5-slide" onClick={() => handleBanner(item)}>
               <img src={item.image} alt={item.title || "西大圈校园生活"} />
               <div className="h5-slide-copy">
                 <span><Sparkles size={14} />西大圈</span>
@@ -282,8 +356,6 @@ function HomeTab({ banners, activities, homeError, randomFood, onChooseFood, onO
         </div>
       </section>
 
-      <WechatBlock onWechat={onWechat} />
-
       <section className="h5-slot">
         <div>
           <span><Utensils size={16} />抽签吃饭</span>
@@ -292,6 +364,24 @@ function HomeTab({ banners, activities, homeError, randomFood, onChooseFood, onO
         </div>
         <button onClick={onChooseFood}><Shuffle size={18} />开抽</button>
       </section>
+
+      <section className="h5-section">
+        <SectionTitle title="精选美食" desc="后台运营推荐" />
+        <div className="h5-list">
+          {featuredFoods.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
+          {!featuredFoods.length && <EmptyCard title="美食精选待补充" text="后台上架美食商家后会展示在这里。" />}
+        </div>
+      </section>
+
+      <section className="h5-section">
+        <SectionTitle title="校园热帖" desc="审核后展示" />
+        <div className="h5-post-list">
+          {featuredPosts.map((post) => <PostCard key={post.id} post={post} onOpen={onOpenPost} />)}
+          {!featuredPosts.length && <EmptyCard title="还没有热帖" text="学生投稿审核通过后会展示在这里。" />}
+        </div>
+      </section>
+
+      <WechatBlock onWechat={onWechat} />
     </>
   );
 }
@@ -345,46 +435,152 @@ function ServicesTab({ categories, activeKey, merchants, error, onCategory, onOp
   categories: Dict[]; activeKey: string; merchants: Dict[]; error: string;
   onCategory: (key: string) => void; onOpenMerchant: (id?: string) => void;
 }) {
-  const fallbackCategories = categories.length ? categories : [
-    { key: "print", name: "打印复印" },
-    { key: "repair", name: "维修" },
-    { key: "photo", name: "证件照" },
-    { key: "ktv", name: "娱乐" }
+  const entries = [
+    { id: "print", title: "打印装订", scene: "论文装订/课程资料", aliases: ["print", "printing", "copy", "binding", "打印", "打印复印", "打印装订"] },
+    { id: "care", title: "洗护理发", scene: "洗衣洗头/理发", aliases: ["laundry", "wash", "hair", "barber", "洗护", "洗衣", "理发", "洗护理发"] },
+    { id: "play", title: "休闲娱乐", scene: "台球棋牌/KTV", aliases: ["ktv", "entertainment", "billiards", "chess", "娱乐", "休闲", "休闲娱乐", "台球", "棋牌"] },
+    { id: "girls", title: "女生精选", scene: "美甲护肤/形象管理", aliases: ["beauty", "nail", "skin", "makeup", "photo", "女生", "女生精选", "美甲", "护肤", "证件照"] },
+    { id: "rent", title: "租房驾校", scene: "短租合租/报名练车", aliases: ["rent", "house", "driving", "driver", "car", "租房", "驾校", "租房驾校"] },
+    { id: "work", title: "兼职考证", scene: "靠谱兼职/证书考试", aliases: ["job", "parttime", "part-time", "certificate", "exam", "兼职", "考证", "兼职考证"] }
   ];
-  const effectiveKey = activeKey || fallbackCategories[0]?.key || "";
+  const normalize = (value?: string) => (value || "").toLowerCase().replace(/\s|_|-/g, "");
+  const categoryFor = (entry: typeof entries[number]) => categories.find((category) => {
+    const key = normalize(category.key);
+    const name = normalize(category.name);
+    return entry.aliases.some((alias) => {
+      const normalizedAlias = normalize(alias);
+      return key === normalizedAlias || name === normalizedAlias || key.includes(normalizedAlias) || name.includes(normalizedAlias);
+    });
+  });
+  const initialEntry = entries.find((entry) => categoryFor(entry)?.key === activeKey)?.id || entries[0].id;
+  const [selectedEntry, setSelectedEntry] = useState(initialEntry);
+  const selectedConfig = entries.find((entry) => entry.id === selectedEntry) || entries[0];
+  const matchedCategory = categoryFor(selectedConfig);
+  const showMerchants = Boolean(matchedCategory?.key && matchedCategory.key === activeKey);
+
+  useEffect(() => {
+    const matchedEntry = entries.find((entry) => categoryFor(entry)?.key === activeKey);
+    if (matchedEntry) setSelectedEntry(matchedEntry.id);
+  }, [activeKey, categories]);
+
+  function chooseEntry(entry: typeof entries[number]) {
+    setSelectedEntry(entry.id);
+    const category = categoryFor(entry);
+    if (category?.key) onCategory(category.key);
+  }
+
   return (
     <>
-      <PageHero icon={<Wrench size={18} />} title="生活服务" text="打印、维修、证件照、娱乐，校园周边刚需服务集中找。" />
-      <ChipRow items={fallbackCategories.map((item) => ({ id: item.key, label: item.name || item.key }))} active={effectiveKey} onChange={onCategory} />
+      <PageHero icon={<Wrench size={18} />} title="生活服务" text="打印洗护娱乐租房，先看学生常用和可信推荐。" />
+      <section className="service-entry-grid" aria-label="生活服务入口">
+        {entries.map((entry) => {
+          const category = categoryFor(entry);
+          const isActive = selectedEntry === entry.id;
+          return (
+            <button key={entry.id} className={isActive ? "active" : ""} onClick={() => chooseEntry(entry)}>
+              <strong>{entry.title}</strong>
+              <span>{entry.scene}</span>
+              {!category && <em>调研中</em>}
+            </button>
+          );
+        })}
+      </section>
+      <section className="service-trust-row" aria-label="可信筛选">
+        <span><ShieldCheck size={14} />西大学生常用</span>
+        <span><MapPin size={14} />距离/价格清楚</span>
+        <span><MessageCircle size={14} />可反馈纠错</span>
+      </section>
       {error && <p className="muted-line">{error}</p>}
       <div className="h5-list">
-        {merchants.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
-        {!merchants.length && !error && <EmptyCard title="该分类正在招募商家" text="欢迎周边优质服务商入驻西大圈。" />}
+        {showMerchants && merchants.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
+        {(!showMerchants || !merchants.length) && !error && <EmptyCard title={`${selectedConfig.title}还在调研中`} text="这个服务还在调研中，推荐你知道的靠谱店，西大圈优先补充，也可以通过微信反馈纠错。" />}
       </div>
     </>
   );
 }
 
-function CommunityTab({ types, activeType, posts, error, onType, onWechat }: {
-  types: string[]; activeType: string; posts: Dict[]; error: string; onType: (type: string) => void; onWechat: () => void;
+function CommunityTab({ types, activeType, posts, error, onType, onOpenPost, onSubmitted }: {
+  types: string[]; activeType: string; posts: Dict[]; error: string; onType: (type: string) => void; onOpenPost: (id?: string) => void; onSubmitted: () => void;
 }) {
+  const [showForm, setShowForm] = useState(false);
   return (
     <>
-      <PageHero icon={<MessageCircle size={18} />} title="校园讨论区" text="只读开放中，先看看大家关心的活动、拼单和校园问题。" action={<button onClick={onWechat}><Plus size={16} />发布</button>} />
+      <PageHero icon={<MessageCircle size={18} />} title="校园讨论区" text="发布后进入后台审核，通过后公开展示。" action={<button onClick={() => setShowForm((value) => !value)}><Plus size={16} />发布</button>} />
+      {showForm && <PostSubmitForm onDone={() => { setShowForm(false); onSubmitted(); }} />}
       <ChipRow items={types.map((type) => ({ id: type, label: type }))} active={activeType} onChange={onType} />
       {error && <p className="muted-line">{error}</p>}
       <div className="h5-post-list">
-        {posts.map((post) => (
-          <article className="h5-post" key={post.id}>
-            <span>{post.type}</span>
-            <h2>{post.title}</h2>
-            <p>{post.summary}</p>
-            <div><CalendarDays size={14} />{post.time}<ThumbsUp size={14} />{post.likeCount ?? 0}<MessageCircle size={14} />{post.commentCount ?? 0}</div>
-          </article>
-        ))}
-        {!posts.length && !error && <EmptyCard title="还没有内容" text="讨论区发布能力即将开放，当前可通过微信投稿。" />}
+        {posts.map((post) => <PostCard key={post.id} post={post} onOpen={onOpenPost} />)}
+        {!posts.length && !error && <EmptyCard title="还没有内容" text="可以发布校园墙、拼饭、二手和信息投稿，审核后展示。" />}
       </div>
     </>
+  );
+}
+
+function PostSubmitForm({ onDone }: { onDone: () => void }) {
+  const [form, setForm] = useState({ type: "校园墙", title: "", content: "", authorNickname: "", contact: "" });
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      await publicWrite("/api/public/community/posts", form);
+      setMessage("投稿成功，审核后展示。");
+      setForm({ type: "校园墙", title: "", content: "", authorNickname: "", contact: "" });
+      window.setTimeout(onDone, 900);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "投稿失败");
+    }
+  }
+
+  return (
+    <form className="h5-post-form" onSubmit={submit}>
+      <div className="post-form-grid">
+        <label>类型<input value={form.type} onChange={(e) => setForm((current) => ({ ...current, type: e.target.value }))} /></label>
+        <label>昵称<input value={form.authorNickname} onChange={(e) => setForm((current) => ({ ...current, authorNickname: e.target.value }))} /></label>
+      </div>
+      <label>标题<input value={form.title} maxLength={80} onChange={(e) => setForm((current) => ({ ...current, title: e.target.value }))} /></label>
+      <label>正文<textarea value={form.content} maxLength={2000} onChange={(e) => setForm((current) => ({ ...current, content: e.target.value }))} /></label>
+      <label>联系方式<input value={form.contact} placeholder="微信或手机号，仅后台可见" onChange={(e) => setForm((current) => ({ ...current, contact: e.target.value }))} /></label>
+      {message && <p className="success">{message}</p>}
+      {error && <p className="error">{error}</p>}
+      <button className="primary"><Send size={16} />提交审核</button>
+    </form>
+  );
+}
+
+function PostCard({ post, onOpen }: { post: Dict; onOpen: (id?: string) => void }) {
+  return (
+    <button className="h5-post" onClick={() => onOpen(post.id)}>
+      <span>{post.type}</span>
+      <h2>{post.title}</h2>
+      <p>{post.summary}</p>
+      <div><CalendarDays size={14} />{post.time}<ThumbsUp size={14} />{post.likeCount ?? 0}<MessageCircle size={14} />{post.commentCount ?? 0}</div>
+    </button>
+  );
+}
+
+function PostDetail({ post, onLike }: { post: Dict; onLike: (id: string) => Promise<void> }) {
+  const [liking, setLiking] = useState(false);
+  async function like() {
+    setLiking(true);
+    try {
+      await onLike(post.id);
+    } finally {
+      setLiking(false);
+    }
+  }
+  return (
+    <article className="post-detail">
+      <span>{post.type}</span>
+      <h1>{post.title}</h1>
+      <div className="post-detail-meta"><CalendarDays size={14} />{post.time}<span>{post.authorNickname || "匿名同学"}</span><span>{post.viewCount ?? 0} 浏览</span></div>
+      <p>{post.content || post.summary}</p>
+      <button onClick={like} disabled={liking}><ThumbsUp size={16} />{post.likeCount ?? 0}</button>
+    </article>
   );
 }
 
@@ -635,7 +831,8 @@ function Overview({ token }: { token: string }) {
   const [stats, setStats] = useState<Dict>({});
   useEffect(() => { api<Dict>(token, "/api/admin/dashboard/overview").then(setStats).catch(console.error); }, [token]);
   const cards = [
-    ["商家数", stats.merchantCount], ["福利数", stats.activityCount], ["轮播数", stats.bannerCount], ["帖子数", stats.communityPostCount],
+    ["商家数", stats.merchantCount], ["福利数", stats.activityCount], ["轮播数", stats.bannerCount], ["待审帖子", stats.pendingCommunityPostCount],
+    ["可见帖子", stats.visibleCommunityPostCount], ["帖子总数", stats.communityPostCount],
     ["今日曝光", stats.todayExposures], ["今日点击", stats.todayClicks], ["优惠券数", stats.couponCount], ["核销数", stats.redemptionCount]
   ];
   return <Page title="概览" hint="平台内容、福利和今日转化数据。"><div className="stats">{cards.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div></Page>;
@@ -657,9 +854,9 @@ function Banners({ token }: { token: string }) {
 function Food({ token }: { token: string }) {
   const base = useAdminData(token);
   const food = base.merchants.filter((item) => item.category?.slug === "food" || item.foodCategory);
-  return <CrudPage token={token} title="今天吃什么" path="/api/admin/merchants" sourceItems={food} defaults={{ status: "APPROVED", randomWeight: 10, isFoodRecommendation: true }} fields={[
-    ["name", "商家名"], ["categoryId", "基础类目", "select", base.categories], ["foodCategory", "餐饮分类"], ["avgPrice", "人均", "number"], ["distanceText", "距离文案"], ["recommendation", "推荐语"], ["randomWeight", "随机权重", "number"], ["isFoodRecommendation", "参与随机推荐", "checkbox"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["coverImageUrl", "图片 URL"], ["tags", "标签逗号分隔", "csv"], ["highlights", "亮点逗号分隔", "csv"], ["menu", "菜单，每行 名称,价格", "menu"], ["qrImageUrl", "二维码 URL"]
-  ]} columns={["name", "foodCategory", "recommendation", "randomWeight", "isFoodRecommendation"]} transform={merchantTransform} onSaved={base.reloadBase} />;
+  return <CrudPage token={token} title="美食运营工作台" hint="只维护美食商家，上架状态会实时影响前台列表、随机推荐和首页精选。" path="/api/admin/merchants" sourceItems={food} defaults={{ status: "APPROVED", randomWeight: 10, isFoodRecommendation: true }} fields={[
+    ["name", "商家名"], ["categoryId", "基础类目", "select", base.categories], ["foodCategory", "餐饮分类"], ["avgPrice", "人均", "number"], ["distanceText", "距离文案"], ["recommendation", "推荐语"], ["tags", "标签逗号分隔", "csv"], ["highlights", "亮点逗号分隔", "csv"], ["menu", "菜单，每行 名称,价格", "menu"], ["coverImageUrl", "封面图 URL"], ["qrImageUrl", "群二维码 URL"], ["randomWeight", "随机权重", "number"], ["sortOrder", "排序", "number"], ["platformBoost", "首页加权", "number"], ["isFoodRecommendation", "参与随机推荐", "checkbox"], ["status", "上架状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"]
+  ]} columns={["name", "foodCategory", "recommendation", "platformBoost", "sortOrder", "randomWeight", "isFoodRecommendation", "status"]} transform={merchantTransform} onSaved={base.reloadBase} />;
 }
 
 function Services({ token }: { token: string }) {
@@ -675,9 +872,9 @@ function ServiceCategories({ token }: { token: string }) {
 }
 
 function Community({ token }: { token: string }) {
-  return <CrudPage token={token} title="论坛功能" path="/api/admin/community-posts" defaults={{ type: "校园墙", status: "VISIBLE", likeCount: 0, commentCount: 0, sortOrder: 100 }} fields={[
-    ["type", "类型"], ["title", "标题"], ["summary", "内容摘要"], ["likeCount", "点赞数", "number"], ["commentCount", "评论数", "number"], ["status", "状态", "select", ["VISIBLE", "HIDDEN"]], ["sortOrder", "排序", "number"]
-  ]} columns={["type", "title", "summary", "likeCount", "commentCount", "status"]} />;
+  return <CrudPage token={token} title="论坛审核台" hint="学生投稿默认待审，联系方式仅后台查看；通过后前台列表和首页热帖才会展示。" path="/api/admin/community-posts" defaults={{ type: "校园墙", status: "VISIBLE", likeCount: 0, commentCount: 0, viewCount: 0, sortOrder: 100, source: "admin" }} fields={[
+    ["type", "类型"], ["title", "标题"], ["summary", "内容摘要"], ["content", "正文", "textarea"], ["authorNickname", "昵称"], ["contact", "联系方式"], ["source", "来源"], ["likeCount", "点赞数", "number"], ["commentCount", "评论数", "number"], ["viewCount", "浏览数", "number"], ["status", "审核状态", "select", ["PENDING", "VISIBLE", "HIDDEN", "REJECTED"]], ["sortOrder", "排序", "number"]
+  ]} columns={["status", "type", "title", "authorNickname", "contact", "likeCount", "viewCount", "sortOrder"]} transform={(item) => ({ ...item, content: item.content || item.summary })} />;
 }
 
 function Merchants({ token }: { token: string }) {
@@ -772,7 +969,7 @@ function Field({ name, label, type = "text", value, options, onChange }: { name:
   if (type === "checkbox") {
     return <label className="check"><input type="checkbox" checked={Boolean(normalized)} onChange={(e) => onChange(e.target.checked)} />{label}</label>;
   }
-  if (type === "menu") {
+  if (type === "menu" || type === "textarea") {
     return <label>{label}<textarea value={normalized} onChange={(e) => onChange(e.target.value)} /></label>;
   }
   return <label>{label}<input type={type === "csv" ? "text" : type} name={name} value={normalized} onChange={(e) => onChange(type === "number" ? Number(e.target.value) : e.target.value)} /></label>;

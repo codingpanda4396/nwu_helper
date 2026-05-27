@@ -70,9 +70,14 @@ const communityPostSchema = z.object({
   type: z.string().min(1),
   title: z.string().min(1),
   summary: z.string().min(1),
+  content: z.string().optional(),
+  authorNickname: z.string().nullable().optional(),
+  contact: z.string().nullable().optional(),
+  source: z.string().optional(),
+  viewCount: z.coerce.number().int().nonnegative().default(0),
   likeCount: z.coerce.number().int().nonnegative().default(0),
   commentCount: z.coerce.number().int().nonnegative().default(0),
-  status: z.enum(["VISIBLE", "HIDDEN"]).default("VISIBLE"),
+  status: z.enum(["PENDING", "VISIBLE", "HIDDEN", "REJECTED"]).default("VISIBLE"),
   sortOrder: z.coerce.number().int().default(100),
   publishedAt: z.coerce.date().optional()
 });
@@ -489,20 +494,22 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount] = await prisma.$transaction([
+    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount] = await prisma.$transaction([
       prisma.merchant.count(),
       prisma.merchant.count({ where: { status: "APPROVED" } }),
       prisma.coupon.count(),
       prisma.activity.count(),
       prisma.banner.count(),
       prisma.communityPost.count(),
+      prisma.communityPost.count({ where: { status: "PENDING" } }),
+      prisma.communityPost.count({ where: { status: "VISIBLE" } }),
       prisma.userCoupon.count(),
       prisma.couponRedemption.count(),
       prisma.exposureLog.count({ where: { createdAt: { gte: today } } }),
       prisma.clickLog.count({ where: { createdAt: { gte: today } } }),
       prisma.couponRedemption.aggregate({ _sum: { amount: true } })
     ]);
-    return ok(reply, { merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount: redemptionAmount._sum.amount ?? 0 });
+    return ok(reply, { merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount: redemptionAmount._sum.amount ?? 0 });
   });
 
   app.get("/api/admin/banners", async (_request, reply) => {
@@ -564,7 +571,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.patch("/api/admin/community-posts/:id/status", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
-    const { status } = z.object({ status: z.enum(["VISIBLE", "HIDDEN"]) }).parse(request.body);
+    const { status } = z.object({ status: z.enum(["PENDING", "VISIBLE", "HIDDEN", "REJECTED"]) }).parse(request.body);
     return ok(reply, await prisma.communityPost.update({ where: { id }, data: { status } }));
   });
 

@@ -59,6 +59,19 @@ const communityQuery = z.object({
   type: z.string().optional()
 });
 
+const communityPostCreateSchema = z.object({
+  type: z.string().trim().min(1).max(24),
+  title: z.string().trim().min(2).max(80),
+  content: z.string().trim().min(5).max(2000),
+  authorNickname: z.string().trim().min(1).max(24),
+  contact: z.string().trim().min(5).max(80),
+  source: z.string().trim().max(24).optional()
+});
+
+const communityLikeSchema = z.object({
+  sessionId: z.string().trim().min(3).max(120).optional()
+});
+
 const shareSchema = z.object({
   source: z.string().optional(),
   channel: z.string().optional(),
@@ -112,6 +125,21 @@ function activityCard(activity: any) {
   };
 }
 
+function communityPostCard(item: any) {
+  return {
+    id: item.id,
+    type: item.type,
+    title: item.title,
+    summary: item.summary,
+    content: item.content || item.summary,
+    authorNickname: item.authorNickname || "匿名同学",
+    likeCount: item.likeCount,
+    commentCount: item.commentCount,
+    viewCount: item.viewCount,
+    time: item.publishedAt.toISOString().slice(0, 10)
+  };
+}
+
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/api/public/banners", async (_request, reply) => {
     const items = await prisma.banner.findMany({
@@ -131,9 +159,24 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/public/home", async (_request, reply) => {
-    const [banners, activities] = await Promise.all([
+    const [banners, activities, featuredFoods, featuredPosts] = await Promise.all([
       prisma.banner.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
-      getHomeActivities()
+      getHomeActivities(),
+      prisma.merchant.findMany({
+        where: { status: "APPROVED", foodCategory: { not: null } },
+        include: {
+          category: true,
+          serviceCategory: true,
+          coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+        },
+        orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }, { randomWeight: "desc" }],
+        take: 4
+      }),
+      prisma.communityPost.findMany({
+        where: { status: "VISIBLE" },
+        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
+        take: 4
+      })
     ]);
     return ok(reply, {
       banners: banners.map((item) => ({
@@ -146,7 +189,9 @@ export async function publicRoutes(app: FastifyInstance) {
         targetId: item.targetId,
         url: item.url
       })),
-      activities: [...activities.dailyDeals, ...activities.femaleSelected, ...activities.groupDeals, ...activities.general].map(activityCard)
+      activities: [...activities.dailyDeals, ...activities.femaleSelected, ...activities.groupDeals, ...activities.general].map(activityCard),
+      featuredFoods: featuredFoods.map(merchantCard),
+      featuredPosts: featuredPosts.map(communityPostCard)
     });
   });
 
@@ -395,15 +440,54 @@ export async function publicRoutes(app: FastifyInstance) {
       where: { status: "VISIBLE", type: query.type && query.type !== "全部" ? query.type : undefined },
       orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }]
     });
-    return ok(reply, items.map((item) => ({
-      id: item.id,
-      type: item.type,
-      title: item.title,
-      summary: item.summary,
-      likeCount: item.likeCount,
-      commentCount: item.commentCount,
-      time: item.publishedAt.toISOString().slice(0, 10)
-    })));
+    return ok(reply, items.map(communityPostCard));
+  });
+
+  app.post("/api/public/community/posts", async (request, reply) => {
+    const parsed = communityPostCreateSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "投稿参数错误");
+    const content = parsed.data.content;
+    const post = await prisma.communityPost.create({
+      data: {
+        type: parsed.data.type,
+        title: parsed.data.title,
+        summary: content.length > 90 ? `${content.slice(0, 90)}...` : content,
+        content,
+        authorNickname: parsed.data.authorNickname,
+        contact: parsed.data.contact,
+        source: parsed.data.source || "student",
+        status: "PENDING",
+        sortOrder: 100
+      }
+    });
+    return ok(reply, { id: post.id, status: post.status }, "投稿成功，审核后展示");
+  });
+
+  app.get("/api/public/community/posts/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const post = await prisma.communityPost.updateMany({
+      where: { id, status: "VISIBLE" },
+      data: { viewCount: { increment: 1 } }
+    });
+    if (post.count === 0) return fail(reply, "NOT_FOUND", "帖子不存在或未审核", 404);
+    const item = await prisma.communityPost.findUnique({ where: { id } });
+    return ok(reply, communityPostCard(item));
+  });
+
+  app.post("/api/public/community/posts/:id/like", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = communityLikeSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "点赞参数错误");
+    const sessionId = parsed.data.sessionId || request.headers["x-session-id"]?.toString() || request.ip;
+    const post = await prisma.communityPost.findFirst({ where: { id, status: "VISIBLE" } });
+    if (!post) return fail(reply, "NOT_FOUND", "帖子不存在或未审核", 404);
+    const likedSessionIds = Array.isArray(post.likedSessionIds) ? post.likedSessionIds.filter((item): item is string => typeof item === "string") : [];
+    if (likedSessionIds.includes(sessionId)) return ok(reply, { liked: true, likeCount: post.likeCount });
+    const updated = await prisma.communityPost.update({
+      where: { id },
+      data: { likeCount: { increment: 1 }, likedSessionIds: [...likedSessionIds, sessionId].slice(-500) }
+    });
+    return ok(reply, { liked: true, likeCount: updated.likeCount });
   });
 
   app.post("/api/public/exposures", async (request, reply) => {

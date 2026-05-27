@@ -18,6 +18,24 @@
     <button class="chooser-btn" bindtap="chooseFood">帮我选</button>
   </view>
 
+  <section-title title="精选美食" hint="后台运营推荐" />
+  <view class="feature-grid">
+    <button wx:for="{{featuredFoods}}" wx:key="id" class="feature-food card" data-id="{{item.id}}" bindtap="onFoodOpen">
+      <image src="{{item.image || '/assets/images/merchant-food-001.jpg'}}" mode="aspectFill" />
+      <view>
+        <view class="feature-title">{{item.name}}</view>
+        <view class="feature-desc">{{item.recommendation || item.discount}}</view>
+      </view>
+    </button>
+  </view>
+
+  <section-title title="校园热帖" hint="审核后展示" />
+  <button wx:for="{{featuredPosts}}" wx:key="id" class="feature-post card" data-id="{{item.id}}" bindtap="openPost">
+    <view class="feature-type">{{item.type}}</view>
+    <view class="feature-title">{{item.title}}</view>
+    <view class="feature-desc">{{item.summary}}</view>
+  </button>
+
   <section-title title="西大圈入口" action-text="了解更多" bind:action="openAbout" />
   <qrcode-block title="加入西大圈" desc="发现更多校园福利、拼饭信息和周边服务。" image="/assets/images/qr-placeholder.jpg" bind:action="showQrToast" />
 

@@ -4,6 +4,8 @@ Page({
   data: {
     banners: [],
     activities: [],
+    featuredFoods: [],
+    featuredPosts: [],
     recommendation: ""
   },
   onLoad() {
@@ -11,7 +13,7 @@ Page({
   },
   async loadHome() {
     const home = await api.getHome();
-    this.setData({ banners: home.banners || [], activities: home.activities || [] });
+    this.setData({ banners: home.banners || [], activities: home.activities || [], featuredFoods: home.featuredFoods || [], featuredPosts: home.featuredPosts || [] });
   },
   onBannerTap(event) {
     const item = event.detail.item;
@@ -32,6 +34,17 @@ Page({
   onActivityOpen(event) {
     const item = event.detail.item;
     if (item && item.merchantId) this.openMerchant(item.merchantId);
+  },
+  onFoodOpen(event) {
+    const id = event.currentTarget.dataset.id;
+    if (id) this.openMerchant(id);
+  },
+  openPost(event) {
+    const id = event.currentTarget.dataset.id;
+    if (id) {
+      wx.setStorageSync("pendingCommunityPostId", id);
+      wx.switchTab({ url: "/pages/community/index" });
+    }
   },
   openMerchant(id) {
     wx.navigateTo({ url: `/pages/merchant/detail?id=${id}` });

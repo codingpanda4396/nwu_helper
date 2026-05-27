@@ -90,8 +90,10 @@ enum BannerTargetType {
 }
 
 enum CommunityPostStatus {
+  PENDING
   VISIBLE
   HIDDEN
+  REJECTED
 }
 
 model User {
@@ -206,8 +208,14 @@ model CommunityPost {
   type         String
   title        String
   summary      String
+  content      String              @default("")
+  authorNickname String?
+  contact      String?
+  source       String              @default("admin")
+  viewCount    Int                 @default(0)
   likeCount    Int                 @default(0)
   commentCount Int                 @default(0)
+  likedSessionIds Json             @default("[]")
   status       CommunityPostStatus @default(VISIBLE)
   sortOrder    Int                 @default(100)
   publishedAt  DateTime            @default(now())

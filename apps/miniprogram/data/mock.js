@@ -211,10 +211,10 @@ const services = [
 const communityTypes = ["全部", "校园墙", "求助", "拼饭", "二手", "吐槽", "校园信息"];
 
 const communityPosts = [
-  { id: "post-001", type: "校园墙", title: "今天南门有什么好吃的推荐？", summary: "想找一家适合两个人吃饭的小店，预算人均 30 左右。", time: "10 分钟前", likeCount: 12, commentCount: 4 },
-  { id: "post-002", type: "拼饭", title: "晚上有人一起吃烧烤吗", summary: "晚课后从长安校区南门出发，想拼晚风烧烤双人套餐。", time: "28 分钟前", likeCount: 8, commentCount: 6 },
-  { id: "post-003", type: "校园信息", title: "南门快印今晚到 22:30", summary: "需要打印课程材料的同学可以微信先传文件。", time: "1 小时前", likeCount: 18, commentCount: 2 },
-  { id: "post-004", type: "二手", title: "出一个八成新台灯", summary: "亮度可调，长安校区自取。", time: "2 小时前", likeCount: 5, commentCount: 3 }
+  { id: "post-001", type: "校园墙", title: "今天南门有什么好吃的推荐？", summary: "想找一家适合两个人吃饭的小店，预算人均 30 左右。", content: "想找一家适合两个人吃饭的小店，预算人均 30 左右。最好离南门近一点，下课后直接过去。", authorNickname: "想吃饭同学", time: "10 分钟前", viewCount: 35, likeCount: 12, commentCount: 4 },
+  { id: "post-002", type: "拼饭", title: "晚上有人一起吃烧烤吗", summary: "晚课后从长安校区南门出发，想拼晚风烧烤双人套餐。", content: "晚课后从长安校区南门出发，想拼晚风烧烤双人套餐，AA 就行。", authorNickname: "晚课人", time: "28 分钟前", viewCount: 26, likeCount: 8, commentCount: 6 },
+  { id: "post-003", type: "校园信息", title: "南门快印今晚到 22:30", summary: "需要打印课程材料的同学可以微信先传文件。", content: "需要打印课程材料的同学可以微信先传文件，今晚营业到 22:30。", authorNickname: "信息搬运", time: "1 小时前", viewCount: 58, likeCount: 18, commentCount: 2 },
+  { id: "post-004", type: "二手", title: "出一个八成新台灯", summary: "亮度可调，长安校区自取。", content: "出一个八成新台灯，亮度可调，长安校区自取。", authorNickname: "毕业清理", time: "2 小时前", viewCount: 19, likeCount: 5, commentCount: 3 }
 ];
 
 const drivingSchool = {

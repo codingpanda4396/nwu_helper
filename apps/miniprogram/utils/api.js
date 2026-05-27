@@ -21,6 +21,15 @@ function request(path, options = {}) {
   });
 }
 
+function getSessionId() {
+  let sessionId = wx.getStorageSync("nwuSessionId");
+  if (!sessionId) {
+    sessionId = `mp-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+    wx.setStorageSync("nwuSessionId", sessionId);
+  }
+  return sessionId;
+}
+
 async function withFallback(loader, fallback) {
   try {
     return await loader();
@@ -31,7 +40,7 @@ async function withFallback(loader, fallback) {
 
 module.exports = {
   mock,
-  getHome: () => withFallback(() => request("/api/public/home"), { banners: mock.banners, activities: mock.activities }),
+  getHome: () => withFallback(() => request("/api/public/home"), { banners: mock.banners, activities: mock.activities, featuredFoods: mock.merchants.filter((merchant) => merchant.category === "food").slice(0, 3), featuredPosts: mock.communityPosts.slice(0, 3) }),
   getFoodCategories: () => withFallback(() => request("/api/public/food/categories"), mock.foodCategories),
   getFoodMerchants: (categoryId) => withFallback(() => request(`/api/public/food/merchants?categoryId=${encodeURIComponent(categoryId || "all")}`), () => mock.merchants.filter((merchant) => merchant.category === "food" && (!categoryId || categoryId === "all" || merchant.foodCategory === categoryId))),
   getRandomFood: () => withFallback(() => request("/api/public/food/random"), () => {
@@ -45,6 +54,12 @@ module.exports = {
   }),
   getCommunityTypes: () => withFallback(() => request("/api/public/community/types"), mock.communityTypes),
   getCommunityPosts: (type) => withFallback(() => request(`/api/public/community/posts?type=${encodeURIComponent(type || "全部")}`), () => type && type !== "全部" ? mock.communityPosts.filter((post) => post.type === type) : mock.communityPosts),
+  submitCommunityPost: (data) => request("/api/public/community/posts", { method: "POST", data }),
+  getCommunityPost: (id) => withFallback(() => request(`/api/public/community/posts/${id}`), () => mock.communityPosts.find((post) => post.id === id) || null),
+  likeCommunityPost: (id) => withFallback(() => request(`/api/public/community/posts/${id}/like`, { method: "POST", data: { sessionId: getSessionId() } }), () => {
+    const post = mock.communityPosts.find((item) => item.id === id);
+    return { liked: true, likeCount: post ? post.likeCount : 0 };
+  }),
   getMerchant: (id) => withFallback(() => request(`/api/public/merchants/${id}`), () => {
     const merchant = mock.merchants.find((item) => item.id === id);
     return merchant ? { ...merchant, coupons: mock.coupons.filter((coupon) => merchant.couponIds.indexOf(coupon.id) >= 0) } : null;
