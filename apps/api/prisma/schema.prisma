@@ -81,6 +81,19 @@ enum ShareEventType {
   SHARE_OPEN
 }
 
+enum BannerTargetType {
+  ACTIVITY
+  SERVICE
+  ABOUT
+  TAB
+  URL
+}
+
+enum CommunityPostStatus {
+  VISIBLE
+  HIDDEN
+}
+
 model User {
   id              String             @id @default(cuid())
   name            String
@@ -121,11 +134,24 @@ model Merchant {
   phone         String?
   businessHours String?
   coverImageUrl String?
+  foodCategory  String?
+  serviceCategoryId String?
+  avgPrice      Decimal?
+  distanceText  String?
+  tags          Json?
+  highlights    Json?
+  menu          Json?
+  qrImageUrl    String?
+  recommendation String?
+  randomWeight  Int                @default(0)
+  isFoodRecommendation Boolean     @default(false)
+  isServicePublished Boolean       @default(false)
   status        MerchantStatus     @default(PENDING)
   rating        Decimal            @default(4.8)
   sortOrder     Int                @default(100)
   platformBoost Int                @default(0)
   category      Category           @relation(fields: [categoryId], references: [id])
+  serviceCategory ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
   ownerUser     User?              @relation(fields: [ownerUserId], references: [id])
   coupons       Coupon[]
   userCoupons   UserCoupon[]
@@ -140,7 +166,55 @@ model Merchant {
   updatedAt     DateTime           @updatedAt
 
   @@index([categoryId])
+  @@index([serviceCategoryId])
+  @@index([foodCategory, isFoodRecommendation, status])
   @@index([status, platformBoost, sortOrder, rating, createdAt])
+}
+
+model Banner {
+  id          String           @id @default(cuid())
+  title       String
+  subtitle    String?
+  imageUrl    String
+  targetType  BannerTargetType @default(TAB)
+  targetId    String?
+  url         String?
+  sortOrder   Int              @default(100)
+  isActive    Boolean          @default(true)
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model ServiceCategory {
+  id          String     @id @default(cuid())
+  name        String
+  key         String     @unique
+  icon        String?
+  sortOrder   Int        @default(100)
+  isActive    Boolean    @default(true)
+  merchants   Merchant[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@index([isActive, sortOrder])
+}
+
+model CommunityPost {
+  id           String              @id @default(cuid())
+  type         String
+  title        String
+  summary      String
+  likeCount    Int                 @default(0)
+  commentCount Int                 @default(0)
+  status       CommunityPostStatus @default(VISIBLE)
+  sortOrder    Int                 @default(100)
+  publishedAt  DateTime            @default(now())
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+
+  @@index([status, type, sortOrder, publishedAt])
 }
 
 model Coupon {

@@ -24,6 +24,18 @@ const merchantSchema = z.object({
   summary: z.string().optional(),
   description: z.string().optional(),
   categoryId: z.string().min(1),
+  foodCategory: z.string().nullable().optional(),
+  serviceCategoryId: z.string().nullable().optional(),
+  avgPrice: z.coerce.number().nullable().optional(),
+  distanceText: z.string().nullable().optional(),
+  tags: z.array(z.string()).optional(),
+  highlights: z.array(z.string()).optional(),
+  menu: z.array(z.object({ name: z.string().min(1), price: z.coerce.number() })).optional(),
+  qrImageUrl: z.string().nullable().optional(),
+  recommendation: z.string().nullable().optional(),
+  randomWeight: z.coerce.number().int().min(0).default(0),
+  isFoodRecommendation: z.boolean().default(false),
+  isServicePublished: z.boolean().default(false),
   ownerUserId: z.string().nullable().optional(),
   address: z.string().min(1),
   phone: z.string().optional(),
@@ -33,6 +45,36 @@ const merchantSchema = z.object({
   rating: z.coerce.number().min(0).max(5).default(4.8),
   sortOrder: z.coerce.number().int().default(100),
   platformBoost: z.coerce.number().int().default(0)
+});
+
+const bannerSchema = z.object({
+  title: z.string().min(1),
+  subtitle: z.string().nullable().optional(),
+  imageUrl: z.string().min(1),
+  targetType: z.enum(["ACTIVITY", "SERVICE", "ABOUT", "TAB", "URL"]).default("TAB"),
+  targetId: z.string().nullable().optional(),
+  url: z.string().nullable().optional(),
+  sortOrder: z.coerce.number().int().default(100),
+  isActive: z.boolean().default(true)
+});
+
+const serviceCategorySchema = z.object({
+  name: z.string().min(1),
+  key: z.string().min(1).regex(/^[a-z0-9-]+$/),
+  icon: z.string().nullable().optional(),
+  sortOrder: z.coerce.number().int().default(100),
+  isActive: z.boolean().default(true)
+});
+
+const communityPostSchema = z.object({
+  type: z.string().min(1),
+  title: z.string().min(1),
+  summary: z.string().min(1),
+  likeCount: z.coerce.number().int().nonnegative().default(0),
+  commentCount: z.coerce.number().int().nonnegative().default(0),
+  status: z.enum(["VISIBLE", "HIDDEN"]).default("VISIBLE"),
+  sortOrder: z.coerce.number().int().default(100),
+  publishedAt: z.coerce.date().optional()
 });
 
 const couponSchema = z.object({
@@ -345,7 +387,7 @@ export async function adminRoutes(app: FastifyInstance) {
     const [items, total] = await prisma.$transaction([
       prisma.merchant.findMany({
         where,
-        include: { category: true, ownerUser: true, coupons: true },
+        include: { category: true, serviceCategory: true, ownerUser: true, coupons: true },
         orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
         skip: (query.page - 1) * query.pageSize,
         take: query.pageSize
@@ -447,17 +489,83 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [merchantCount, approvedMerchantCount, couponCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount] = await prisma.$transaction([
+    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount] = await prisma.$transaction([
       prisma.merchant.count(),
       prisma.merchant.count({ where: { status: "APPROVED" } }),
       prisma.coupon.count(),
+      prisma.activity.count(),
+      prisma.banner.count(),
+      prisma.communityPost.count(),
       prisma.userCoupon.count(),
       prisma.couponRedemption.count(),
       prisma.exposureLog.count({ where: { createdAt: { gte: today } } }),
       prisma.clickLog.count({ where: { createdAt: { gte: today } } }),
       prisma.couponRedemption.aggregate({ _sum: { amount: true } })
     ]);
-    return ok(reply, { merchantCount, approvedMerchantCount, couponCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount: redemptionAmount._sum.amount ?? 0 });
+    return ok(reply, { merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount: redemptionAmount._sum.amount ?? 0 });
+  });
+
+  app.get("/api/admin/banners", async (_request, reply) => {
+    return ok(reply, await prisma.banner.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }));
+  });
+
+  app.post("/api/admin/banners", async (request, reply) => {
+    const parsed = bannerSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "轮播图参数错误");
+    return ok(reply, await prisma.banner.create({ data: parsed.data }));
+  });
+
+  app.patch("/api/admin/banners/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = bannerSchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "轮播图参数错误");
+    return ok(reply, await prisma.banner.update({ where: { id }, data: parsed.data }));
+  });
+
+  app.patch("/api/admin/banners/:id/status", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const { isActive } = z.object({ isActive: z.boolean() }).parse(request.body);
+    return ok(reply, await prisma.banner.update({ where: { id }, data: { isActive } }));
+  });
+
+  app.get("/api/admin/service-categories", async (_request, reply) => {
+    return ok(reply, await prisma.serviceCategory.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] }));
+  });
+
+  app.post("/api/admin/service-categories", async (request, reply) => {
+    const parsed = serviceCategorySchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "服务分类参数错误");
+    return ok(reply, await prisma.serviceCategory.create({ data: parsed.data }));
+  });
+
+  app.patch("/api/admin/service-categories/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = serviceCategorySchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "服务分类参数错误");
+    return ok(reply, await prisma.serviceCategory.update({ where: { id }, data: parsed.data }));
+  });
+
+  app.get("/api/admin/community-posts", async (_request, reply) => {
+    return ok(reply, await prisma.communityPost.findMany({ orderBy: [{ status: "asc" }, { sortOrder: "asc" }, { publishedAt: "desc" }] }));
+  });
+
+  app.post("/api/admin/community-posts", async (request, reply) => {
+    const parsed = communityPostSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "帖子参数错误");
+    return ok(reply, await prisma.communityPost.create({ data: parsed.data }));
+  });
+
+  app.patch("/api/admin/community-posts/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = communityPostSchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "帖子参数错误");
+    return ok(reply, await prisma.communityPost.update({ where: { id }, data: parsed.data }));
+  });
+
+  app.patch("/api/admin/community-posts/:id/status", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const { status } = z.object({ status: z.enum(["VISIBLE", "HIDDEN"]) }).parse(request.body);
+    return ok(reply, await prisma.communityPost.update({ where: { id }, data: { status } }));
   });
 
   app.get("/api/admin/analytics/summary", async (request, reply) => {

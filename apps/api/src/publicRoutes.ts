@@ -51,6 +51,14 @@ const activityListQuery = z.object({
   pageSize: z.coerce.number().int().positive().max(50).default(20)
 });
 
+const serviceQuery = z.object({
+  serviceKey: z.string().optional()
+});
+
+const communityQuery = z.object({
+  type: z.string().optional()
+});
+
 const shareSchema = z.object({
   source: z.string().optional(),
   channel: z.string().optional(),
@@ -60,7 +68,88 @@ const shareSchema = z.object({
   sessionId: z.string().optional()
 });
 
+function asStringArray(value: unknown): string[] {
+  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
+}
+
+function merchantCard(merchant: any) {
+  const coupons = merchant.coupons ?? [];
+  const activeCoupon = coupons[0];
+  return {
+    id: merchant.id,
+    category: merchant.category?.slug === "food" ? "food" : "service",
+    foodCategory: merchant.foodCategory,
+    serviceId: merchant.serviceCategory?.key,
+    name: merchant.name,
+    image: merchant.coverImageUrl,
+    rating: Number(merchant.rating),
+    avgPrice: merchant.avgPrice == null ? null : Number(merchant.avgPrice),
+    distance: merchant.distanceText ?? "",
+    distanceText: merchant.distanceText ?? "",
+    address: merchant.address,
+    businessHours: merchant.businessHours,
+    tags: asStringArray(merchant.tags),
+    discount: activeCoupon?.title ?? "",
+    recommendation: merchant.recommendation ?? merchant.summary ?? "",
+    highlights: asStringArray(merchant.highlights),
+    menu: Array.isArray(merchant.menu) ? merchant.menu : [],
+    couponIds: coupons.map((coupon: { id: string }) => coupon.id),
+    qrImage: merchant.qrImageUrl,
+    qrImageUrl: merchant.qrImageUrl,
+    coupons
+  };
+}
+
+function activityCard(activity: any) {
+  return {
+    id: activity.id,
+    merchantId: activity.merchantId,
+    title: activity.title,
+    tags: [activity.subtitle, activity.type].filter(Boolean),
+    discount: activity.coupon?.title ?? activity.subtitle ?? "",
+    image: activity.coverImage ?? activity.merchant?.coverImageUrl,
+    cta: "去看看"
+  };
+}
+
 export async function publicRoutes(app: FastifyInstance) {
+  app.get("/api/public/banners", async (_request, reply) => {
+    const items = await prisma.banner.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
+    });
+    return ok(reply, items.map((item) => ({
+      id: item.id,
+      title: item.title,
+      subtitle: item.subtitle,
+      image: item.imageUrl,
+      imageUrl: item.imageUrl,
+      targetType: item.targetType.toLowerCase(),
+      targetId: item.targetId,
+      url: item.url
+    })));
+  });
+
+  app.get("/api/public/home", async (_request, reply) => {
+    const [banners, activities] = await Promise.all([
+      prisma.banner.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
+      getHomeActivities()
+    ]);
+    return ok(reply, {
+      banners: banners.map((item) => ({
+        id: item.id,
+        title: item.title,
+        subtitle: item.subtitle,
+        image: item.imageUrl,
+        imageUrl: item.imageUrl,
+        targetType: item.targetType.toLowerCase(),
+        targetId: item.targetId,
+        url: item.url
+      })),
+      activities: [...activities.dailyDeals, ...activities.femaleSelected, ...activities.groupDeals, ...activities.general].map(activityCard)
+    });
+  });
+
   app.get("/api/public/categories", async (_request, reply) => {
     const items = await prisma.category.findMany({
       where: { isActive: true },
@@ -203,11 +292,118 @@ export async function publicRoutes(app: FastifyInstance) {
       where: { id, status: "APPROVED" },
       include: {
         category: true,
+        serviceCategory: true,
         coupons: { orderBy: [{ status: "asc" }, { createdAt: "desc" }] }
       }
     });
     if (!merchant) return fail(reply, "NOT_FOUND", "商家不存在", 404);
-    return ok(reply, merchant);
+    return ok(reply, merchantCard(merchant));
+  });
+
+  app.get("/api/public/food/categories", async (_request, reply) => {
+    const rows = await prisma.merchant.findMany({
+      where: { status: "APPROVED", foodCategory: { not: null } },
+      distinct: ["foodCategory"],
+      select: { foodCategory: true },
+      orderBy: { foodCategory: "asc" }
+    });
+    const names: Record<string, string> = {
+      bbq: "烧烤",
+      hotpot: "火锅",
+      "milk-tea": "奶茶",
+      snack: "小吃",
+      night: "夜宵",
+      "fast-food": "快餐"
+    };
+    return ok(reply, [{ id: "all", name: "全部" }, ...rows.filter((row) => row.foodCategory).map((row) => ({ id: row.foodCategory!, name: names[row.foodCategory!] ?? row.foodCategory! }))]);
+  });
+
+  app.get("/api/public/food/merchants", async (request, reply) => {
+    const { categoryId } = z.object({ categoryId: z.string().optional() }).parse(request.query);
+    const items = await prisma.merchant.findMany({
+      where: {
+        status: "APPROVED",
+        foodCategory: categoryId && categoryId !== "all" ? categoryId : { not: null }
+      },
+      include: {
+        category: true,
+        serviceCategory: true,
+        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+      },
+      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
+    });
+    return ok(reply, items.map(merchantCard));
+  });
+
+  app.get("/api/public/food/random", async (_request, reply) => {
+    const items = await prisma.merchant.findMany({
+      where: { status: "APPROVED", isFoodRecommendation: true, foodCategory: { not: null } },
+      include: {
+        category: true,
+        serviceCategory: true,
+        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+      }
+    });
+    if (items.length === 0) return ok(reply, null);
+    const total = items.reduce((sum, item) => sum + Math.max(item.randomWeight, 1), 0);
+    let cursor = Math.floor(Math.random() * total);
+    const selected = items.find((item) => {
+      cursor -= Math.max(item.randomWeight, 1);
+      return cursor < 0;
+    }) ?? items[0];
+    return ok(reply, merchantCard(selected));
+  });
+
+  app.get("/api/public/services/categories", async (_request, reply) => {
+    return ok(reply, await prisma.serviceCategory.findMany({
+      where: { isActive: true },
+      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+    }));
+  });
+
+  app.get("/api/public/services/merchants", async (request, reply) => {
+    const query = serviceQuery.parse(request.query);
+    const items = await prisma.merchant.findMany({
+      where: {
+        status: "APPROVED",
+        isServicePublished: true,
+        serviceCategory: query.serviceKey ? { key: query.serviceKey } : undefined
+      },
+      include: {
+        category: true,
+        serviceCategory: true,
+        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+      },
+      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
+    });
+    return ok(reply, items.map(merchantCard));
+  });
+
+  app.get("/api/public/community/types", async (_request, reply) => {
+    const rows = await prisma.communityPost.findMany({
+      where: { status: "VISIBLE" },
+      distinct: ["type"],
+      select: { type: true },
+      orderBy: { type: "asc" }
+    });
+    return ok(reply, ["全部", ...rows.map((row) => row.type)]);
+  });
+
+  app.get("/api/public/community/posts", async (request, reply) => {
+    const query = communityQuery.parse(request.query);
+    const items = await prisma.communityPost.findMany({
+      where: { status: "VISIBLE", type: query.type && query.type !== "全部" ? query.type : undefined },
+      orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }]
+    });
+    return ok(reply, items.map((item) => ({
+      id: item.id,
+      type: item.type,
+      title: item.title,
+      summary: item.summary,
+      likeCount: item.likeCount,
+      commentCount: item.commentCount,
+      time: item.publishedAt.toISOString().slice(0, 10)
+    })));
   });
 
   app.post("/api/public/exposures", async (request, reply) => {

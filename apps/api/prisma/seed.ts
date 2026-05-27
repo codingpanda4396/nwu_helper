@@ -14,14 +14,19 @@ const categories = [
 ];
 
 async function main() {
-  const adminPassword = await bcrypt.hash("admin123456", 10);
+  const adminPassword = await bcrypt.hash("123456", 10);
   const merchantPassword = await bcrypt.hash("merchant123456", 10);
   const demoMerchantPassword = await bcrypt.hash("123456", 10);
 
+  await prisma.user.updateMany({
+    where: { username: "panda", role: { not: "ADMIN" } },
+    data: { username: null }
+  });
+
   await prisma.user.upsert({
     where: { phone: "18800000000" },
-    update: { name: "平台管理员", role: "ADMIN", passwordHash: adminPassword },
-    create: { name: "平台管理员", phone: "18800000000", role: "ADMIN", passwordHash: adminPassword }
+    update: { name: "平台管理员", username: "panda", role: "ADMIN", passwordHash: adminPassword },
+    create: { name: "平台管理员", username: "panda", phone: "18800000000", role: "ADMIN", passwordHash: adminPassword }
   });
 
   const categoryRecords = new Map<string, { id: string }>();
@@ -37,8 +42,8 @@ async function main() {
   const merchantOwners = await Promise.all([
     prisma.user.upsert({
       where: { phone: "18800000011" },
-      update: { name: "饭点小馆店长", username: "panda", role: "MERCHANT", passwordHash: demoMerchantPassword },
-      create: { name: "饭点小馆店长", username: "panda", phone: "18800000011", role: "MERCHANT", passwordHash: demoMerchantPassword }
+      update: { name: "饭点小馆店长", username: "food-owner", role: "MERCHANT", passwordHash: demoMerchantPassword },
+      create: { name: "饭点小馆店长", username: "food-owner", phone: "18800000011", role: "MERCHANT", passwordHash: demoMerchantPassword }
     }),
     prisma.user.upsert({
       where: { phone: "18800000012" },
@@ -52,6 +57,24 @@ async function main() {
     })
   ]);
 
+  const serviceCategories = [
+    { key: "printing", name: "打印", icon: "打印", sortOrder: 10 },
+    { key: "ktv", name: "KTV", icon: "欢唱", sortOrder: 20 },
+    { key: "rent", name: "租房", icon: "租住", sortOrder: 30 },
+    { key: "errand", name: "跑腿", icon: "代办", sortOrder: 40 },
+    { key: "job", name: "兼职", icon: "兼职", sortOrder: 50 }
+  ];
+
+  const serviceCategoryRecords = new Map<string, { id: string }>();
+  for (const category of serviceCategories) {
+    const record = await prisma.serviceCategory.upsert({
+      where: { key: category.key },
+      update: category,
+      create: category
+    });
+    serviceCategoryRecords.set(category.key, record);
+  }
+
   const merchants = [
     {
       id: "seed-merchant-food",
@@ -64,6 +87,18 @@ async function main() {
       phone: "029-88880011",
       businessHours: "10:30-22:00",
       coverImageUrl: "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?auto=format&fit=crop&w=1200&q=80",
+      foodCategory: "fast-food",
+      serviceCategoryId: null,
+      avgPrice: 25,
+      distanceText: "距西大长安校区约 1.2km",
+      tags: ["热炒", "简餐", "学生优惠"],
+      highlights: ["出餐快", "近南门", "学生套餐"],
+      menu: [{ name: "招牌盖饭", price: 18 }, { name: "双人热炒套餐", price: 58 }],
+      qrImageUrl: "/assets/images/qr-placeholder.jpg",
+      recommendation: "适合下课后和舍友一起吃顿热饭。",
+      randomWeight: 10,
+      isFoodRecommendation: true,
+      isServicePublished: false,
       status: "APPROVED" as const,
       rating: 4.8,
       sortOrder: 10,
@@ -80,6 +115,18 @@ async function main() {
       phone: "029-88880012",
       businessHours: "08:30-23:00",
       coverImageUrl: "https://images.unsplash.com/photo-1612815154858-60aa4c59eaa6?auto=format&fit=crop&w=1200&q=80",
+      foodCategory: null,
+      serviceCategoryId: serviceCategoryRecords.get("printing")!.id,
+      avgPrice: 8,
+      distanceText: "距西大长安校区约 600m",
+      tags: ["打印", "装订", "证件照"],
+      highlights: ["营业时间长", "支持微信传文件", "可开票"],
+      menu: [{ name: "黑白打印", price: 0.2 }, { name: "普通装订", price: 5 }],
+      qrImageUrl: "/assets/images/qr-placeholder.jpg",
+      recommendation: "课程材料、社团海报和论文装订都能处理。",
+      randomWeight: 0,
+      isFoodRecommendation: false,
+      isServicePublished: true,
       status: "APPROVED" as const,
       rating: 4.7,
       sortOrder: 20,
@@ -96,6 +143,18 @@ async function main() {
       phone: "029-88880013",
       businessHours: "09:00-20:00",
       coverImageUrl: "https://images.unsplash.com/photo-1503376780353-7e6692767b70?auto=format&fit=crop&w=1200&q=80",
+      foodCategory: null,
+      serviceCategoryId: null,
+      avgPrice: 2600,
+      distanceText: "校车接送",
+      tags: ["驾校", "校车", "学生优惠"],
+      highlights: ["近学校", "接送方便", "寒暑假班"],
+      menu: [{ name: "学生优惠班", price: 2600 }, { name: "寒暑假集中班", price: 3200 }],
+      qrImageUrl: "/assets/images/qr-placeholder.jpg",
+      recommendation: "适合假期集中练车，咨询后再确认班型。",
+      randomWeight: 0,
+      isFoodRecommendation: false,
+      isServicePublished: false,
       status: "APPROVED" as const,
       rating: 4.6,
       sortOrder: 30,
@@ -231,9 +290,63 @@ async function main() {
     });
   }
 
+  const banners = [
+    {
+      id: "seed-banner-activity",
+      title: "商家活动",
+      subtitle: "今日校园福利",
+      imageUrl: "/assets/images/banner-activity.jpg",
+      targetType: "ACTIVITY" as const,
+      targetId: "seed-activity-daily-food",
+      sortOrder: 10,
+      isActive: true
+    },
+    {
+      id: "seed-banner-wechat",
+      title: "加入西大圈",
+      subtitle: "优惠、拼饭、校园服务都在这里",
+      imageUrl: "/assets/images/banner-wechat.jpg",
+      targetType: "ABOUT" as const,
+      sortOrder: 20,
+      isActive: true
+    },
+    {
+      id: "seed-banner-service",
+      title: "校园生活服务",
+      subtitle: "打印、驾校、租房、跑腿一站看",
+      imageUrl: "/assets/images/banner-campus.jpg",
+      targetType: "TAB" as const,
+      url: "/pages/service/index",
+      sortOrder: 30,
+      isActive: true
+    }
+  ];
+
+  for (const banner of banners) {
+    await prisma.banner.upsert({
+      where: { id: banner.id },
+      update: banner,
+      create: banner
+    });
+  }
+
+  const posts = [
+    { id: "seed-post-001", type: "校园墙", title: "今天南门有什么好吃的推荐？", summary: "想找一家适合两个人吃饭的小店，预算人均 30 左右。", likeCount: 12, commentCount: 4, sortOrder: 10 },
+    { id: "seed-post-002", type: "拼饭", title: "晚上有人一起吃饭点小馆吗", summary: "晚课后从长安校区南门出发，想拼一个双人热炒套餐。", likeCount: 8, commentCount: 6, sortOrder: 20 },
+    { id: "seed-post-003", type: "校园信息", title: "星火图文打印今晚到 23:00", summary: "需要打印课程材料的同学可以微信先传文件。", likeCount: 18, commentCount: 2, sortOrder: 30 }
+  ];
+
+  for (const post of posts) {
+    await prisma.communityPost.upsert({
+      where: { id: post.id },
+      update: { ...post, status: "VISIBLE" },
+      create: { ...post, status: "VISIBLE" }
+    });
+  }
+
   console.log("Seed completed.");
-  console.log("Admin: 18800000000 / admin123456");
-  console.log("Merchant demo: panda / 123456");
+  console.log("Admin: panda / 123456");
+  console.log("Merchant demo: food-owner / 123456");
 }
 
 main()
