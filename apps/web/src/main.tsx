@@ -1,9 +1,9 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, Image, ListChecks, LogOut, MessageSquareText, Store, Ticket, Utensils, Wrench } from "lucide-react";
+import { BarChart3, ChevronLeft, Clock, Gift, Image, ListChecks, LogOut, MapPin, MessageSquareText, Shuffle, Sparkles, Store, Ticket, Utensils, Wrench } from "lucide-react";
 import "./styles.css";
 
-const API_BASE = import.meta.env.VITE_API_BASE ?? "http://localhost:3000";
+const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
 type Section = "overview" | "benefits" | "banners" | "food" | "services" | "community" | "merchants" | "coupons";
 type Dict = Record<string, any>;
@@ -28,6 +28,21 @@ async function api<T>(token: string, path: string, options: RequestInit = {}): P
   const body = await res.json().catch(() => ({}));
   if (!res.ok || body.success === false) throw new Error(body.message || "请求失败");
   return body.data;
+}
+
+async function publicApi<T>(path: string): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`);
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok || body.success === false) throw new Error(body.message || "请求失败");
+  return body.data;
+}
+
+function initialMerchantId() {
+  const params = new URLSearchParams(window.location.search);
+  const fromQuery = params.get("merchantId");
+  if (fromQuery) return fromQuery;
+  const match = window.location.hash.match(/merchant=([^&]+)/);
+  return match ? decodeURIComponent(match[1]) : "";
 }
 
 function toDateTimeLocal(value?: string) {
@@ -56,9 +71,158 @@ function menuText(value: unknown) {
   return Array.isArray(value) ? value.map((item) => `${item.name},${item.price}`).join("\n") : "";
 }
 
+function webImage(value?: string) {
+  return value && /^(https?:|data:|\/api\/)/.test(value) ? value : "";
+}
+
+function StudentHome() {
+  const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[] }>({ banners: [], activities: [] });
+  const [randomFood, setRandomFood] = useState<Dict | null>(null);
+  const [selectedMerchantId, setSelectedMerchantId] = useState(initialMerchantId);
+  const [merchant, setMerchant] = useState<Dict | null>(null);
+  const [loadingMerchant, setLoadingMerchant] = useState(false);
+  const [homeError, setHomeError] = useState("");
+
+  useEffect(() => {
+    publicApi<{ banners: Dict[]; activities: Dict[] }>("/api/public/home")
+      .then((data) => setHome({ banners: data.banners || [], activities: data.activities || [] }))
+      .catch(() => setHomeError("校园福利暂时加载失败，请稍后再试。"));
+  }, []);
+
+  useEffect(() => {
+    if (!selectedMerchantId) {
+      setMerchant(null);
+      return;
+    }
+    setLoadingMerchant(true);
+    publicApi<Dict>(`/api/public/merchants/${encodeURIComponent(selectedMerchantId)}`)
+      .then(setMerchant)
+      .catch(() => setMerchant(null))
+      .finally(() => setLoadingMerchant(false));
+  }, [selectedMerchantId]);
+
+  async function chooseFood() {
+    try {
+      setRandomFood(await publicApi<Dict | null>("/api/public/food/random"));
+    } catch {
+      setRandomFood(null);
+    }
+  }
+
+  function openMerchant(id?: string) {
+    if (!id) return;
+    setSelectedMerchantId(id);
+    window.history.replaceState(null, "", `/student?merchantId=${encodeURIComponent(id)}`);
+  }
+
+  function closeMerchant() {
+    setSelectedMerchantId("");
+    window.history.replaceState(null, "", window.location.pathname === "/" ? "/" : "/student");
+  }
+
+  const leadImage = webImage(home.banners[0]?.image) || webImage(home.activities[0]?.image);
+
+  if (selectedMerchantId) {
+    return (
+      <main className="student-page">
+        <section className="student-shell">
+          <button className="back-btn" onClick={closeMerchant}><ChevronLeft size={18} />返回</button>
+          {loadingMerchant && <div className="empty-card">商家信息加载中...</div>}
+          {!loadingMerchant && !merchant && <div className="empty-card">商家暂时不可查看。</div>}
+          {merchant && <MerchantDetail merchant={merchant} />}
+        </section>
+      </main>
+    );
+  }
+
+  return (
+    <main className="student-page">
+      <section className="student-shell">
+        <div className="mobile-hero">
+          <div>
+            <span className="hero-kicker"><Sparkles size={15} />西大圈</span>
+            <h1>发现西北大学周边好店与校园福利</h1>
+            <p>优惠、拼饭、生活服务和今日推荐，先从这里逛起。</p>
+          </div>
+          {leadImage && <img src={leadImage} alt="校园福利" />}
+        </div>
+
+        <section className="student-section">
+          <div className="section-title"><h2>今日校园福利</h2><span>优惠和周边好店</span></div>
+          {homeError && <p className="muted-line">{homeError}</p>}
+          <div className="activity-list">
+            {home.activities.map((item) => (
+              <button className={`activity-card ${webImage(item.image) ? "has-image" : ""}`} key={item.id} onClick={() => openMerchant(item.merchantId)}>
+                {webImage(item.image) && <img src={webImage(item.image)} alt={item.title} />}
+                <span><Gift size={14} />{item.discount || "校园福利"}</span>
+                <strong>{item.title}</strong>
+              </button>
+            ))}
+            {!home.activities.length && !homeError && <div className="empty-card">今天暂无上架福利。</div>}
+          </div>
+        </section>
+
+        <section className="food-picker">
+          <div>
+            <span><Utensils size={16} />今天吃什么</span>
+            <strong>{randomFood ? randomFood.name : "帮我选一家"}</strong>
+            <p>{randomFood ? randomFood.recommendation || randomFood.discount || "这家今天值得试试。" : "选择困难时，让西大圈随机推荐一家。 "}</p>
+          </div>
+          <button onClick={chooseFood}><Shuffle size={18} />帮我选</button>
+        </section>
+
+        <section className="student-section">
+          <div className="section-title"><h2>推荐入口</h2><span>从活动进入商家详情</span></div>
+          <div className="banner-list">
+            {home.banners.map((item) => (
+              <button className={`banner-card ${webImage(item.image) ? "has-image" : ""}`} key={item.id} onClick={() => item.targetType === "activity" && openMerchant(home.activities.find((activity) => activity.id === item.targetId)?.merchantId)}>
+                {webImage(item.image) && <img src={webImage(item.image)} alt={item.title} />}
+                <strong>{item.title}</strong>
+                <span>{item.subtitle || "校园生活服务"}</span>
+              </button>
+            ))}
+            {!home.banners.length && <div className="empty-card">暂无轮播内容。</div>}
+          </div>
+        </section>
+      </section>
+    </main>
+  );
+}
+
+function MerchantDetail({ merchant }: { merchant: Dict }) {
+  const coupons = Array.isArray(merchant.coupons) ? merchant.coupons : [];
+  return (
+    <article className="merchant-detail">
+      {webImage(merchant.image) && <img className="merchant-cover" src={webImage(merchant.image)} alt={merchant.name} />}
+      <div className="merchant-head">
+        <span>{merchant.foodCategory || merchant.serviceId || "校园商家"}</span>
+        <h1>{merchant.name}</h1>
+        <p>{merchant.recommendation || "西大圈推荐商家"}</p>
+      </div>
+      <div className="info-grid">
+        <div><MapPin size={17} /><span>{merchant.address || "地址待补充"}</span></div>
+        <div><Clock size={17} /><span>{merchant.businessHours || "营业时间待补充"}</span></div>
+      </div>
+      <section>
+        <h2>优惠券</h2>
+        <div className="coupon-list">
+          {coupons.map((coupon: Dict) => <div className="coupon-card" key={coupon.id}><strong>{coupon.title}</strong><span>{coupon.description || "到店使用请咨询商家"}</span></div>)}
+          {!coupons.length && <div className="empty-card">暂无可领取优惠券。</div>}
+        </div>
+      </section>
+      {Array.isArray(merchant.highlights) && merchant.highlights.length > 0 && (
+        <section>
+          <h2>推荐理由</h2>
+          <div className="tag-row">{merchant.highlights.map((item: string) => <span key={item}>{item}</span>)}</div>
+        </section>
+      )}
+    </article>
+  );
+}
+
 function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
-  const [account, setAccount] = useState("panda");
-  const [password, setPassword] = useState("123456");
+  const [account, setAccount] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState("");
 
   async function submit(event: React.FormEvent) {
@@ -85,8 +249,8 @@ function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
     <main className="login-page">
       <form className="login-card" onSubmit={submit}>
         <h1>西大圈平台后台</h1>
-        <label>账号<input value={account} onChange={(e) => setAccount(e.target.value)} /></label>
-        <label>密码<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></label>
+        <label>账号<input value={account} autoComplete="username" onChange={(e) => setAccount(e.target.value)} /></label>
+        <label>密码<input type="password" value={password} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} /></label>
         {error && <p className="error">{error}</p>}
         <button className="primary">登录</button>
       </form>
@@ -95,6 +259,12 @@ function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
 }
 
 function App() {
+  const isAdmin = window.location.pathname === "/admin" || window.location.pathname.startsWith("/admin/");
+  if (!isAdmin) return <StudentHome />;
+  return <AdminApp />;
+}
+
+function AdminApp() {
   const [token, setToken] = useState(localStorage.getItem("adminToken") || "");
   const [user, setUser] = useState<Dict | null>(() => JSON.parse(localStorage.getItem("adminUser") || "null"));
   const [section, setSection] = useState<Section>("overview");
