@@ -1,4 +1,4 @@
-import type { ActivityType, Prisma } from "@prisma/client";
+import type { Prisma } from "@prisma/client";
 import { prisma } from "../db.js";
 
 const activeActivityWhere = (now = new Date()) =>
@@ -10,18 +10,17 @@ const activeActivityWhere = (now = new Date()) =>
   }) satisfies Prisma.ActivityWhereInput;
 
 export const activityInclude = {
-  merchant: { include: { category: true } },
-  coupon: true
+  merchant: { include: { category: true } }
 } satisfies Prisma.ActivityInclude;
 
 export function activityOrderBy() {
-  return [{ manualWeight: "desc" as const }, { sortOrder: "asc" as const }, { startAt: "desc" as const }];
+  return [{ sortOrder: "asc" as const }, { startAt: "desc" as const }];
 }
 
-export async function listPublicActivities(input: { type?: ActivityType; page?: number; pageSize?: number }) {
+export async function listPublicActivities(input: { page?: number; pageSize?: number }) {
   const page = input.page ?? 1;
   const pageSize = input.pageSize ?? 20;
-  const where = { ...activeActivityWhere(), type: input.type } satisfies Prisma.ActivityWhereInput;
+  const where = activeActivityWhere();
   const [items, total] = await prisma.$transaction([
     prisma.activity.findMany({
       where,
@@ -37,13 +36,12 @@ export async function listPublicActivities(input: { type?: ActivityType; page?: 
 
 export async function getHomeActivities() {
   const take = 10;
-  const [dailyDeals, femaleSelected, groupDeals, general] = await prisma.$transaction([
-    prisma.activity.findMany({ where: { ...activeActivityWhere(), type: "DAILY_DEAL" }, include: activityInclude, orderBy: activityOrderBy(), take }),
-    prisma.activity.findMany({ where: { ...activeActivityWhere(), type: "FEMALE_SELECTED" }, include: activityInclude, orderBy: activityOrderBy(), take }),
-    prisma.activity.findMany({ where: { ...activeActivityWhere(), type: "GROUP_DEAL" }, include: activityInclude, orderBy: activityOrderBy(), take }),
-    prisma.activity.findMany({ where: { ...activeActivityWhere(), type: "GENERAL" }, include: activityInclude, orderBy: activityOrderBy(), take })
-  ]);
-  return { dailyDeals, femaleSelected, groupDeals, general };
+  return prisma.activity.findMany({
+    where: activeActivityWhere(),
+    include: activityInclude,
+    orderBy: activityOrderBy(),
+    take
+  });
 }
 
 export async function getPublicActivity(id: string) {
@@ -53,11 +51,7 @@ export async function getPublicActivity(id: string) {
       ...activityInclude,
       merchant: {
         include: {
-          category: true,
-          coupons: {
-            where: { status: "ACTIVE", validTo: { gte: new Date() } },
-            orderBy: { createdAt: "desc" }
-          }
+          category: true
         }
       }
     }

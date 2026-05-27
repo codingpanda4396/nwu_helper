@@ -2,13 +2,6 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
-import { getActivityPerformance, getBySource, getChannelPerformance, getCouponPerformance, getSummary, getTrends, parseAnalyticsScope } from "./services/analyticsService.js";
-import { buildAnalyticsCsv } from "./services/exportService.js";
-
-const pagination = z.object({
-  page: z.coerce.number().int().positive().default(1),
-  pageSize: z.coerce.number().int().positive().max(100).default(20)
-});
 
 const categorySchema = z.object({
   name: z.string().min(1),
@@ -21,29 +14,15 @@ const categorySchema = z.object({
 const merchantSchema = z.object({
   name: z.string().min(1),
   summary: z.string().optional(),
-  description: z.string().optional(),
   categoryId: z.string().min(1),
-  foodCategory: z.string().nullable().optional(),
   serviceCategoryId: z.string().nullable().optional(),
-  avgPrice: z.coerce.number().nullable().optional(),
-  distanceText: z.string().nullable().optional(),
-  tags: z.array(z.string()).optional(),
-  highlights: z.array(z.string()).optional(),
-  menu: z.array(z.object({ name: z.string().min(1), price: z.coerce.number() })).optional(),
-  qrImageUrl: z.string().nullable().optional(),
-  recommendation: z.string().nullable().optional(),
-  randomWeight: z.coerce.number().int().min(0).default(0),
-  isFoodRecommendation: z.boolean().default(false),
-  isServicePublished: z.boolean().default(false),
-  ownerUserId: z.string().nullable().optional(),
   address: z.string().min(1),
   phone: z.string().optional(),
   businessHours: z.string().optional(),
   coverImageUrl: z.string().optional(),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]).default("APPROVED"),
-  rating: z.coerce.number().min(0).max(5).default(4.8),
+  qrImageUrl: z.string().nullable().optional(),
   sortOrder: z.coerce.number().int().default(100),
-  platformBoost: z.coerce.number().int().default(0)
+  status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]).default("APPROVED")
 });
 
 const bannerSchema = z.object({
@@ -89,245 +68,34 @@ const communityPostSchema = z.object({
   publishedAt: z.coerce.date().optional()
 });
 
-const couponSchema = z.object({
-  merchantId: z.string().min(1),
-  title: z.string().min(1),
-  description: z.string().optional(),
-  threshold: z.coerce.number().nullable().optional(),
-  discountValue: z.coerce.number().nullable().optional(),
-  totalStock: z.coerce.number().int().positive(),
-  remainingStock: z.coerce.number().int().nonnegative().optional(),
-  validFrom: z.coerce.date().optional(),
-  validTo: z.coerce.date(),
-  status: z.enum(["ACTIVE", "PAUSED", "EXPIRED"]).default("ACTIVE")
-});
-
-const merchantProfileSchema = z.object({
-  name: z.string().min(1).optional(),
-  summary: z.string().nullable().optional(),
-  description: z.string().nullable().optional(),
-  address: z.string().min(1).optional(),
-  phone: z.string().nullable().optional(),
-  businessHours: z.string().nullable().optional(),
-  coverImageUrl: z.string().nullable().optional()
-});
-
-const merchantCouponSchema = z.object({
-  title: z.string().min(1),
-  description: z.string().nullable().optional(),
-  threshold: z.coerce.number().nullable().optional(),
-  discountValue: z.coerce.number().nullable().optional(),
-  totalStock: z.coerce.number().int().positive(),
-  remainingStock: z.coerce.number().int().nonnegative().optional(),
-  validFrom: z.coerce.date().optional(),
-  validTo: z.coerce.date(),
-  status: z.enum(["ACTIVE", "PAUSED", "EXPIRED"]).default("ACTIVE")
-});
-
-const merchantUserSchema = z.object({
-  name: z.string().min(1),
-  username: z.string().min(1).optional(),
-  phone: z.string().min(5),
-  passwordHash: z.string().optional()
-});
-
-const promotionSchema = z.object({
-  merchantId: z.string().min(1),
-  couponId: z.string().nullable().optional(),
-  name: z.string().min(1),
-  source: z.enum(["MANUAL", "CAMPAIGN", "BIDDING_RESERVED"]).default("CAMPAIGN"),
-  pricingMode: z.enum(["MANUAL", "CPC", "CPA"]).default("MANUAL"),
-  boostWeight: z.coerce.number().int().default(0),
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date(),
-  budget: z.coerce.number().nullable().optional(),
-  cpc: z.coerce.number().nullable().optional(),
-  cpa: z.coerce.number().nullable().optional(),
-  isActive: z.boolean().default(true)
-});
-
-function countGroup(row: { _count?: number | true | Record<string, number | undefined> }) {
-  return typeof row._count === "number" ? row._count : typeof row._count === "object" ? row._count._all ?? Object.values(row._count)[0] ?? 0 : 0;
-}
-
 const activitySchema = z.object({
   title: z.string().min(1),
-  subtitle: z.string().nullable().optional(),
   description: z.string().nullable().optional(),
-  type: z.enum(["DAILY_DEAL", "FEMALE_SELECTED", "GROUP_DEAL", "NIGHT_FOOD", "GENERAL"]).default("GENERAL"),
   merchantId: z.string().min(1),
-  couponId: z.string().nullable().optional(),
   coverImage: z.string().nullable().optional(),
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date(),
-  manualWeight: z.coerce.number().int().default(0),
   sortOrder: z.coerce.number().int().default(100),
-  budget: z.coerce.number().nullable().optional(),
-  pricingMode: z.enum(["FREE", "CPC", "CPA", "FIXED"]).default("FREE"),
-  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT")
+  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT"),
+  startAt: z.coerce.date(),
+  endAt: z.coerce.date()
 });
 
 function authUser(request: { user?: unknown }) {
-  return request.user as { sub: string; role: "STUDENT" | "MERCHANT" | "ADMIN"; name: string };
-}
-
-async function merchantIdForUser(userId: string) {
-  const merchant = await prisma.merchant.findUnique({ where: { ownerUserId: userId } });
-  return merchant?.id;
+  return request.user as { sub: string; role: "STUDENT" | "ADMIN"; name: string };
 }
 
 export async function adminRoutes(app: FastifyInstance) {
   app.addHook("preHandler", async (request, reply) => {
     const auth = authUser(request);
-    if (request.url.startsWith("/api/admin") && auth.role !== "ADMIN") {
+    if (auth.role !== "ADMIN") {
       return fail(reply, "FORBIDDEN", "需要管理员权限", 403);
-    }
-    if (request.url.startsWith("/api/merchant") && auth.role !== "MERCHANT") {
-      return fail(reply, "FORBIDDEN", "需要商家权限", 403);
     }
   });
 
   app.get("/api/users/me", async (request, reply) => {
     const auth = authUser(request);
-    const user = await prisma.user.findUnique({
-      where: { id: auth.sub },
-      include: { merchantProfile: true }
-    });
+    const user = await prisma.user.findUnique({ where: { id: auth.sub } });
     if (!user) return fail(reply, "NOT_FOUND", "用户不存在", 404);
-    return ok(reply, { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role, merchantId: user.merchantProfile?.id });
-  });
-
-  app.get("/api/merchant/overview", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-
-    const [merchant, coupons, claims, used, exposureCount, clickCount] = await prisma.$transaction([
-      prisma.merchant.findUnique({ where: { id: merchantId }, include: { category: true } }),
-      prisma.coupon.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" } }),
-      prisma.userCoupon.count({ where: { merchantId } }),
-      prisma.userCoupon.count({ where: { merchantId, status: "USED" } }),
-      prisma.exposureLog.count({ where: { merchantId } }),
-      prisma.clickLog.count({ where: { merchantId } })
-    ]);
-    return ok(reply, { merchant, coupons, stats: { claims, used, exposureCount, clickCount } });
-  });
-
-  app.get("/api/merchant/coupons", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await prisma.coupon.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" } }));
-  });
-
-  app.get("/api/merchant/activities", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await prisma.activity.findMany({
-      where: { merchantId },
-      include: { coupon: true },
-      orderBy: [{ status: "asc" }, { manualWeight: "desc" }, { sortOrder: "asc" }]
-    }));
-  });
-
-  app.patch("/api/merchant/profile", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const parsed = merchantProfileSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "店铺资料参数错误");
-    return ok(reply, await prisma.merchant.update({ where: { id: merchantId }, data: parsed.data, include: { category: true } }));
-  });
-
-  app.post("/api/merchant/coupons", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const parsed = merchantCouponSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
-    const totalStock = parsed.data.totalStock;
-    return ok(reply, await prisma.coupon.create({ data: { ...parsed.data, merchantId, remainingStock: parsed.data.remainingStock ?? totalStock } }));
-  });
-
-  app.patch("/api/merchant/coupons/:id", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const existing = await prisma.coupon.findFirst({ where: { id, merchantId } });
-    if (!existing) return fail(reply, "NOT_FOUND", "优惠券不存在", 404);
-    const parsed = merchantCouponSchema.partial().safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
-    return ok(reply, await prisma.coupon.update({ where: { id }, data: parsed.data }));
-  });
-
-  app.get("/api/merchant/claims", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const items = await prisma.userCoupon.findMany({
-      where: { merchantId },
-      include: { coupon: true, user: true },
-      orderBy: { claimedAt: "desc" }
-    });
-    return ok(reply, items);
-  });
-
-  app.get("/api/merchant/analytics/summary", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getSummary(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/analytics/by-source", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getBySource(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/coupon-performance", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getCouponPerformance(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/channel-performance", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getChannelPerformance(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/reports/overview", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getSummary(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/reports/activities", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getActivityPerformance(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/reports/channels", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getBySource(parseAnalyticsScope(request.query, merchantId)));
-  });
-
-  app.get("/api/merchant/trends", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    return ok(reply, await getTrends(parseAnalyticsScope(request.query, merchantId)));
+    return ok(reply, { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role });
   });
 
   app.get("/api/admin/categories", async (_request, reply) => {
@@ -347,172 +115,53 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, await prisma.category.update({ where: { id }, data: parsed.data }));
   });
 
-  app.get("/api/admin/merchants", async (request, reply) => {
-    const query = pagination.extend({ status: z.string().optional(), categoryId: z.string().optional() }).parse(request.query);
-    const where = { status: query.status as never, categoryId: query.categoryId };
-    const [items, total] = await prisma.$transaction([
-      prisma.merchant.findMany({
-        where,
-        include: { category: true, serviceCategory: true, ownerUser: true, coupons: true },
-        orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }, { createdAt: "desc" }],
-        skip: (query.page - 1) * query.pageSize,
-        take: query.pageSize
-      }),
-      prisma.merchant.count({ where })
-    ]);
-    return ok(reply, { items, total, page: query.page, pageSize: query.pageSize });
-  });
-
-  app.post("/api/admin/merchant-users", async (request, reply) => {
-    const parsed = merchantUserSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家账号参数错误");
-    const bcrypt = await import("bcryptjs");
-    const passwordHash = await bcrypt.hash(parsed.data.passwordHash ?? "merchant123456", 10);
-    const user = await prisma.user.upsert({
-      where: { phone: parsed.data.phone },
-      update: { name: parsed.data.name, username: parsed.data.username, role: "MERCHANT", passwordHash },
-      create: { name: parsed.data.name, username: parsed.data.username, phone: parsed.data.phone, role: "MERCHANT", passwordHash }
+  app.get("/api/admin/merchants", async (_request, reply) => {
+    const items = await prisma.merchant.findMany({
+      include: { category: true, serviceCategory: true, activities: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
     });
-    return ok(reply, user);
+    return ok(reply, items);
   });
 
   app.post("/api/admin/merchants", async (request, reply) => {
     const parsed = merchantSchema.safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
-    return ok(reply, await prisma.merchant.create({ data: parsed.data }));
+    return ok(reply, await prisma.merchant.create({ data: { ...parsed.data, serviceCategoryId: parsed.data.serviceCategoryId || null } }));
   });
 
   app.patch("/api/admin/merchants/:id", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const parsed = merchantSchema.partial().safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
-    return ok(reply, await prisma.merchant.update({ where: { id }, data: parsed.data }));
-  });
-
-  app.patch("/api/admin/merchants/:id/status", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const { status } = z.object({ status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]) }).parse(request.body);
-    return ok(reply, await prisma.merchant.update({ where: { id }, data: { status } }));
-  });
-
-  app.get("/api/admin/coupons", async (_request, reply) => {
-    return ok(reply, await prisma.coupon.findMany({ include: { merchant: true }, orderBy: { createdAt: "desc" } }));
+    const data = { ...parsed.data };
+    if ("serviceCategoryId" in data) data.serviceCategoryId = data.serviceCategoryId || null;
+    return ok(reply, await prisma.merchant.update({ where: { id }, data }));
   });
 
   app.get("/api/admin/activities", async (_request, reply) => {
     return ok(reply, await prisma.activity.findMany({
-      include: { merchant: true, coupon: true },
-      orderBy: [{ status: "asc" }, { manualWeight: "desc" }, { sortOrder: "asc" }, { startAt: "desc" }]
+      include: { merchant: true },
+      orderBy: [{ sortOrder: "asc" }, { startAt: "desc" }]
     }));
   });
 
   app.post("/api/admin/activities", async (request, reply) => {
     const parsed = activitySchema.safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
-    if (parsed.data.couponId) {
-      const coupon = await prisma.coupon.findFirst({ where: { id: parsed.data.couponId, merchantId: parsed.data.merchantId } });
-      if (!coupon) return fail(reply, "VALIDATION_ERROR", "优惠券不属于所选商家");
-    }
-    return ok(reply, await prisma.activity.create({ data: { ...parsed.data, couponId: parsed.data.couponId || null } }));
+    return ok(reply, await prisma.activity.create({ data: parsed.data }));
   });
 
   app.patch("/api/admin/activities/:id", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const parsed = activitySchema.partial().safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
-    const current = await prisma.activity.findUnique({ where: { id } });
-    if (!current) return fail(reply, "NOT_FOUND", "活动不存在", 404);
-    const merchantId = parsed.data.merchantId ?? current.merchantId;
-    if (parsed.data.couponId) {
-      const coupon = await prisma.coupon.findFirst({ where: { id: parsed.data.couponId, merchantId } });
-      if (!coupon) return fail(reply, "VALIDATION_ERROR", "优惠券不属于所选商家");
-    }
-    const data = { ...parsed.data };
-    if ("couponId" in data) data.couponId = data.couponId || null;
-    return ok(reply, await prisma.activity.update({ where: { id }, data }));
+    return ok(reply, await prisma.activity.update({ where: { id }, data: parsed.data }));
   });
 
   app.patch("/api/admin/activities/:id/status", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const { status } = z.object({ status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]) }).parse(request.body);
     return ok(reply, await prisma.activity.update({ where: { id }, data: { status } }));
-  });
-
-  app.post("/api/admin/coupons", async (request, reply) => {
-    const parsed = couponSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
-    const totalStock = parsed.data.totalStock;
-    return ok(reply, await prisma.coupon.create({ data: { ...parsed.data, remainingStock: parsed.data.remainingStock ?? totalStock } }));
-  });
-
-  app.patch("/api/admin/coupons/:id", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = couponSchema.partial().safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "优惠券参数错误");
-    return ok(reply, await prisma.coupon.update({ where: { id }, data: parsed.data }));
-  });
-
-  app.get("/api/admin/dashboard/overview", async (_request, reply) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, todayExposures, todayClicks, todayClaims, topMerchantExposures, topMerchantClicks, topMerchantClaims, topCouponClaims, topChannelExposures, topChannelClicks, topChannelClaims] = await prisma.$transaction([
-      prisma.merchant.count(),
-      prisma.merchant.count({ where: { status: "APPROVED" } }),
-      prisma.coupon.count(),
-      prisma.activity.count(),
-      prisma.banner.count(),
-      prisma.communityPost.count(),
-      prisma.communityPost.count({ where: { status: "PENDING" } }),
-      prisma.communityPost.count({ where: { status: "VISIBLE" } }),
-      prisma.userCoupon.count(),
-      prisma.exposureLog.count({ where: { createdAt: { gte: today } } }),
-      prisma.clickLog.count({ where: { createdAt: { gte: today } } }),
-      prisma.userCoupon.count({ where: { claimedAt: { gte: today } } }),
-      prisma.exposureLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
-      prisma.clickLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
-      prisma.userCoupon.groupBy({ by: ["merchantId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
-      prisma.userCoupon.groupBy({ by: ["couponId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { couponId: "desc" } }, take: 10 }),
-      prisma.exposureLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
-      prisma.clickLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
-      prisma.userCoupon.groupBy({ by: ["channel"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 })
-    ]);
-    const merchantScores = new Map<string, { id: string; exposureCount: number; clickCount: number; claimCount: number; score: number }>();
-    const ensureMerchant = (id: string) => {
-      if (!merchantScores.has(id)) merchantScores.set(id, { id, exposureCount: 0, clickCount: 0, claimCount: 0, score: 0 });
-      return merchantScores.get(id)!;
-    };
-    topMerchantExposures.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.exposureCount = value; item.score += value; });
-    topMerchantClicks.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.clickCount = value; item.score += value * 2; });
-    topMerchantClaims.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.claimCount = value; item.score += value * 4; });
-    const merchantNames = await prisma.merchant.findMany({ where: { id: { in: [...merchantScores.keys()] } }, select: { id: true, name: true } });
-    const nameByMerchant = new Map(merchantNames.map((item) => [item.id, item.name]));
-
-    const couponScores = new Map<string, { id: string; claimCount: number }>();
-    const ensureCoupon = (id: string) => {
-      if (!couponScores.has(id)) couponScores.set(id, { id, claimCount: 0 });
-      return couponScores.get(id)!;
-    };
-    topCouponClaims.forEach((row) => { ensureCoupon(row.couponId).claimCount = countGroup(row); });
-    const couponNames = await prisma.coupon.findMany({ where: { id: { in: [...couponScores.keys()] } }, select: { id: true, title: true } });
-    const titleByCoupon = new Map(couponNames.map((item) => [item.id, item.title]));
-
-    const channelScores = new Map<string, { channel: string; exposureCount: number; clickCount: number; claimCount: number }>();
-    const ensureChannel = (channel: string | null) => {
-      const key = channel || "direct";
-      if (!channelScores.has(key)) channelScores.set(key, { channel: key, exposureCount: 0, clickCount: 0, claimCount: 0 });
-      return channelScores.get(key)!;
-    };
-    topChannelExposures.forEach((row) => { ensureChannel(row.channel).exposureCount = countGroup(row); });
-    topChannelClicks.forEach((row) => { ensureChannel(row.channel).clickCount = countGroup(row); });
-    topChannelClaims.forEach((row) => { ensureChannel(row.channel).claimCount = countGroup(row); });
-
-    return ok(reply, {
-      merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount,
-      claimCount, todayExposures, todayClicks, todayClaims,
-      topMerchants: [...merchantScores.values()].map((item) => ({ ...item, name: nameByMerchant.get(item.id) || item.id })).sort((a, b) => b.score - a.score).slice(0, 5),
-      topCoupons: [...couponScores.values()].map((item) => ({ ...item, title: titleByCoupon.get(item.id) || item.id })).sort((a, b) => b.claimCount - a.claimCount).slice(0, 5),
-      topChannels: [...channelScores.values()].sort((a, b) => b.exposureCount - a.exposureCount || b.clickCount - a.clickCount).slice(0, 5)
-    });
   });
 
   app.get("/api/admin/banners", async (_request, reply) => {
@@ -611,90 +260,14 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, await prisma.communityPost.update({ where: { id }, data: { status } }));
   });
 
-  app.get("/api/admin/analytics/summary", async (request, reply) => {
-    return ok(reply, await getSummary(parseAnalyticsScope(request.query)));
-  });
-
-  app.get("/api/admin/analytics/by-source", async (request, reply) => {
-    return ok(reply, await getBySource(parseAnalyticsScope(request.query)));
-  });
-
-  app.get("/api/admin/reports/overview", async (request, reply) => {
-    return ok(reply, await getSummary(parseAnalyticsScope(request.query)));
-  });
-
-  app.get("/api/admin/reports/channels", async (request, reply) => {
-    return ok(reply, await getBySource(parseAnalyticsScope(request.query)));
-  });
-
-  app.get("/api/admin/reports/activities", async (request, reply) => {
-    return ok(reply, await getActivityPerformance(parseAnalyticsScope(request.query)));
-  });
-
-  app.get("/api/admin/reports/merchants", async (_request, reply) => {
-    const merchants = await prisma.merchant.findMany({
-      include: { category: true, userCoupons: true, exposureLogs: true, clickLogs: true },
-      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
-    });
-    return ok(reply, merchants.map((merchant) => ({
-      id: merchant.id,
-      name: merchant.name,
-      category: merchant.category.name,
-      status: merchant.status,
-      exposures: merchant.exposureLogs.length,
-      clicks: merchant.clickLogs.length,
-      claims: merchant.userCoupons.length
-    })));
-  });
-
-  app.get("/api/admin/analytics/export.csv", async (request, reply) => {
-    const csv = await buildAnalyticsCsv(parseAnalyticsScope(request.query));
-    reply.header("Content-Type", "text/csv; charset=utf-8");
-    reply.header("Content-Disposition", 'attachment; filename="analytics-export.csv"');
-    return reply.send(csv);
-  });
-
-  app.get("/api/admin/promotions", async (_request, reply) => {
-    return ok(reply, await prisma.merchantPromotion.findMany({
-      include: { merchant: true, coupon: true },
-      orderBy: [{ isActive: "desc" }, { startAt: "desc" }]
-    }));
-  });
-
-  app.post("/api/admin/promotions", async (request, reply) => {
-    const parsed = promotionSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "推广活动参数错误");
-    return ok(reply, await prisma.merchantPromotion.create({ data: { ...parsed.data, couponId: parsed.data.couponId || null } }));
-  });
-
-  app.patch("/api/admin/promotions/:id", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = promotionSchema.partial().safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "推广活动参数错误");
-    const data = { ...parsed.data };
-    if ("couponId" in data) data.couponId = data.couponId || null;
-    return ok(reply, await prisma.merchantPromotion.update({ where: { id }, data }));
-  });
-
-  app.patch("/api/admin/promotions/:id/status", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const { isActive } = z.object({ isActive: z.boolean() }).parse(request.body);
-    return ok(reply, await prisma.merchantPromotion.update({ where: { id }, data: { isActive } }));
-  });
-
-  app.get("/api/admin/dashboard/merchants", async (_request, reply) => {
-    const merchants = await prisma.merchant.findMany({
-      include: { category: true, userCoupons: true, exposureLogs: true, clickLogs: true },
-      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
-    });
-    return ok(reply, merchants.map((merchant) => ({
-      id: merchant.id,
-      name: merchant.name,
-      category: merchant.category.name,
-      status: merchant.status,
-      exposures: merchant.exposureLogs.length,
-      clicks: merchant.clickLogs.length,
-      claims: merchant.userCoupons.length
-    })));
+  app.get("/api/admin/dashboard/overview", async (_request, reply) => {
+    const [merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount] = await prisma.$transaction([
+      prisma.merchant.count(),
+      prisma.activity.count(),
+      prisma.banner.count(),
+      prisma.communityPost.count(),
+      prisma.communityPost.count({ where: { status: "PENDING" } })
+    ]);
+    return ok(reply, { merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount });
   });
 }

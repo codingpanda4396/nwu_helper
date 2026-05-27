@@ -21,8 +21,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (parsed.data.username || parsed.data.account) accountWhere.push({ username: account });
     if (parsed.data.phone || parsed.data.account) accountWhere.push({ phone: account });
     const user = await prisma.user.findFirst({
-      where: { OR: accountWhere },
-      include: { merchantProfile: true }
+      where: { OR: accountWhere }
     });
     if (!user || user.status !== "ACTIVE" || !user.passwordHash) return fail(reply, "AUTH_FAILED", "账号或密码错误", 401);
 
@@ -32,7 +31,7 @@ export async function authRoutes(app: FastifyInstance) {
     const token = app.jwt.sign({ sub: user.id, role: user.role, name: user.name });
     return ok(reply, {
       token,
-      user: { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role, merchantId: user.merchantProfile?.id }
+      user: { id: user.id, name: user.name, username: user.username, phone: user.phone, role: user.role }
     });
   });
 }

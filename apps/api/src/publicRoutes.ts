@@ -2,10 +2,7 @@ import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
-import { claimCoupon } from "./services/couponService.js";
-import { compareMerchants } from "./services/rankingService.js";
 import { getHomeActivities, getPublicActivity, listPublicActivities } from "./services/activityService.js";
-import { createShareLink, openShareLink } from "./services/shareService.js";
 
 const listQuery = z.object({
   categoryId: z.string().optional(),
@@ -14,39 +11,7 @@ const listQuery = z.object({
   pageSize: z.coerce.number().int().positive().max(50).default(20)
 });
 
-const logSchema = z.object({
-  merchantId: z.string().min(1),
-  sessionId: z.string().optional(),
-  source: z.string().optional(),
-  channel: z.string().optional(),
-  scene: z.string().optional(),
-  campaign: z.string().optional(),
-  activityId: z.string().optional(),
-  shareLinkId: z.string().optional(),
-  referrerId: z.string().optional(),
-  target: z.string().optional()
-});
-
-const activityLogSchema = logSchema.omit({ merchantId: true }).extend({
-  merchantId: z.string().optional()
-});
-
-const claimSchema = z.object({
-  studentName: z.string().min(1).default("西大学生"),
-  phone: z.string().min(5),
-  openid: z.string().optional(),
-  sessionId: z.string().optional(),
-  source: z.string().optional(),
-  channel: z.string().optional(),
-  scene: z.string().optional(),
-  campaign: z.string().optional(),
-  activityId: z.string().optional(),
-  shareLinkId: z.string().optional(),
-  referrerId: z.string().optional()
-});
-
 const activityListQuery = z.object({
-  type: z.enum(["DAILY_DEAL", "FEMALE_SELECTED", "GROUP_DEAL", "NIGHT_FOOD", "GENERAL"]).optional(),
   page: z.coerce.number().int().positive().default(1),
   pageSize: z.coerce.number().int().positive().max(50).default(20)
 });
@@ -72,44 +37,20 @@ const communityLikeSchema = z.object({
   sessionId: z.string().trim().min(3).max(120).optional()
 });
 
-const shareSchema = z.object({
-  source: z.string().optional(),
-  channel: z.string().optional(),
-  scene: z.string().optional(),
-  campaign: z.string().optional(),
-  referrerId: z.string().optional(),
-  sessionId: z.string().optional()
-});
-
-function asStringArray(value: unknown): string[] {
-  return Array.isArray(value) ? value.filter((item): item is string => typeof item === "string") : [];
-}
-
 function merchantCard(merchant: any) {
-  const coupons = merchant.coupons ?? [];
-  const activeCoupon = coupons[0];
   return {
     id: merchant.id,
     category: merchant.category?.slug === "food" ? "food" : "service",
-    foodCategory: merchant.foodCategory,
     serviceId: merchant.serviceCategory?.key,
     name: merchant.name,
     image: merchant.coverImageUrl,
-    rating: Number(merchant.rating),
-    avgPrice: merchant.avgPrice == null ? null : Number(merchant.avgPrice),
-    distance: merchant.distanceText ?? "",
-    distanceText: merchant.distanceText ?? "",
+    avgPrice: null,
+    distance: "",
+    distanceText: "",
     address: merchant.address,
     businessHours: merchant.businessHours,
-    tags: asStringArray(merchant.tags),
-    discount: activeCoupon?.title ?? "",
-    recommendation: merchant.recommendation ?? merchant.summary ?? "",
-    highlights: asStringArray(merchant.highlights),
-    menu: Array.isArray(merchant.menu) ? merchant.menu : [],
-    couponIds: coupons.map((coupon: { id: string }) => coupon.id),
     qrImage: merchant.qrImageUrl,
-    qrImageUrl: merchant.qrImageUrl,
-    coupons
+    qrImageUrl: merchant.qrImageUrl
   };
 }
 
@@ -118,10 +59,9 @@ function activityCard(activity: any) {
     id: activity.id,
     merchantId: activity.merchantId,
     title: activity.title,
-    tags: [activity.subtitle, activity.type].filter(Boolean),
-    discount: activity.coupon?.title ?? activity.subtitle ?? "",
+    description: activity.description,
     image: activity.coverImage ?? activity.merchant?.coverImageUrl,
-    cta: "去看看"
+    merchant: activity.merchant ? merchantCard(activity.merchant) : null
   };
 }
 
@@ -186,7 +126,7 @@ export async function publicRoutes(app: FastifyInstance) {
         targetId: item.targetId,
         url: item.url
       })),
-      activities: [...activities.dailyDeals, ...activities.femaleSelected, ...activities.groupDeals, ...activities.general].map(activityCard),
+      activities: activities.map(activityCard),
       wechatEntry: wechatEntryCard(wechatEntry)
     });
   });
@@ -217,87 +157,7 @@ export async function publicRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const activity = await getPublicActivity(id);
     if (!activity) return fail(reply, "NOT_FOUND", "活动不存在或已结束", 404);
-    return ok(reply, activity);
-  });
-
-  app.post("/api/public/activities/:id/exposures", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = activityLogSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动曝光参数错误");
-    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
-    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
-    const log = await prisma.exposureLog.create({
-      data: {
-        merchantId: activity.merchantId,
-        sessionId: parsed.data.sessionId,
-        source: parsed.data.source,
-        channel: parsed.data.channel,
-        scene: parsed.data.scene,
-        campaign: parsed.data.campaign,
-        activityId: activity.id,
-        shareLinkId: parsed.data.shareLinkId,
-        referrerId: parsed.data.referrerId,
-        ip: request.ip,
-        userAgent: request.headers["user-agent"]
-      }
-    });
-    return ok(reply, log);
-  });
-
-  app.post("/api/public/activities/:id/clicks", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = activityLogSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动点击参数错误");
-    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
-    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
-    const log = await prisma.clickLog.create({
-      data: {
-        merchantId: activity.merchantId,
-        sessionId: parsed.data.sessionId,
-        target: parsed.data.target ?? "activity-detail",
-        source: parsed.data.source,
-        channel: parsed.data.channel,
-        scene: parsed.data.scene,
-        campaign: parsed.data.campaign,
-        activityId: activity.id,
-        shareLinkId: parsed.data.shareLinkId,
-        referrerId: parsed.data.referrerId,
-        ip: request.ip,
-        userAgent: request.headers["user-agent"]
-      }
-    });
-    return ok(reply, log);
-  });
-
-  app.post("/api/public/activities/:id/share-links", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = shareSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "分享参数错误");
-    const activity = await prisma.activity.findFirst({ where: { id, status: "ACTIVE" } });
-    if (!activity) return fail(reply, "NOT_FOUND", "活动不存在", 404);
-    const shareLink = await createShareLink({
-      ...parsed.data,
-      activityId: activity.id,
-      merchantId: activity.merchantId,
-      couponId: activity.couponId,
-      targetType: "ACTIVITY",
-      targetId: activity.id
-    });
-    return ok(reply, { ...shareLink, url: `/share/${shareLink.token}` });
-  });
-
-  app.post("/api/public/share/:token/open", async (request, reply) => {
-    const { token } = z.object({ token: z.string().min(1) }).parse(request.params);
-    const parsed = shareSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "分享打开参数错误");
-    try {
-      const shareLink = await openShareLink(token, { ...parsed.data, ip: request.ip, userAgent: request.headers["user-agent"] });
-      const targetPath = shareLink.targetType === "ACTIVITY" ? `/activities/${shareLink.targetId}` : shareLink.targetType === "MERCHANT" ? `/merchants/${shareLink.targetId}` : `/coupons/${shareLink.targetId}`;
-      return ok(reply, { shareLink, targetPath });
-    } catch (error) {
-      if (error instanceof Error && error.message === "SHARE_LINK_NOT_FOUND") return fail(reply, "NOT_FOUND", "分享链接不存在", 404);
-      throw error;
-    }
+    return ok(reply, activityCard(activity));
   });
 
   app.get("/api/public/merchants", async (request, reply) => {
@@ -313,23 +173,23 @@ export async function publicRoutes(app: FastifyInstance) {
           ]
         : undefined
     };
-    const [allItems, total] = await prisma.$transaction([
+    const [items, total] = await prisma.$transaction([
       prisma.merchant.findMany({
         where,
         include: {
           category: true,
-          coupons: {
-            where: { status: "ACTIVE", validTo: { gte: new Date() } },
-            orderBy: { createdAt: "desc" }
-          },
-          promotions: true
+          activities: {
+            where: { status: "ACTIVE", startAt: { lte: new Date() }, endAt: { gte: new Date() } },
+            orderBy: { sortOrder: "asc" }
+          }
         },
-        orderBy: [{ createdAt: "desc" }]
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }],
+        skip: (query.page - 1) * query.pageSize,
+        take: query.pageSize
       }),
       prisma.merchant.count({ where })
     ]);
-    const items = allItems.sort((a, b) => compareMerchants(a, b)).slice((query.page - 1) * query.pageSize, query.page * query.pageSize);
-    return ok(reply, { items, total, page: query.page, pageSize: query.pageSize });
+    return ok(reply, { items: items.map(merchantCard), total, page: query.page, pageSize: query.pageSize });
   });
 
   app.get("/api/public/merchants/:id", async (request, reply) => {
@@ -339,64 +199,57 @@ export async function publicRoutes(app: FastifyInstance) {
       include: {
         category: true,
         serviceCategory: true,
-        coupons: { orderBy: [{ status: "asc" }, { createdAt: "desc" }] }
+        activities: {
+          where: { status: "ACTIVE", startAt: { lte: new Date() }, endAt: { gte: new Date() } },
+          orderBy: { sortOrder: "asc" }
+        }
       }
     });
     if (!merchant) return fail(reply, "NOT_FOUND", "商家不存在", 404);
-    return ok(reply, merchantCard(merchant));
+    return ok(reply, {
+      ...merchantCard(merchant),
+      summary: merchant.summary,
+      activities: merchant.activities.map(activityCard)
+    });
   });
 
   app.get("/api/public/food/categories", async (_request, reply) => {
-    const rows = await prisma.merchant.findMany({
-      where: { status: "APPROVED", foodCategory: { not: null } },
-      distinct: ["foodCategory"],
-      select: { foodCategory: true },
-      orderBy: { foodCategory: "asc" }
-    });
-    const names: Record<string, string> = {
-      bbq: "烧烤",
-      hotpot: "火锅",
-      "milk-tea": "奶茶",
-      snack: "小吃",
-      night: "夜宵",
-      "fast-food": "快餐"
-    };
-    return ok(reply, [{ id: "all", name: "全部" }, ...rows.filter((row) => row.foodCategory).map((row) => ({ id: row.foodCategory!, name: names[row.foodCategory!] ?? row.foodCategory! }))]);
+    return ok(reply, [{ id: "all", name: "全部" }]);
   });
 
   app.get("/api/public/food/merchants", async (request, reply) => {
-    const { categoryId } = z.object({ categoryId: z.string().optional() }).parse(request.query);
+    const query = listQuery.parse(request.query);
     const items = await prisma.merchant.findMany({
       where: {
         status: "APPROVED",
-        foodCategory: categoryId && categoryId !== "all" ? categoryId : { not: null }
+        category: { slug: "food" }
       },
       include: {
         category: true,
         serviceCategory: true,
-        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+        activities: {
+          where: { status: "ACTIVE", startAt: { lte: new Date() }, endAt: { gte: new Date() } },
+          orderBy: { sortOrder: "asc" }
+        }
       },
-      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
+      orderBy: [{ sortOrder: "asc" }]
     });
     return ok(reply, items.map(merchantCard));
   });
 
   app.get("/api/public/food/random", async (_request, reply) => {
     const items = await prisma.merchant.findMany({
-      where: { status: "APPROVED", isFoodRecommendation: true, foodCategory: { not: null } },
+      where: {
+        status: "APPROVED",
+        category: { slug: "food" }
+      },
       include: {
         category: true,
-        serviceCategory: true,
-        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+        serviceCategory: true
       }
     });
     if (items.length === 0) return ok(reply, null);
-    const total = items.reduce((sum, item) => sum + Math.max(item.randomWeight, 1), 0);
-    let cursor = Math.floor(Math.random() * total);
-    const selected = items.find((item) => {
-      cursor -= Math.max(item.randomWeight, 1);
-      return cursor < 0;
-    }) ?? items[0];
+    const selected = items[Math.floor(Math.random() * items.length)];
     return ok(reply, merchantCard(selected));
   });
 
@@ -412,15 +265,17 @@ export async function publicRoutes(app: FastifyInstance) {
     const items = await prisma.merchant.findMany({
       where: {
         status: "APPROVED",
-        isServicePublished: true,
         serviceCategory: query.serviceKey ? { key: query.serviceKey } : undefined
       },
       include: {
         category: true,
         serviceCategory: true,
-        coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
+        activities: {
+          where: { status: "ACTIVE", startAt: { lte: new Date() }, endAt: { gte: new Date() } },
+          orderBy: { sortOrder: "asc" }
+        }
       },
-      orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
+      orderBy: [{ sortOrder: "asc" }]
     });
     return ok(reply, items.map(merchantCard));
   });
@@ -489,68 +344,5 @@ export async function publicRoutes(app: FastifyInstance) {
       data: { likeCount: { increment: 1 }, likedSessionIds: [...likedSessionIds, sessionId].slice(-500) }
     });
     return ok(reply, { liked: true, likeCount: updated.likeCount });
-  });
-
-  app.post("/api/public/exposures", async (request, reply) => {
-    const parsed = logSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "曝光参数错误");
-    const log = await prisma.exposureLog.create({
-      data: {
-        merchantId: parsed.data.merchantId,
-        sessionId: parsed.data.sessionId,
-        source: parsed.data.source,
-        channel: parsed.data.channel,
-        scene: parsed.data.scene,
-        campaign: parsed.data.campaign,
-        activityId: parsed.data.activityId,
-        shareLinkId: parsed.data.shareLinkId,
-        referrerId: parsed.data.referrerId,
-        ip: request.ip,
-        userAgent: request.headers["user-agent"]
-      }
-    });
-    return ok(reply, log);
-  });
-
-  app.post("/api/public/clicks", async (request, reply) => {
-    const parsed = logSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "点击参数错误");
-    const log = await prisma.clickLog.create({
-      data: {
-        merchantId: parsed.data.merchantId,
-        sessionId: parsed.data.sessionId,
-        target: parsed.data.target,
-        source: parsed.data.source,
-        channel: parsed.data.channel,
-        scene: parsed.data.scene,
-        campaign: parsed.data.campaign,
-        activityId: parsed.data.activityId,
-        shareLinkId: parsed.data.shareLinkId,
-        referrerId: parsed.data.referrerId,
-        ip: request.ip,
-        userAgent: request.headers["user-agent"]
-      }
-    });
-    return ok(reply, log);
-  });
-
-  app.post("/api/public/coupons/:id/claim", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = claimSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "请填写昵称和手机号");
-
-    try {
-      const result = await claimCoupon(id, parsed.data);
-      return ok(reply, result, "领取成功");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "COUPON_NOT_FOUND") return fail(reply, "NOT_FOUND", "优惠券不存在", 404);
-      if (message === "DUPLICATE_CLAIM") return fail(reply, "DUPLICATE_CLAIM", "你已领取过该优惠券");
-      if (message === "COUPON_INACTIVE") return fail(reply, "COUPON_INACTIVE", "优惠券暂不可领取");
-      if (message === "COUPON_NOT_STARTED") return fail(reply, "COUPON_NOT_STARTED", "优惠券尚未开始");
-      if (message === "COUPON_EXPIRED") return fail(reply, "COUPON_EXPIRED", "优惠券已过期");
-      if (message === "COUPON_SOLD_OUT") return fail(reply, "COUPON_SOLD_OUT", "优惠券已领完");
-      throw error;
-    }
   });
 }

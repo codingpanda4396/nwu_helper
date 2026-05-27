@@ -9,7 +9,6 @@ datasource db {
 
 enum UserRole {
   STUDENT
-  MERCHANT
   ADMIN
 }
 
@@ -25,60 +24,11 @@ enum MerchantStatus {
   SUSPENDED
 }
 
-enum CouponStatus {
-  ACTIVE
-  PAUSED
-  EXPIRED
-}
-
-enum UserCouponStatus {
-  CLAIMED
-  USED
-  EXPIRED
-}
-
-enum PricingMode {
-  MANUAL
-  CPC
-  CPA
-}
-
-enum ActivityType {
-  DAILY_DEAL
-  FEMALE_SELECTED
-  GROUP_DEAL
-  NIGHT_FOOD
-  GENERAL
-}
-
 enum ActivityStatus {
   DRAFT
   ACTIVE
   PAUSED
   ENDED
-}
-
-enum ActivityPricingMode {
-  FREE
-  CPC
-  CPA
-  FIXED
-}
-
-enum PromotionSource {
-  MANUAL
-  CAMPAIGN
-  BIDDING_RESERVED
-}
-
-enum ShareTargetType {
-  MERCHANT
-  COUPON
-  ACTIVITY
-}
-
-enum ShareEventType {
-  SHARE_OPEN
 }
 
 enum BannerTargetType {
@@ -97,92 +47,66 @@ enum CommunityPostStatus {
 }
 
 model User {
-  id              String             @id @default(cuid())
-  name            String
-  username        String?            @unique
-  phone           String?            @unique
-  openid          String?            @unique
-  role            UserRole           @default(STUDENT)
-  passwordHash    String?
-  status          UserStatus         @default(ACTIVE)
-  merchantProfile Merchant?
-  userCoupons     UserCoupon[]       @relation("StudentCoupons")
-  shareLinks      ShareLink[]
-  createdAt       DateTime           @default(now())
-  updatedAt       DateTime           @updatedAt
+  id           String     @id @default(cuid())
+  name         String
+  username     String?    @unique
+  phone        String?    @unique
+  openid       String?    @unique
+  role         UserRole   @default(STUDENT)
+  passwordHash String?
+  status       UserStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Category {
-  id          String     @id @default(cuid())
-  name        String     @unique
-  slug        String     @unique
-  icon        String?
-  sortOrder   Int        @default(100)
-  isActive    Boolean    @default(true)
-  merchants   Merchant[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        String     @id @default(cuid())
+  name      String     @unique
+  slug      String     @unique
+  icon      String?
+  sortOrder Int        @default(100)
+  isActive  Boolean    @default(true)
+  merchants Merchant[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 }
 
 model Merchant {
-  id            String             @id @default(cuid())
-  name          String
-  summary       String?
-  description   String?
-  categoryId    String
-  ownerUserId   String?            @unique
-  address       String
-  phone         String?
-  businessHours String?
-  coverImageUrl String?
-  foodCategory  String?
+  id               String           @id @default(cuid())
+  name             String
+  summary          String?
+  categoryId       String
+  address          String
+  phone            String?
+  businessHours    String?
+  coverImageUrl    String?
+  qrImageUrl       String?
+  sortOrder        Int              @default(100)
+  status           MerchantStatus   @default(PENDING)
+  category         Category         @relation(fields: [categoryId], references: [id])
+  serviceCategory  ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
   serviceCategoryId String?
-  avgPrice      Decimal?
-  distanceText  String?
-  tags          Json?
-  highlights    Json?
-  menu          Json?
-  qrImageUrl    String?
-  recommendation String?
-  randomWeight  Int                @default(0)
-  isFoodRecommendation Boolean     @default(false)
-  isServicePublished Boolean       @default(false)
-  status        MerchantStatus     @default(PENDING)
-  rating        Decimal            @default(4.8)
-  sortOrder     Int                @default(100)
-  platformBoost Int                @default(0)
-  category      Category           @relation(fields: [categoryId], references: [id])
-  serviceCategory ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
-  ownerUser     User?              @relation(fields: [ownerUserId], references: [id])
-  coupons       Coupon[]
-  userCoupons   UserCoupon[]
-  exposureLogs  ExposureLog[]
-  clickLogs     ClickLog[]
-  promotions    MerchantPromotion[]
-  activities    Activity[]
-  shareLinks    ShareLink[]
-  shareEvents   ShareEvent[]
-  createdAt     DateTime           @default(now())
-  updatedAt     DateTime           @updatedAt
+  activities       Activity[]
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([categoryId])
   @@index([serviceCategoryId])
-  @@index([foodCategory, isFoodRecommendation, status])
-  @@index([status, platformBoost, sortOrder, rating, createdAt])
+  @@index([status, sortOrder])
 }
 
 model Banner {
-  id          String           @id @default(cuid())
-  title       String
-  subtitle    String?
-  imageUrl    String
-  targetType  BannerTargetType @default(TAB)
-  targetId    String?
-  url         String?
-  sortOrder   Int              @default(100)
-  isActive    Boolean          @default(true)
-  createdAt   DateTime         @default(now())
-  updatedAt   DateTime         @updatedAt
+  id         String           @id @default(cuid())
+  title      String
+  subtitle   String?
+  imageUrl   String
+  targetType BannerTargetType @default(TAB)
+  targetId   String?
+  url        String?
+  sortOrder  Int              @default(100)
+  isActive   Boolean          @default(true)
+  createdAt  DateTime         @default(now())
+  updatedAt  DateTime         @updatedAt
 
   @@index([isActive, sortOrder])
 }
@@ -199,252 +123,55 @@ model WechatEntryConfig {
 }
 
 model ServiceCategory {
-  id          String     @id @default(cuid())
-  name        String
-  key         String     @unique
-  icon        String?
-  sortOrder   Int        @default(100)
-  isActive    Boolean    @default(true)
-  merchants   Merchant[]
-  createdAt   DateTime   @default(now())
-  updatedAt   DateTime   @updatedAt
+  id        String     @id @default(cuid())
+  name      String
+  key       String     @unique
+  icon      String?
+  sortOrder Int        @default(100)
+  isActive  Boolean    @default(true)
+  merchants Merchant[]
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
 
   @@index([isActive, sortOrder])
 }
 
 model CommunityPost {
-  id           String              @id @default(cuid())
-  type         String
-  title        String
-  summary      String
-  content      String              @default("")
+  id             String              @id @default(cuid())
+  type           String
+  title          String
+  summary        String
+  content        String              @default("")
   authorNickname String?
-  contact      String?
-  source       String              @default("admin")
-  viewCount    Int                 @default(0)
-  likeCount    Int                 @default(0)
-  commentCount Int                 @default(0)
-  likedSessionIds Json             @default("[]")
-  status       CommunityPostStatus @default(VISIBLE)
-  sortOrder    Int                 @default(100)
-  publishedAt  DateTime            @default(now())
-  createdAt    DateTime            @default(now())
-  updatedAt    DateTime            @updatedAt
+  contact        String?
+  source         String              @default("admin")
+  viewCount      Int                 @default(0)
+  likeCount      Int                 @default(0)
+  commentCount   Int                 @default(0)
+  likedSessionIds Json               @default("[]")
+  status         CommunityPostStatus @default(VISIBLE)
+  sortOrder      Int                 @default(100)
+  publishedAt    DateTime            @default(now())
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
 
   @@index([status, type, sortOrder, publishedAt])
 }
 
-model Coupon {
-  id             String             @id @default(cuid())
-  merchantId     String
-  title          String
-  description    String?
-  threshold      Decimal?
-  discountValue  Decimal?
-  totalStock     Int
-  remainingStock Int
-  validFrom      DateTime           @default(now())
-  validTo        DateTime
-  status         CouponStatus       @default(ACTIVE)
-  merchant       Merchant           @relation(fields: [merchantId], references: [id])
-  userCoupons    UserCoupon[]
-  promotions     MerchantPromotion[]
-  activities     Activity[]
-  shareLinks     ShareLink[]
-  shareEvents    ShareEvent[]
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-
-  @@index([merchantId, status, validTo])
-}
-
-model UserCoupon {
-  id               String             @id @default(cuid())
-  userId           String
-  couponId         String
-  merchantId       String
-  code             String             @unique
-  status           UserCouponStatus   @default(CLAIMED)
-  claimedAt        DateTime           @default(now())
-  usedAt           DateTime?
-  source           String?
-  channel          String?
-  scene            String?
-  campaign         String?
-  activityId       String?
-  shareLinkId      String?
-  referrerId       String?
-  claimedSessionId String?
-  user             User               @relation("StudentCoupons", fields: [userId], references: [id])
-  coupon           Coupon             @relation(fields: [couponId], references: [id])
-  merchant         Merchant           @relation(fields: [merchantId], references: [id])
-  activity         Activity?          @relation(fields: [activityId], references: [id])
-  shareLink        ShareLink?         @relation(fields: [shareLinkId], references: [id])
-
-  @@unique([userId, couponId])
-  @@index([merchantId, status, claimedAt])
-  @@index([merchantId, source, channel, claimedAt])
-  @@index([activityId, claimedAt])
-  @@index([shareLinkId])
-  @@index([referrerId])
-}
-
-model ExposureLog {
-  id         String   @id @default(cuid())
-  merchantId String
-  sessionId  String?
-  source     String?
-  channel    String?
-  scene      String?
-  campaign   String?
-  activityId String?
-  shareLinkId String?
-  referrerId String?
-  userAgent  String?
-  ip         String?
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
-  activity   Activity? @relation(fields: [activityId], references: [id])
-  shareLink  ShareLink? @relation(fields: [shareLinkId], references: [id])
-  createdAt  DateTime @default(now())
-
-  @@index([merchantId, createdAt])
-  @@index([merchantId, source, channel, createdAt])
-  @@index([activityId, createdAt])
-  @@index([shareLinkId])
-}
-
-model ClickLog {
-  id         String   @id @default(cuid())
-  merchantId String
-  sessionId  String?
-  target     String?
-  source     String?
-  channel    String?
-  scene      String?
-  campaign   String?
-  activityId String?
-  shareLinkId String?
-  referrerId String?
-  userAgent  String?
-  ip         String?
-  merchant   Merchant @relation(fields: [merchantId], references: [id])
-  activity   Activity? @relation(fields: [activityId], references: [id])
-  shareLink  ShareLink? @relation(fields: [shareLinkId], references: [id])
-  createdAt  DateTime @default(now())
-
-  @@index([merchantId, createdAt])
-  @@index([merchantId, source, channel, createdAt])
-  @@index([activityId, createdAt])
-  @@index([shareLinkId])
-}
-
 model Activity {
-  id            String              @id @default(cuid())
-  title         String
-  subtitle      String?
-  description   String?
-  type          ActivityType        @default(GENERAL)
-  merchantId    String
-  couponId      String?
-  coverImage    String?
-  startAt       DateTime
-  endAt         DateTime
-  manualWeight  Int                 @default(0)
-  sortOrder     Int                 @default(100)
-  budget        Decimal?
-  pricingMode   ActivityPricingMode @default(FREE)
-  status        ActivityStatus      @default(DRAFT)
-  merchant      Merchant            @relation(fields: [merchantId], references: [id])
-  coupon        Coupon?             @relation(fields: [couponId], references: [id])
-  shareLinks    ShareLink[]
-  shareEvents   ShareEvent[]
-  exposureLogs  ExposureLog[]
-  clickLogs     ClickLog[]
-  userCoupons   UserCoupon[]
-  createdAt     DateTime            @default(now())
-  updatedAt     DateTime            @updatedAt
-
-  @@index([status, type, startAt, endAt, manualWeight, sortOrder])
-  @@index([merchantId])
-  @@index([couponId])
-}
-
-model ShareLink {
-  id           String          @id @default(cuid())
-  userId       String?
-  merchantId   String?
-  couponId     String?
-  activityId   String?
-  targetType   ShareTargetType
-  targetId     String
-  source       String?
-  channel      String?
-  scene        String?
-  campaign     String?
-  referrerId   String?
-  token        String          @unique
-  createdAt    DateTime        @default(now())
-  user         User?           @relation(fields: [userId], references: [id])
-  merchant     Merchant?       @relation(fields: [merchantId], references: [id])
-  coupon       Coupon?         @relation(fields: [couponId], references: [id])
-  activity     Activity?       @relation(fields: [activityId], references: [id])
-  events       ShareEvent[]
-  exposureLogs ExposureLog[]
-  clickLogs    ClickLog[]
-  userCoupons  UserCoupon[]
-
-  @@index([targetType, targetId])
-  @@index([activityId])
-  @@index([merchantId])
-  @@index([couponId])
-  @@index([referrerId])
-}
-
-model ShareEvent {
   id          String         @id @default(cuid())
-  shareLinkId String
-  activityId  String?
-  merchantId  String?
-  couponId    String?
-  eventType   ShareEventType @default(SHARE_OPEN)
-  sessionId   String?
-  source      String?
-  channel     String?
-  scene       String?
-  campaign    String?
-  referrerId  String?
-  ip          String?
-  userAgent   String?
-  createdAt   DateTime       @default(now())
-  shareLink   ShareLink      @relation(fields: [shareLinkId], references: [id])
-  activity    Activity?      @relation(fields: [activityId], references: [id])
-  merchant    Merchant?      @relation(fields: [merchantId], references: [id])
-  coupon      Coupon?        @relation(fields: [couponId], references: [id])
-
-  @@index([activityId, createdAt])
-  @@index([merchantId, createdAt])
-  @@index([source, channel, createdAt])
-}
-
-model MerchantPromotion {
-  id          String          @id @default(cuid())
+  title       String
+  description String?
   merchantId  String
-  couponId    String?
-  name        String
-  source      PromotionSource @default(MANUAL)
-  pricingMode PricingMode     @default(MANUAL)
-  boostWeight Int             @default(0)
+  coverImage  String?
+  sortOrder   Int            @default(100)
+  status      ActivityStatus @default(DRAFT)
   startAt     DateTime
   endAt       DateTime
-  budget      Decimal?
-  cpc         Decimal?
-  cpa         Decimal?
-  isActive    Boolean         @default(true)
-  merchant    Merchant        @relation(fields: [merchantId], references: [id])
-  coupon      Coupon?         @relation(fields: [couponId], references: [id])
-  createdAt   DateTime        @default(now())
-  updatedAt   DateTime        @updatedAt
+  merchant    Merchant       @relation(fields: [merchantId], references: [id])
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
 
-  @@index([merchantId, isActive, startAt, endAt])
-  @@index([couponId])
+  @@index([status, startAt, endAt, sortOrder])
+  @@index([merchantId])
 }
