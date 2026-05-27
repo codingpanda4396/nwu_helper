@@ -1,14 +1,18 @@
-const { communityTypes, communityPosts } = require("../../data/mock");
+const api = require("../../utils/api");
 
 Page({
   data: {
-    types: communityTypes,
+    types: [],
     activeType: "全部",
-    list: communityPosts
+    list: []
   },
-  setType(event) {
+  async onLoad() {
+    const [types, list] = await Promise.all([api.getCommunityTypes(), api.getCommunityPosts("全部")]);
+    this.setData({ types, list });
+  },
+  async setType(event) {
     const type = event.currentTarget.dataset.type;
-    const list = type === "全部" ? communityPosts : communityPosts.filter((post) => post.type === type);
+    const list = await api.getCommunityPosts(type);
     this.setData({ activeType: type, list });
   },
   publish() {

@@ -1,14 +1,17 @@
-const { banners, quickEntries, activities, merchants } = require("../../data/mock");
+const api = require("../../utils/api");
 
 Page({
   data: {
-    banners,
-    quickEntries,
-    activities,
+    banners: [],
+    activities: [],
     recommendation: ""
   },
-  onSearch() {
-    wx.showToast({ title: "搜索功能即将开放", icon: "none" });
+  onLoad() {
+    this.loadHome();
+  },
+  async loadHome() {
+    const home = await api.getHome();
+    this.setData({ banners: home.banners || [], activities: home.activities || [] });
   },
   onBannerTap(event) {
     const item = event.detail.item;
@@ -22,19 +25,9 @@ Page({
       return;
     }
     if (item.targetType === "activity") {
-      const activity = activities.find((entry) => entry.id === item.targetId);
+      const activity = this.data.activities.find((entry) => entry.id === item.targetId);
       if (activity) this.openMerchant(activity.merchantId);
     }
-  },
-  onEntryTap(event) {
-    const item = event.detail.item;
-    if (!item) return;
-    if (item.filterId) wx.setStorageSync("serviceFilterId", item.filterId);
-    if (item.type === "tab" && item.url) {
-      wx.switchTab({ url: item.url });
-      return;
-    }
-    wx.showToast({ title: "功能即将开放", icon: "none" });
   },
   onActivityOpen(event) {
     const item = event.detail.item;
@@ -43,9 +36,8 @@ Page({
   openMerchant(id) {
     wx.navigateTo({ url: `/pages/merchant/detail?id=${id}` });
   },
-  chooseFood() {
-    const foodMerchants = merchants.filter((merchant) => merchant.category === "food");
-    const next = foodMerchants[Math.floor(Math.random() * foodMerchants.length)];
+  async chooseFood() {
+    const next = await api.getRandomFood();
     this.setData({
       recommendation: next ? `${next.name}：${next.recommendation}` : "今天先去南门转转。"
     });

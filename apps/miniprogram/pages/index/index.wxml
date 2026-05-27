@@ -2,11 +2,9 @@
   <view class="hero">
     <view class="brand">西大圈</view>
     <view class="subtitle">发现西北大学周边好店与校园生活服务</view>
-    <search-bar bind:search="onSearch" bind:input="onSearch" />
   </view>
 
   <banner-swiper banners="{{banners}}" bind:bannertap="onBannerTap" />
-  <quick-grid entries="{{quickEntries}}" bind:entrytap="onEntryTap" />
 
   <section-title title="今日校园福利" hint="优惠、套餐和周边好店" />
   <activity-card wx:for="{{activities}}" wx:key="id" item="{{item}}" bind:open="onActivityOpen" />

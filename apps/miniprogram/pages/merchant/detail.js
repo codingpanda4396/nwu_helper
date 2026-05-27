@@ -1,12 +1,12 @@
-const { merchants, coupons } = require("../../data/mock");
+const api = require("../../utils/api");
 
 Page({
   data: {
     merchant: null,
     merchantCoupons: []
   },
-  onLoad(options) {
-    const merchant = merchants.find((item) => item.id === options.id);
+  async onLoad(options) {
+    const merchant = await api.getMerchant(options.id);
     if (!merchant) {
       wx.showToast({ title: "商家不存在", icon: "none" });
       this.setData({ merchant: null, merchantCoupons: [] });
@@ -14,7 +14,7 @@ Page({
     }
     this.setData({
       merchant,
-      merchantCoupons: coupons.filter((coupon) => merchant.couponIds.indexOf(coupon.id) >= 0)
+      merchantCoupons: merchant.coupons || []
     });
   },
   copyAddress() {

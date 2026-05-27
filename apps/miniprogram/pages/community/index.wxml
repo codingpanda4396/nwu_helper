@@ -1,7 +1,7 @@
 <view class="page community">
   <view class="top card">
     <view>
-      <view class="title">西小北北</view>
+      <view class="title">西大圈</view>
       <view class="desc">校园墙、求助、拼饭、二手和校园信息</view>
     </view>
     <button bindtap="publish">发布</button>

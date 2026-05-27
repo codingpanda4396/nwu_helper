@@ -1,12 +1,20 @@
-const { services, merchants } = require("../../data/mock");
+const api = require("../../utils/api");
 
 Page({
   data: {
-    services,
+    services: [],
     activeServiceId: "printing",
     list: []
   },
-  onShow() {
+  async onLoad() {
+    const services = await api.getServiceCategories();
+    this.setData({ services });
+  },
+  async onShow() {
+    if (!this.data.services.length) {
+      const services = await api.getServiceCategories();
+      this.setData({ services });
+    }
     const stored = wx.getStorageSync("serviceFilterId");
     if (stored) {
       wx.removeStorageSync("serviceFilterId");
@@ -18,10 +26,12 @@ Page({
   selectService(event) {
     this.selectServiceById(event.currentTarget.dataset.id);
   },
-  selectServiceById(id) {
-    const service = services.find((item) => item.id === id) || services[0];
-    const list = merchants.filter((merchant) => service.merchantIds.indexOf(merchant.id) >= 0);
-    this.setData({ activeServiceId: service.id, list });
+  async selectServiceById(id) {
+    const service = this.data.services.find((item) => item.key === id || item.id === id) || this.data.services[0];
+    if (!service) return;
+    const key = service.key || service.id;
+    const list = await api.getServiceMerchants(key);
+    this.setData({ activeServiceId: key, list });
   },
   openMerchant(event) {
     const item = event.detail.item;

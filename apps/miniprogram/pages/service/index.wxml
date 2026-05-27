@@ -1,6 +1,6 @@
 <view class="page">
   <view class="service-grid">
-    <button wx:for="{{services}}" wx:key="id" class="service card {{activeServiceId === item.id ? 'active' : ''}}" data-id="{{item.id}}" bindtap="selectService">
+    <button wx:for="{{services}}" wx:key="id" class="service card {{activeServiceId === (item.key || item.id) ? 'active' : ''}}" data-id="{{item.key || item.id}}" bindtap="selectService">
       <view class="icon">{{item.icon}}</view>
       <view class="name">{{item.name}}</view>
     </button>

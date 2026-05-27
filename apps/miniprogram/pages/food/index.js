@@ -1,12 +1,14 @@
-const { foodCategories, merchants } = require("../../data/mock");
+const api = require("../../utils/api");
 
 Page({
   data: {
-    categories: foodCategories,
+    categories: [],
     activeCategory: "all",
     list: []
   },
-  onLoad() {
+  async onLoad() {
+    const categories = await api.getFoodCategories();
+    this.setData({ categories });
     this.filterList("all");
   },
   setCategory(event) {
@@ -14,11 +16,8 @@ Page({
     this.setData({ activeCategory: id });
     this.filterList(id);
   },
-  filterList(categoryId) {
-    const list = merchants.filter((merchant) => {
-      if (merchant.category !== "food") return false;
-      return categoryId === "all" || merchant.foodCategory === categoryId;
-    });
+  async filterList(categoryId) {
+    const list = await api.getFoodMerchants(categoryId);
     this.setData({ list });
   },
   openMerchant(event) {
