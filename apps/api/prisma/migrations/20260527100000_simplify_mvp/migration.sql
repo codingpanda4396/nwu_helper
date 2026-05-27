@@ -2,6 +2,15 @@
 ALTER TABLE "Merchant" DROP CONSTRAINT IF EXISTS "Merchant_ownerUserId_fkey";
 
 -- DropForeignKey
+ALTER TABLE "CouponRedemption" DROP CONSTRAINT IF EXISTS "CouponRedemption_couponId_fkey";
+
+-- DropForeignKey
+ALTER TABLE "CouponRedemption" DROP CONSTRAINT IF EXISTS "CouponRedemption_userId_fkey";
+
+-- DropTable
+DROP TABLE IF EXISTS "CouponRedemption";
+
+-- DropForeignKey
 ALTER TABLE "Coupon" DROP CONSTRAINT IF EXISTS "Coupon_merchantId_fkey";
 
 -- DropForeignKey
