@@ -125,6 +125,17 @@ function activityCard(activity: any) {
   };
 }
 
+function wechatEntryCard(item: any) {
+  if (!item?.isActive) return null;
+  return {
+    title: item.title,
+    description: item.description,
+    buttonText: item.buttonText,
+    imageUrl: item.imageUrl,
+    isActive: item.isActive
+  };
+}
+
 function communityPostCard(item: any) {
   return {
     id: item.id,
@@ -159,24 +170,10 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/public/home", async (_request, reply) => {
-    const [banners, activities, featuredFoods, featuredPosts] = await Promise.all([
+    const [banners, activities, wechatEntry] = await Promise.all([
       prisma.banner.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
       getHomeActivities(),
-      prisma.merchant.findMany({
-        where: { status: "APPROVED", foodCategory: { not: null } },
-        include: {
-          category: true,
-          serviceCategory: true,
-          coupons: { where: { status: "ACTIVE", validTo: { gte: new Date() } }, orderBy: { createdAt: "desc" } }
-        },
-        orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }, { randomWeight: "desc" }],
-        take: 4
-      }),
-      prisma.communityPost.findMany({
-        where: { status: "VISIBLE" },
-        orderBy: [{ sortOrder: "asc" }, { publishedAt: "desc" }],
-        take: 4
-      })
+      prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } })
     ]);
     return ok(reply, {
       banners: banners.map((item) => ({
@@ -190,9 +187,13 @@ export async function publicRoutes(app: FastifyInstance) {
         url: item.url
       })),
       activities: [...activities.dailyDeals, ...activities.femaleSelected, ...activities.groupDeals, ...activities.general].map(activityCard),
-      featuredFoods: featuredFoods.map(merchantCard),
-      featuredPosts: featuredPosts.map(communityPostCard)
+      wechatEntry: wechatEntryCard(wechatEntry)
     });
+  });
+
+  app.get("/api/public/wechat-entry", async (_request, reply) => {
+    const item = await prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } });
+    return ok(reply, wechatEntryCard(item));
   });
 
   app.get("/api/public/categories", async (_request, reply) => {

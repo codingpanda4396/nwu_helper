@@ -1,6 +1,0 @@
-<view class="grid card">
-  <button wx:for="{{entries}}" wx:key="id" class="entry" data-item="{{item}}" bindtap="onTap">
-    <view class="icon">{{item.icon}}</view>
-    <view class="label">{{item.title}}</view>
-  </button>
-</view>

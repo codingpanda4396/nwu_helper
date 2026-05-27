@@ -64,6 +64,9 @@ else
   run_compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
 fi
 
+log "Applying database migrations"
+run_compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate
+
 log "Container status"
 run_compose -f docker-compose.prod.yml --env-file .env ps
 

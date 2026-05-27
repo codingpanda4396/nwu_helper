@@ -1,6 +1,0 @@
-{
-  "navigationBarTitleText": "关于西大圈",
-  "usingComponents": {
-    "qrcode-block": "/components/qrcode-block/index"
-  }
-}

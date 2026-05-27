@@ -224,6 +224,18 @@ h1, h2, p { margin: 0; letter-spacing: 0; }
   font-weight: 850;
 }
 
+.h5-slot-actions {
+  display: grid;
+  gap: 8px;
+  justify-items: end;
+}
+
+.h5-slot button.secondary {
+  background: #fff;
+  color: #92400e;
+  border: 1px solid rgba(146, 64, 14, 0.2);
+}
+
 .h5-page-hero {
   margin-bottom: 12px;
   padding: 18px 16px;
@@ -423,6 +435,74 @@ h1, h2, p { margin: 0; letter-spacing: 0; }
 
 .empty-card, .coupon-card {
   padding: 14px;
+}
+
+.coupon-card .claim-open {
+  margin-top: 12px;
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: var(--green);
+  color: #fff;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 850;
+}
+
+.claim-form {
+  margin-top: 12px;
+  display: grid;
+  gap: 10px;
+}
+
+.claim-form label, .merchant-login label, .redeem-panel label {
+  display: grid;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.claim-form input, .merchant-login input, .redeem-panel input {
+  width: 100%;
+  min-height: 42px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 0 11px;
+  background: #fff;
+  color: var(--ink);
+}
+
+.claim-success {
+  margin-bottom: 12px;
+  padding: 14px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  border: 1px solid #a7f3d0;
+}
+
+.claim-success span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #047857;
+  font-size: 13px;
+  font-weight: 850;
+}
+
+.claim-success strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 30px;
+  letter-spacing: 0;
+}
+
+.claim-success p, .claim-success small {
+  display: block;
+  margin-top: 6px;
+  color: #166534;
+  line-height: 1.45;
 }
 
 .empty-card span, .coupon-card span {
@@ -939,6 +1019,11 @@ nav button.active, nav button:hover {
   color: var(--ink);
 }
 
+.wechat-preview {
+  max-width: 520px;
+  padding: 0 18px 18px;
+}
+
 table {
   width: 100%;
   border-collapse: collapse;
@@ -960,3 +1045,195 @@ th {
   font-weight: 850;
 }
 tr:last-child td { border-bottom: 0; }
+
+.entry-page, .merchant-page {
+  min-height: 100vh;
+  background: #eef2f7;
+  padding: 18px;
+}
+
+.entry-shell, .merchant-console, .merchant-login {
+  width: min(100%, 880px);
+  margin: 0 auto;
+}
+
+.entry-brand {
+  padding: 28px 0 18px;
+}
+
+.entry-brand span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f766e;
+  font-weight: 900;
+}
+
+.entry-brand h1 {
+  margin-top: 12px;
+  font-size: 38px;
+  line-height: 1.12;
+}
+
+.entry-brand p {
+  margin-top: 10px;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+.entry-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.entry-grid a {
+  min-height: 156px;
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--ink);
+  text-decoration: none;
+  display: grid;
+  align-content: start;
+  gap: 10px;
+}
+
+.entry-grid svg { color: #0f766e; }
+.entry-grid strong { font-size: 20px; }
+.entry-grid span { color: var(--muted); line-height: 1.45; }
+
+.merchant-login {
+  max-width: 420px;
+  margin-top: 8vh;
+  padding: 22px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: grid;
+  gap: 14px;
+}
+
+.merchant-console {
+  display: grid;
+  gap: 16px;
+}
+
+.merchant-console header {
+  padding: 18px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.merchant-console header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.merchant-console header h1 {
+  margin-top: 4px;
+  font-size: 26px;
+}
+
+.merchant-console header button {
+  min-height: 36px;
+  border-radius: 8px;
+  padding: 0 12px;
+  background: #eef2f7;
+  color: var(--ink);
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.merchant-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.merchant-stat-grid div, .redeem-panel, .redeem-preview, .rank-list {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: #fff;
+}
+
+.merchant-stat-grid span, .rank-list p {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.merchant-stat-grid strong {
+  display: block;
+  margin-top: 10px;
+  font-size: 30px;
+}
+
+.redeem-panel {
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 12px;
+  align-items: end;
+}
+
+.redeem-preview {
+  display: grid;
+  gap: 10px;
+}
+
+.redeem-preview span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: #0f766e;
+  font-weight: 850;
+}
+
+.rank-grid {
+  margin-top: 16px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.rank-list h2 {
+  margin-bottom: 10px;
+  font-size: 18px;
+}
+
+.rank-list div {
+  min-height: 38px;
+  border-top: 1px solid var(--line);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.rank-list div span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+@media (max-width: 720px) {
+  .entry-grid, .merchant-stat-grid, .rank-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .entry-brand h1 {
+    font-size: 31px;
+  }
+
+  .redeem-panel {
+    grid-template-columns: 1fr;
+  }
+}

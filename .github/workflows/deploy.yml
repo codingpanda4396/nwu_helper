@@ -207,7 +207,7 @@ jobs:
               docker compose -f docker-compose.prod.yml --env-file .env logs --tail=80 api
               exit 1
             fi
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/public/activities/home').then(async r => { const text = await r.text(); if (!r.ok) throw new Error(text); const body = JSON.parse(text); if (!body.success) throw new Error(text); console.log('activity api ok'); })"
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "fetch('http://127.0.0.1:4000/api/public/home').then(async r => { const text = await r.text(); if (!r.ok) throw new Error(text); const body = JSON.parse(text); if (!body.success) throw new Error(text); console.log('home api ok'); })"
 
       - name: Seed demo data
         if: github.event.inputs.seed == 'true'

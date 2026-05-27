@@ -61,8 +61,9 @@ async function main() {
     { key: "printing", name: "打印", icon: "打印", sortOrder: 10 },
     { key: "ktv", name: "KTV", icon: "欢唱", sortOrder: 20 },
     { key: "rent", name: "租房", icon: "租住", sortOrder: 30 },
-    { key: "errand", name: "跑腿", icon: "代办", sortOrder: 40 },
-    { key: "job", name: "兼职", icon: "兼职", sortOrder: 50 }
+    { key: "care", name: "洗护理发", icon: "洗护", sortOrder: 40 },
+    { key: "play", name: "台球 KTV", icon: "娱乐", sortOrder: 50 },
+    { key: "job", name: "兼职", icon: "兼职", sortOrder: 60 }
   ];
 
   const serviceCategoryRecords = new Map<string, { id: string }>();
@@ -159,6 +160,62 @@ async function main() {
       rating: 4.6,
       sortOrder: 30,
       platformBoost: 10
+    },
+    {
+      id: "seed-merchant-care",
+      name: "南门轻护理发",
+      summary: "洗剪吹、洗护和基础造型",
+      description: "适合学生日常理发和临时整理造型，支持微信预约。",
+      categoryId: categoryRecords.get("services")!.id,
+      ownerUserId: null,
+      address: "西北大学长安校区南门生活广场 2 楼",
+      phone: "029-88880014",
+      businessHours: "10:00-22:00",
+      coverImageUrl: "/assets/images/banner-campus.jpg",
+      foodCategory: null,
+      serviceCategoryId: serviceCategoryRecords.get("care")!.id,
+      avgPrice: 39,
+      distanceText: "距西大长安校区约 800m",
+      tags: ["理发", "洗护", "学生价"],
+      highlights: ["可预约", "学生价", "反馈快"],
+      menu: [{ name: "洗剪吹", price: 39 }, { name: "头皮护理", price: 69 }],
+      qrImageUrl: "/assets/images/qr-placeholder.jpg",
+      recommendation: "基础剪发和洗护评价稳定，适合日常整理。",
+      randomWeight: 0,
+      isFoodRecommendation: false,
+      isServicePublished: true,
+      status: "APPROVED" as const,
+      rating: 4.6,
+      sortOrder: 40,
+      platformBoost: 10
+    },
+    {
+      id: "seed-merchant-play",
+      name: "北门星球台球 KTV",
+      summary: "台球、桌游和小包间欢唱",
+      description: "适合宿舍聚会和社团小活动，凭西大圈券到店享学生价。",
+      categoryId: categoryRecords.get("services")!.id,
+      ownerUserId: null,
+      address: "西北大学长安校区北门美食街 3 楼",
+      phone: "029-88880015",
+      businessHours: "13:00-02:00",
+      coverImageUrl: "/assets/images/merchant-service-ktv.jpg",
+      foodCategory: null,
+      serviceCategoryId: serviceCategoryRecords.get("play")!.id,
+      avgPrice: 45,
+      distanceText: "距西大长安校区约 900m",
+      tags: ["台球", "KTV", "宿舍聚会"],
+      highlights: ["夜间营业", "适合多人", "学生套餐"],
+      menu: [{ name: "台球小时卡", price: 28 }, { name: "KTV 小包 2 小时", price: 98 }],
+      qrImageUrl: "/assets/images/qr-placeholder.jpg",
+      recommendation: "适合周末和社团小聚，价格提前确认。",
+      randomWeight: 0,
+      isFoodRecommendation: false,
+      isServicePublished: true,
+      status: "APPROVED" as const,
+      rating: 4.5,
+      sortOrder: 50,
+      platformBoost: 8
     }
   ];
 
@@ -170,49 +227,26 @@ async function main() {
     });
   }
 
-  const couponCount = await prisma.coupon.count();
-  if (couponCount === 0) {
-    const validTo = new Date("2026-12-31T15:59:59.000Z");
-    await prisma.coupon.createMany({
-      data: [
-        {
-          merchantId: "seed-merchant-food",
-          title: "满 30 减 8 元",
-          description: "堂食出示核销码使用，不与其他活动同享。",
-          threshold: 30,
-          discountValue: 8,
-          totalStock: 300,
-          remainingStock: 300,
-          validTo
-        },
-        {
-          merchantId: "seed-merchant-print",
-          title: "黑白打印 100 张 8 折",
-          description: "适用于课程资料、论文初稿打印。",
-          threshold: 10,
-          discountValue: 2,
-          totalStock: 500,
-          remainingStock: 500,
-          validTo
-        },
-        {
-          merchantId: "seed-merchant-driving",
-          title: "报名立减 200 元",
-          description: "到店咨询并完成报名后核销。",
-          threshold: 1000,
-          discountValue: 200,
-          totalStock: 80,
-          remainingStock: 80,
-          validTo
-        }
-      ]
+  const validTo = new Date("2026-12-31T15:59:59.000Z");
+  const coupons = [
+    { id: "seed-coupon-food", merchantId: "seed-merchant-food", title: "满 30 减 8 元", description: "堂食出示核销码使用，不与其他活动同享。", threshold: 30, discountValue: 8, totalStock: 300, remainingStock: 300, validTo },
+    { id: "seed-coupon-print", merchantId: "seed-merchant-print", title: "黑白打印 100 张 8 折", description: "适用于课程资料、论文初稿打印。", threshold: 10, discountValue: 2, totalStock: 500, remainingStock: 500, validTo },
+    { id: "seed-coupon-driving", merchantId: "seed-merchant-driving", title: "报名立减 200 元", description: "到店咨询并完成报名后核销。", threshold: 1000, discountValue: 200, totalStock: 80, remainingStock: 80, validTo },
+    { id: "seed-coupon-care", merchantId: "seed-merchant-care", title: "洗剪吹立减 10 元", description: "首次到店洗剪吹可用，需提前预约。", threshold: 39, discountValue: 10, totalStock: 120, remainingStock: 120, validTo },
+    { id: "seed-coupon-play", merchantId: "seed-merchant-play", title: "台球 KTV 套餐减 20 元", description: "台球或 KTV 套餐满 98 元可用。", threshold: 98, discountValue: 20, totalStock: 100, remainingStock: 100, validTo }
+  ];
+  for (const coupon of coupons) {
+    await prisma.coupon.upsert({
+      where: { id: coupon.id },
+      update: coupon,
+      create: coupon
     });
   }
 
   const [foodCoupon, printCoupon, drivingCoupon] = await Promise.all([
-    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-food" }, orderBy: { createdAt: "asc" } }),
-    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-print" }, orderBy: { createdAt: "asc" } }),
-    prisma.coupon.findFirst({ where: { merchantId: "seed-merchant-driving" }, orderBy: { createdAt: "asc" } })
+    prisma.coupon.findUnique({ where: { id: "seed-coupon-food" } }),
+    prisma.coupon.findUnique({ where: { id: "seed-coupon-print" } }),
+    prisma.coupon.findUnique({ where: { id: "seed-coupon-driving" } })
   ]);
 
   const activityWindow = {
@@ -329,6 +363,25 @@ async function main() {
       create: banner
     });
   }
+
+  await prisma.wechatEntryConfig.upsert({
+    where: { id: "home-wechat-entry" },
+    update: {
+      title: "加入西大圈微信",
+      description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
+      buttonText: "添加微信",
+      imageUrl: "/assets/images/h5-wechat-promo.png",
+      isActive: true
+    },
+    create: {
+      id: "home-wechat-entry",
+      title: "加入西大圈微信",
+      description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
+      buttonText: "添加微信",
+      imageUrl: "/assets/images/h5-wechat-promo.png",
+      isActive: true
+    }
+  });
 
   const posts = [
     { id: "seed-post-001", type: "校园墙", title: "今天南门有什么好吃的推荐？", summary: "想找一家适合两个人吃饭的小店，预算人均 30 左右。", likeCount: 12, commentCount: 4, sortOrder: 10 },

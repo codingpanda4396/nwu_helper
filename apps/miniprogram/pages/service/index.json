@@ -1,8 +1,0 @@
-{
-  "navigationBarTitleText": "生活服务",
-  "usingComponents": {
-    "section-title": "/components/section-title/index",
-    "merchant-card": "/components/merchant-card/index",
-    "empty-state": "/components/empty-state/index"
-  }
-}

@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "西大圈",
-  "usingComponents": {
-    "community-post-card": "/components/community-post-card/index",
-    "empty-state": "/components/empty-state/index"
-  }
-}

@@ -1,4 +1,0 @@
-<view class="search">
-  <text class="icon">⌕</text>
-  <input placeholder="{{placeholder}}" confirm-type="search" bindfocus="onFocus" bindinput="onInput" />
-</view>

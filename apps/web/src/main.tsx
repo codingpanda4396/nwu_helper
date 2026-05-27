@@ -1,17 +1,18 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { createRoot } from "react-dom/client";
-import { BarChart3, BadgePercent, CalendarDays, Car, ChevronLeft, ChevronRight, Clock, Coffee, Gift, Heart, Home, Image, Info, ListChecks, LogOut, MapPin, Megaphone, MessageCircle, MessageSquareText, Phone, Plus, QrCode, Send, ShieldCheck, Shuffle, Sparkles, Star, Store, Ticket, ThumbsUp, Utensils, Wrench } from "lucide-react";
+import { BarChart3, BadgePercent, CalendarDays, Car, ChevronLeft, ChevronRight, Clock, Coffee, Gift, Heart, Home, Image, Info, ListChecks, LogOut, MapPin, MessageCircle, MessageSquareText, Phone, Plus, QrCode, Send, ShieldCheck, Shuffle, Sparkles, Star, Store, Ticket, ThumbsUp, Utensils, Wrench } from "lucide-react";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
-type Section = "overview" | "benefits" | "banners" | "food" | "services" | "community" | "merchants" | "coupons";
+type Section = "overview" | "benefits" | "banners" | "wechat" | "food" | "services" | "community" | "merchants" | "coupons";
 type Dict = Record<string, any>;
 
 const nav: { id: Section; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
   { id: "overview", label: "概览", Icon: BarChart3 },
   { id: "benefits", label: "校园福利发布", Icon: Ticket },
   { id: "banners", label: "轮播图修改", Icon: Image },
+  { id: "wechat", label: "西大圈入口", Icon: QrCode },
   { id: "food", label: "今天吃什么", Icon: Utensils },
   { id: "services", label: "服务发布", Icon: Wrench },
   { id: "community", label: "论坛功能", Icon: MessageSquareText },
@@ -103,13 +104,50 @@ const h5Tabs: { id: H5Tab; label: string; Icon: React.ComponentType<{ size?: num
   { id: "about", label: "关于", Icon: Info }
 ];
 
+const mockMerchants: Dict[] = [
+  { id: "mock-bbq", category: "food", foodCategory: "烧烤夜宵", name: "北门阿强烧烤", image: asset("merchant-food-001.jpg"), rating: 4.8, avgPrice: 42, distance: "北门步行6分钟", address: "西大北门美食街 18 号", phone: "13800000001", businessHours: "17:00-02:00", tags: ["夜宵", "学生套餐", "可拼桌"], discount: "满50减8", recommendation: "宿舍夜宵局常选，烤串出餐快。", highlights: ["离校近", "套餐清楚", "适合多人"], menu: [{ name: "双人烤串套餐", price: 68 }, { name: "烤鱼拼盘", price: 88 }], qrImageUrl: qrPlaceholder, coupons: [{ id: "mock-coupon-bbq", title: "满50减8", description: "到店消费满50元可用，每桌限用一张。" }] },
+  { id: "mock-print", category: "service", serviceId: "print", name: "西门快印装订", image: asset("merchant-print-001.jpg"), rating: 4.7, avgPrice: 12, distance: "西门步行4分钟", address: "西大西门商业街 6 号", phone: "13800000002", businessHours: "08:30-22:30", tags: ["论文装订", "资料打印", "证件照"], discount: "打印满10减2", recommendation: "课程资料、论文装订和证件照一站处理。", highlights: ["营业晚", "可装订", "价格透明"], menu: [{ name: "黑白打印", price: 0.15 }, { name: "论文胶装", price: 8 }], qrImageUrl: qrPlaceholder, coupons: [{ id: "mock-coupon-print", title: "打印满10减2", description: "资料打印满10元立减2元。" }] },
+  { id: "mock-driving", category: "service", serviceId: "rent", name: "校园优选驾校", image: asset("driving-school.jpg"), rating: 4.9, avgPrice: 2680, distance: "校车接送", address: "西大周边训练场", phone: "13800000003", businessHours: "09:00-20:00", tags: ["接送练车", "学生班", "流程透明"], discount: "报名减100", recommendation: "适合课表不固定的同学，练车时间可沟通。", highlights: ["接送方便", "班型清楚", "微信跟进"], menu: [{ name: "学生基础班", price: 2680 }], qrImageUrl: qrPlaceholder, coupons: [{ id: "mock-coupon-driving", title: "报名减100", description: "通过西大圈咨询报名可享。" }] },
+  { id: "mock-hair", category: "service", serviceId: "care", name: "南门轻护理发", image: asset("h5-wechat-promo.png"), rating: 4.6, avgPrice: 39, distance: "南门步行8分钟", address: "南门生活广场 2 楼", phone: "13800000004", businessHours: "10:00-22:00", tags: ["理发", "洗护", "学生价"], discount: "洗剪吹减10", recommendation: "基础剪发和洗护评价稳定。", highlights: ["学生价", "可预约", "反馈快"], menu: [{ name: "洗剪吹", price: 39 }], qrImageUrl: qrPlaceholder, coupons: [{ id: "mock-coupon-hair", title: "洗剪吹减10", description: "首次到店洗剪吹可用。" }] }
+];
+
+const mockPosts = [
+  { id: "mock-post-1", type: "校园墙", title: "北门夜宵哪家适合四人局？", summary: "想找能坐下聊天、价格别太离谱的店。", content: "想找能坐下聊天、价格别太离谱的店，欢迎推荐。", authorNickname: "同学A", likeCount: 12, commentCount: 3, viewCount: 98, time: "今天" }
+];
+
+function getSessionId() {
+  const key = "nwuSessionId";
+  const current = localStorage.getItem(key);
+  if (current) return current;
+  const next = `h5-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+  localStorage.setItem(key, next);
+  return next;
+}
+
+function attribution(scene: string) {
+  const params = new URLSearchParams(window.location.search);
+  return {
+    sessionId: getSessionId(),
+    source: "h5",
+    channel: params.get("channel") || "direct",
+    scene,
+    campaign: params.get("campaign") || undefined
+  };
+}
+
+function firePublicLog(kind: "exposures" | "clicks", merchantId?: string, scene = "home", extra: Dict = {}) {
+  if (!merchantId || merchantId.startsWith("mock-")) return;
+  publicWrite(`/api/public/${kind}`, { merchantId, ...attribution(scene), ...extra }).catch(() => undefined);
+}
+
 function StudentHome() {
   const [activeTab, setActiveTab] = useState<H5Tab>(() => {
     const hash = window.location.hash.replace("#", "");
     return h5Tabs.some((item) => item.id === hash) ? hash as H5Tab : "home";
   });
-  const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[] }>({ banners: [], activities: [], featuredFoods: [], featuredPosts: [] });
+  const [home, setHome] = useState<{ banners: Dict[]; activities: Dict[]; wechatEntry: Dict | null }>({ banners: [], activities: [], wechatEntry: null });
   const [randomFood, setRandomFood] = useState<Dict | null>(null);
+  const [hasDrawnFood, setHasDrawnFood] = useState(false);
   const [selectedMerchantId, setSelectedMerchantId] = useState(initialMerchantId);
   const [merchant, setMerchant] = useState<Dict | null>(null);
   const [selectedPostId, setSelectedPostId] = useState(initialPostId);
@@ -132,21 +170,24 @@ function StudentHome() {
   const [toast, setToast] = useState("");
 
   useEffect(() => {
-    publicApi<{ banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[] }>("/api/public/home")
-      .then((data) => setHome({ banners: data.banners || [], activities: data.activities || [], featuredFoods: data.featuredFoods || [], featuredPosts: data.featuredPosts || [] }))
-      .catch(() => setHomeError("校园福利暂时加载失败，请稍后再试。"));
+    publicApi<{ banners: Dict[]; activities: Dict[]; wechatEntry: Dict | null }>("/api/public/home")
+      .then((data) => {
+        setHome({ banners: data.banners || [], activities: data.activities || [], wechatEntry: data.wechatEntry || null });
+        setHomeError("");
+      })
+      .catch(() => setHomeError("首页内容暂时加载失败，请稍后再试。"));
   }, []);
 
   useEffect(() => {
     publicApi<Dict[]>("/api/public/food/categories")
       .then((data) => setFoodCategories(data.length ? data : [{ id: "all", name: "全部" }]))
-      .catch(() => setFoodError("美食分类暂时加载失败。"));
+      .catch(() => setFoodCategories([{ id: "all", name: "全部" }, { id: "烧烤夜宵", name: "烧烤夜宵" }]));
   }, []);
 
   useEffect(() => {
     publicApi<Dict[]>(`/api/public/food/merchants?categoryId=${encodeURIComponent(foodCategory)}`)
       .then((data) => { setFoodMerchants(data || []); setFoodError(""); })
-      .catch(() => { setFoodMerchants([]); setFoodError("美食商家暂时加载失败。"); });
+      .catch(() => { setFoodMerchants(mockMerchants.filter((item) => item.category === "food")); setFoodError("当前使用本地试点数据。"); });
   }, [foodCategory]);
 
   useEffect(() => {
@@ -155,26 +196,29 @@ function StudentHome() {
         setServiceCategories(data || []);
         if (!serviceKey && data?.[0]?.key) setServiceKey(data[0].key);
       })
-      .catch(() => setServiceError("服务分类暂时加载失败。"));
+      .catch(() => {
+        setServiceCategories([{ id: "mock-print-cat", key: "print", name: "打印装订" }, { id: "mock-care-cat", key: "care", name: "洗护理发" }, { id: "mock-rent-cat", key: "rent", name: "租房驾校" }]);
+        if (!serviceKey) setServiceKey("print");
+      });
   }, []);
 
   useEffect(() => {
     if (!serviceKey) return;
     publicApi<Dict[]>(`/api/public/services/merchants?serviceKey=${encodeURIComponent(serviceKey)}`)
       .then((data) => { setServiceMerchants(data || []); setServiceError(""); })
-      .catch(() => { setServiceMerchants([]); setServiceError("生活服务暂时加载失败。"); });
+      .catch(() => { setServiceMerchants(mockMerchants.filter((item) => item.serviceId === serviceKey)); setServiceError("当前使用本地试点数据。"); });
   }, [serviceKey]);
 
   useEffect(() => {
     publicApi<string[]>("/api/public/community/types")
       .then((data) => setCommunityTypes(data.length ? data : ["全部"]))
-      .catch(() => setCommunityError("讨论区分类暂时加载失败。"));
+      .catch(() => setCommunityTypes(["全部", "校园墙", "拼饭"]));
   }, []);
 
   useEffect(() => {
     publicApi<Dict[]>(`/api/public/community/posts?type=${encodeURIComponent(communityType)}`)
       .then((data) => { setCommunityPosts(data || []); setCommunityError(""); })
-      .catch(() => { setCommunityPosts([]); setCommunityError("讨论区暂时加载失败。"); });
+      .catch(() => { setCommunityPosts(mockPosts); setCommunityError("当前使用本地试点数据。"); });
   }, [communityType]);
 
   useEffect(() => {
@@ -183,6 +227,12 @@ function StudentHome() {
       return;
     }
     setLoadingMerchant(true);
+    const mock = mockMerchants.find((item) => item.id === selectedMerchantId);
+    if (mock) {
+      setMerchant(mock);
+      setLoadingMerchant(false);
+      return;
+    }
     publicApi<Dict>(`/api/public/merchants/${encodeURIComponent(selectedMerchantId)}`)
       .then(setMerchant)
       .catch(() => setMerchant(null))
@@ -195,6 +245,12 @@ function StudentHome() {
       return;
     }
     setLoadingPost(true);
+    const mock = mockPosts.find((item) => item.id === selectedPostId);
+    if (mock) {
+      setPostDetail(mock);
+      setLoadingPost(false);
+      return;
+    }
     publicApi<Dict>(`/api/public/community/posts/${encodeURIComponent(selectedPostId)}`)
       .then(setPostDetail)
       .catch(() => setPostDetail(null))
@@ -202,6 +258,7 @@ function StudentHome() {
   }, [selectedPostId]);
 
   async function chooseFood() {
+    setHasDrawnFood(true);
     try {
       setRandomFood(await publicApi<Dict | null>("/api/public/food/random"));
     } catch {
@@ -218,6 +275,7 @@ function StudentHome() {
 
   function openMerchant(id?: string) {
     if (!id) return;
+    firePublicLog("clicks", id, activeTab === "services" ? "service-list" : activeTab === "food" ? "food-list" : "home", { target: "merchant-detail" });
     setSelectedMerchantId(id);
     window.history.replaceState(null, "", `/student?merchantId=${encodeURIComponent(id)}`);
   }
@@ -289,7 +347,7 @@ function StudentHome() {
   return (
     <main className="student-page">
       <section className="h5-shell">
-        {activeTab === "home" && <HomeTab banners={heroBanners} activities={home.activities} featuredFoods={home.featuredFoods} featuredPosts={home.featuredPosts} homeError={homeError} randomFood={randomFood} onChooseFood={chooseFood} onOpenMerchant={openMerchant} onOpenPost={openPost} onTab={switchTab} onWechat={showWechatToast} />}
+        {activeTab === "home" && <HomeTab banners={heroBanners} activities={home.activities} wechatEntry={home.wechatEntry} homeError={homeError} randomFood={randomFood} hasDrawnFood={hasDrawnFood} onChooseFood={chooseFood} onOpenMerchant={openMerchant} onTab={switchTab} onWechat={showWechatToast} />}
         {activeTab === "food" && <FoodTab categories={foodCategories} activeCategory={foodCategory} merchants={foodMerchants} error={foodError} onCategory={setFoodCategory} onOpenMerchant={openMerchant} />}
         {activeTab === "driving" && <DrivingTab onWechat={showWechatToast} />}
         {activeTab === "services" && <ServicesTab categories={serviceCategories} activeKey={serviceKey} merchants={serviceMerchants} error={serviceError} onCategory={setServiceKey} onOpenMerchant={openMerchant} />}
@@ -318,9 +376,9 @@ function TabBar({ active, onChange }: { active: H5Tab; onChange: (id: H5Tab) => 
   );
 }
 
-function HomeTab({ banners, activities, featuredFoods, featuredPosts, homeError, randomFood, onChooseFood, onOpenMerchant, onOpenPost, onTab, onWechat }: {
-  banners: Dict[]; activities: Dict[]; featuredFoods: Dict[]; featuredPosts: Dict[]; homeError: string; randomFood: Dict | null;
-  onChooseFood: () => void; onOpenMerchant: (id?: string) => void; onOpenPost: (id?: string) => void; onTab: (id: H5Tab) => void; onWechat: () => void;
+function HomeTab({ banners, activities, wechatEntry, homeError, randomFood, hasDrawnFood, onChooseFood, onOpenMerchant, onTab, onWechat }: {
+  banners: Dict[]; activities: Dict[]; wechatEntry: Dict | null; homeError: string; randomFood: Dict | null; hasDrawnFood: boolean;
+  onChooseFood: () => void; onOpenMerchant: (id?: string) => void; onTab: (id: H5Tab) => void; onWechat: () => void;
 }) {
   function handleBanner(item: Dict) {
     if (item.targetType === "activity") onOpenMerchant(activities.find((activity) => activity.id === item.targetId)?.merchantId);
@@ -360,30 +418,37 @@ function HomeTab({ banners, activities, featuredFoods, featuredPosts, homeError,
         <div>
           <span><Utensils size={16} />抽签吃饭</span>
           <strong>{randomFood ? randomFood.name : "今天交给西大圈"}</strong>
-          <p>{randomFood ? randomFood.recommendation || randomFood.discount || "这家今天值得试试。" : "选择困难时，随机抽一家校边美食。"}</p>
+          <p>{randomFood ? randomFood.recommendation || randomFood.discount || "这家今天值得试试。" : "选择困难时，随机抽一家校边美食；暂无可抽商家时会提示空态。"}</p>
         </div>
-        <button onClick={onChooseFood}><Shuffle size={18} />开抽</button>
-      </section>
-
-      <section className="h5-section">
-        <SectionTitle title="精选美食" desc="后台运营推荐" />
-        <div className="h5-list">
-          {featuredFoods.map((merchant) => <MerchantCard key={merchant.id} merchant={merchant} onOpen={onOpenMerchant} />)}
-          {!featuredFoods.length && <EmptyCard title="美食精选待补充" text="后台上架美食商家后会展示在这里。" />}
+        <div className="h5-slot-actions">
+          <button onClick={onChooseFood}><Shuffle size={18} />开抽</button>
+          {randomFood && <button className="secondary" onClick={() => onOpenMerchant(randomFood.id)}><ChevronRight size={18} />进店</button>}
         </div>
       </section>
+      {hasDrawnFood && !randomFood && <EmptyCard title="暂无可抽美食" text="后台上架美食商家并开启随机推荐后，这里会抽出真实商家。" />}
 
-      <section className="h5-section">
-        <SectionTitle title="校园热帖" desc="审核后展示" />
-        <div className="h5-post-list">
-          {featuredPosts.map((post) => <PostCard key={post.id} post={post} onOpen={onOpenPost} />)}
-          {!featuredPosts.length && <EmptyCard title="还没有热帖" text="学生投稿审核通过后会展示在这里。" />}
-        </div>
-      </section>
-
-      <WechatBlock onWechat={onWechat} />
+      <WechatBlock entry={wechatEntry} onWechat={onWechat} />
     </>
   );
+}
+
+function useExposureLog(merchantId?: string, scene = "home", activityId?: string) {
+  const ref = useRef<HTMLButtonElement | null>(null);
+  useEffect(() => {
+    const node = ref.current;
+    if (!node || !merchantId) return;
+    const key = `nwuExposure:${scene}:${merchantId}:${activityId || ""}`;
+    if (sessionStorage.getItem(key)) return;
+    const observer = new IntersectionObserver((entries) => {
+      if (!entries.some((entry) => entry.isIntersecting)) return;
+      sessionStorage.setItem(key, "1");
+      firePublicLog("exposures", merchantId, scene, activityId ? { activityId } : {});
+      observer.disconnect();
+    }, { threshold: 0.45 });
+    observer.observe(node);
+    return () => observer.disconnect();
+  }, [merchantId, scene, activityId]);
+  return ref;
 }
 
 function FoodTab({ categories, activeCategory, merchants, error, onCategory, onOpenMerchant }: {
@@ -617,6 +682,8 @@ function MerchantDetail({ merchant }: { merchant: Dict }) {
   const menu = Array.isArray(merchant.menu) ? merchant.menu : [];
   const cover = webImage(merchant.image) || asset("h5-hero-campus-life.png");
   const qr = webImage(merchant.qrImage || merchant.qrImageUrl) || qrPlaceholder;
+  const claimStorageKey = `nwuLastClaim:${merchant.id}`;
+  const [claimResult, setClaimResult] = useState<Dict | null>(() => JSON.parse(localStorage.getItem(claimStorageKey) || "null"));
   return (
     <article className="merchant-detail">
       <section className="merchant-cover-wrap">
@@ -643,13 +710,18 @@ function MerchantDetail({ merchant }: { merchant: Dict }) {
         <h2>到店信息</h2>
         <div className="info-grid">
           <div><MapPin size={17} /><span>{merchant.address || "地址待补充"}</span></div>
+          <div><Phone size={17} /><span>{merchant.phone || "电话待补充"}</span></div>
           <div><Clock size={17} /><span>{merchant.businessHours || "营业时间待补充"}</span></div>
         </div>
       </section>
       <section className="detail-block">
         <h2>优惠券</h2>
+        {claimResult && <ClaimSuccess result={claimResult} merchant={merchant} />}
         <div className="coupon-list">
-          {coupons.map((coupon: Dict) => <div className="coupon-card" key={coupon.id}><strong>{coupon.title}</strong><span>{coupon.description || "到店使用请咨询商家"}</span></div>)}
+          {coupons.map((coupon: Dict) => <CouponClaimCard key={coupon.id} coupon={coupon} merchant={merchant} onClaimed={(result) => {
+            localStorage.setItem(claimStorageKey, JSON.stringify(result));
+            setClaimResult(result);
+          }} />)}
           {!coupons.length && <EmptyCard title="暂无可领取优惠券" text="进群咨询可能有隐藏福利。" />}
         </div>
       </section>
@@ -671,6 +743,63 @@ function MerchantDetail({ merchant }: { merchant: Dict }) {
   );
 }
 
+function CouponClaimCard({ coupon, merchant, onClaimed }: { coupon: Dict; merchant: Dict; onClaimed: (result: Dict) => void }) {
+  const [open, setOpen] = useState(false);
+  const [form, setForm] = useState({ studentName: "", phone: "" });
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setLoading(true);
+    try {
+      if (coupon.id?.startsWith("mock-")) {
+        onClaimed({ code: `MOCK${Math.floor(100000 + Math.random() * 900000)}`, coupon, merchant, user: { name: form.studentName || "西大学生", phone: form.phone }, claimedAt: new Date().toISOString() });
+      } else {
+        const result = await publicWrite<Dict>(`/api/public/coupons/${encodeURIComponent(coupon.id)}/claim`, { ...form, ...attribution("coupon-claim") });
+        onClaimed(result);
+      }
+      setOpen(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "领取失败");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  return (
+    <div className="coupon-card">
+      <strong>{coupon.title}</strong>
+      <span>{coupon.description || "到店使用请咨询商家"}</span>
+      <button className="claim-open" onClick={() => setOpen((value) => !value)}><Ticket size={16} />领取</button>
+      {open && (
+        <form className="claim-form" onSubmit={submit}>
+          <label>昵称<input value={form.studentName} required onChange={(event) => setForm((current) => ({ ...current, studentName: event.target.value }))} /></label>
+          <label>手机号<input value={form.phone} required onChange={(event) => setForm((current) => ({ ...current, phone: event.target.value }))} /></label>
+          {error && <p className="error">{error}</p>}
+          <button className="primary" disabled={loading}>{loading ? "领取中..." : "确认领取"}</button>
+        </form>
+      )}
+    </div>
+  );
+}
+
+function ClaimSuccess({ result, merchant }: { result: Dict; merchant: Dict }) {
+  return (
+    <section className="claim-success">
+      <span><ShieldCheck size={15} />领取成功</span>
+      <strong>{result.code}</strong>
+      <p>到店出示核销码，由商家在核销端确认使用。请在有效期内使用，同一手机号同券限领一次。</p>
+      <div>
+        <small>{merchant.address || "地址待补充"}</small>
+        <small>{merchant.phone || "电话待补充"}</small>
+        <small>{merchant.businessHours || "营业时间待补充"}</small>
+      </div>
+    </section>
+  );
+}
+
 function SectionTitle({ title, desc }: { title: string; desc?: string }) {
   return <div className="section-title"><h2>{title}</h2>{desc && <span>{desc}</span>}</div>;
 }
@@ -684,8 +813,9 @@ function ChipRow({ items, active, onChange }: { items: { id: string; label: stri
 }
 
 function ActivityCard({ activity, onOpen }: { activity: Dict; onOpen: (id?: string) => void }) {
+  const ref = useExposureLog(activity.merchantId, "home", activity.id);
   return (
-    <button className={`h5-activity-card ${webImage(activity.image) ? "has-image" : ""}`} onClick={() => onOpen(activity.merchantId)}>
+    <button ref={ref} className={`h5-activity-card ${webImage(activity.image) ? "has-image" : ""}`} onClick={() => onOpen(activity.merchantId)}>
       {webImage(activity.image) && <img src={webImage(activity.image)} alt={activity.title} />}
       <div>
         <span><Gift size={14} />{activity.discount || "校园福利"}</span>
@@ -697,8 +827,10 @@ function ActivityCard({ activity, onOpen }: { activity: Dict; onOpen: (id?: stri
 }
 
 function MerchantCard({ merchant, onOpen }: { merchant: Dict; onOpen: (id?: string) => void }) {
+  const scene = merchant.category === "service" ? "service-list" : "food-list";
+  const ref = useExposureLog(merchant.id, scene);
   return (
-    <button className="h5-merchant-card" onClick={() => onOpen(merchant.id)}>
+    <button ref={ref} className="h5-merchant-card" onClick={() => onOpen(merchant.id)}>
       <img src={webImage(merchant.image) || asset("banner-campus.jpg")} alt={merchant.name} />
       <div>
         <div className="merchant-card-head"><strong>{merchant.name}</strong><span>{merchant.avgPrice ? `¥${merchant.avgPrice}/人` : "价格待补"}</span></div>
@@ -710,15 +842,20 @@ function MerchantCard({ merchant, onOpen }: { merchant: Dict; onOpen: (id?: stri
   );
 }
 
-function WechatBlock({ onWechat }: { onWechat?: () => void }) {
+function WechatBlock({ entry, onWechat }: { entry?: Dict | null; onWechat?: () => void }) {
+  if (entry === null) return null;
+  const title = entry?.title || "加入西大圈微信";
+  const description = entry?.description || "领活动、问优惠、推荐好店、反馈问题，都从这里开始。";
+  const buttonText = entry?.buttonText || "添加微信";
+  const image = webImage(entry?.imageUrl) || asset("h5-wechat-promo.png");
   return (
     <section className="h5-wechat">
-      <img src={asset("h5-wechat-promo.png")} alt="西大圈微信" />
+      <img src={image} alt={title} />
       <div>
         <span><QrCode size={15} />微信入口</span>
-        <h2>加入西大圈微信</h2>
-        <p>领活动、问优惠、推荐好店、反馈问题，都从这里开始。</p>
-        {onWechat && <button onClick={onWechat}><Send size={16} />添加微信</button>}
+        <h2>{title}</h2>
+        <p>{description}</p>
+        {onWechat && <button onClick={onWechat}><Send size={16} />{buttonText}</button>}
       </div>
     </section>
   );
@@ -772,9 +909,153 @@ function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
 }
 
 function App() {
-  const isAdmin = window.location.pathname === "/admin" || window.location.pathname.startsWith("/admin/");
+  const path = window.location.pathname;
+  if (path === "/") return <EntryPage />;
+  if (path === "/merchant" || path.startsWith("/merchant/")) return <MerchantApp />;
+  const isAdmin = path === "/admin" || path.startsWith("/admin/");
   if (!isAdmin) return <StudentHome />;
   return <AdminApp />;
+}
+
+function EntryPage() {
+  return (
+    <main className="entry-page">
+      <section className="entry-shell">
+        <div className="entry-brand">
+          <span><Sparkles size={16} />西大圈试点版</span>
+          <h1>摸摸圈圈头，万事不用愁</h1>
+          <p>学生领券、商家核销、平台看板从同一个地址进入。</p>
+        </div>
+        <div className="entry-grid">
+          <a href="/student"><Utensils size={24} /><strong>学生端</strong><span>找美食服务，领周边优惠</span></a>
+          <a href="/merchant"><Store size={24} /><strong>商家核销端</strong><span>核销优惠券，查看今日数据</span></a>
+          <a href="/admin"><BarChart3 size={24} /><strong>管理后台</strong><span>维护内容，查看试点转化</span></a>
+        </div>
+      </section>
+    </main>
+  );
+}
+
+function MerchantApp() {
+  const [token, setToken] = useState(localStorage.getItem("merchantToken") || "");
+  const [user, setUser] = useState<Dict | null>(() => JSON.parse(localStorage.getItem("merchantUser") || "null"));
+  if (!token) return <MerchantLogin onLogin={(nextToken, nextUser) => { setToken(nextToken); setUser(nextUser); }} />;
+  return <MerchantConsole token={token} user={user} onLogout={() => {
+    localStorage.removeItem("merchantToken");
+    localStorage.removeItem("merchantUser");
+    setToken("");
+    setUser(null);
+  }} />;
+}
+
+function MerchantLogin({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
+  const [account, setAccount] = useState("");
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+
+  async function submit(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    try {
+      const res = await fetch(`${API_BASE}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account, password }) });
+      const body = await res.json();
+      if (!res.ok || body.success === false) throw new Error(body.message || "登录失败");
+      if (body.data.user.role !== "MERCHANT" && body.data.user.role !== "ADMIN") throw new Error("当前账号不是商家账号");
+      localStorage.setItem("merchantToken", body.data.token);
+      localStorage.setItem("merchantUser", JSON.stringify(body.data.user));
+      onLogin(body.data.token, body.data.user);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "登录失败");
+    }
+  }
+
+  return (
+    <main className="merchant-page">
+      <form className="merchant-login" onSubmit={submit}>
+        <h1>商家核销端</h1>
+        <label>账号<input value={account} autoComplete="username" onChange={(event) => setAccount(event.target.value)} /></label>
+        <label>密码<input type="password" value={password} autoComplete="current-password" onChange={(event) => setPassword(event.target.value)} /></label>
+        {error && <p className="error">{error}</p>}
+        <button className="primary">登录</button>
+      </form>
+    </main>
+  );
+}
+
+function MerchantConsole({ token, user, onLogout }: { token: string; user: Dict | null; onLogout: () => void }) {
+  const [overview, setOverview] = useState<Dict>({});
+  const [summary, setSummary] = useState<Dict>({});
+  const [code, setCode] = useState("");
+  const [preview, setPreview] = useState<Dict | null>(null);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  async function load() {
+    const [nextOverview, nextSummary] = await Promise.all([
+      api<Dict>(token, "/api/merchant/overview"),
+      api<Dict>(token, "/api/merchant/analytics/summary?range=today")
+    ]);
+    setOverview(nextOverview);
+    setSummary(nextSummary);
+  }
+
+  useEffect(() => { load().catch((err) => setError(err instanceof Error ? err.message : "数据加载失败")); }, [token]);
+
+  async function previewCode(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    setPreview(null);
+    try {
+      setPreview(await api<Dict>(token, `/api/merchant/redeem/preview?code=${encodeURIComponent(code.trim())}`));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "核销码不可用");
+    }
+  }
+
+  async function redeem() {
+    setError("");
+    setMessage("");
+    try {
+      await api<Dict>(token, "/api/merchant/redeem", { method: "POST", body: JSON.stringify({ code: code.trim() }) });
+      setMessage("核销成功");
+      setPreview(null);
+      setCode("");
+      await load();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "核销失败");
+    }
+  }
+
+  const cards = [
+    ["今日核销", summary.redemptionCount], ["今日领取", summary.claimCount], ["今日曝光", summary.exposureCount], ["今日点击", summary.clickCount]
+  ];
+
+  return (
+    <main className="merchant-page">
+      <section className="merchant-console">
+        <header>
+          <div><span>{user?.name || "商家账号"}</span><h1>{overview.merchant?.name || "商家核销台"}</h1></div>
+          <button onClick={onLogout}><LogOut size={16} />退出</button>
+        </header>
+        <div className="merchant-stat-grid">{cards.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div>
+        <form className="redeem-panel" onSubmit={previewCode}>
+          <label>核销码<input value={code} placeholder="输入学生出示的核销码" onChange={(event) => setCode(event.target.value.toUpperCase())} /></label>
+          <button className="primary">预览</button>
+        </form>
+        {preview && (
+          <section className="redeem-preview">
+            <span><Ticket size={15} />待核销优惠券</span>
+            <h2>{preview.couponTitle || preview.coupon?.title || preview.userCoupon?.coupon?.title || "优惠券"}</h2>
+            <p>核销码 {preview.code || code} · {preview.maskedPhone || preview.user?.phone || preview.student?.phone || "手机号未返回"}</p>
+            <button className="primary" onClick={redeem}>确认核销</button>
+          </section>
+        )}
+        {message && <p className="success">{message}</p>}
+        {error && <p className="error">{error}</p>}
+      </section>
+    </main>
+  );
 }
 
 function AdminApp() {
@@ -802,6 +1083,7 @@ function AdminApp() {
         {section === "overview" && <Overview token={token} />}
         {section === "benefits" && <Activities token={token} />}
         {section === "banners" && <Banners token={token} />}
+        {section === "wechat" && <WechatEntryAdmin token={token} />}
         {section === "food" && <Food token={token} />}
         {section === "services" && <Services token={token} />}
         {section === "community" && <Community token={token} />}
@@ -831,11 +1113,29 @@ function Overview({ token }: { token: string }) {
   const [stats, setStats] = useState<Dict>({});
   useEffect(() => { api<Dict>(token, "/api/admin/dashboard/overview").then(setStats).catch(console.error); }, [token]);
   const cards = [
-    ["商家数", stats.merchantCount], ["福利数", stats.activityCount], ["轮播数", stats.bannerCount], ["待审帖子", stats.pendingCommunityPostCount],
-    ["可见帖子", stats.visibleCommunityPostCount], ["帖子总数", stats.communityPostCount],
-    ["今日曝光", stats.todayExposures], ["今日点击", stats.todayClicks], ["优惠券数", stats.couponCount], ["核销数", stats.redemptionCount]
+    ["今日曝光", stats.todayExposures], ["今日点击", stats.todayClicks], ["今日领券", stats.todayClaims], ["今日核销", stats.todayRedemptions],
+    ["商家数", stats.merchantCount], ["优惠券数", stats.couponCount], ["待审帖子", stats.pendingCommunityPostCount], ["可见帖子", stats.visibleCommunityPostCount]
   ];
-  return <Page title="概览" hint="平台内容、福利和今日转化数据。"><div className="stats">{cards.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div></Page>;
+  return (
+    <Page title="概览" hint="平台内容、福利和今日转化数据。">
+      <div className="stats">{cards.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div>
+      <div className="rank-grid">
+        <RankList title="TOP 商家" items={stats.topMerchants || []} valueKey="score" />
+        <RankList title="TOP 优惠券" items={stats.topCoupons || []} valueKey="claimCount" />
+        <RankList title="TOP 渠道" items={stats.topChannels || []} valueKey="exposureCount" />
+      </div>
+    </Page>
+  );
+}
+
+function RankList({ title, items, valueKey }: { title: string; items: Dict[]; valueKey: string }) {
+  return (
+    <section className="rank-list">
+      <h2>{title}</h2>
+      {items.slice(0, 5).map((item, index) => <div key={`${title}-${index}`}><span>{item.name || item.title || item.channel || "未命名"}</span><strong>{item[valueKey] ?? 0}</strong></div>)}
+      {!items.length && <p>暂无数据</p>}
+    </section>
+  );
 }
 
 function Activities({ token }: { token: string }) {
@@ -849,6 +1149,53 @@ function Banners({ token }: { token: string }) {
   return <CrudPage token={token} title="轮播图修改" path="/api/admin/banners" defaults={{ targetType: "TAB", sortOrder: 100, isActive: true }} fields={[
     ["title", "标题"], ["subtitle", "副标题"], ["imageUrl", "图片 URL"], ["targetType", "跳转类型", "select", ["ACTIVITY", "SERVICE", "ABOUT", "TAB", "URL"]], ["targetId", "跳转目标"], ["url", "页面路径/URL"], ["sortOrder", "排序", "number"], ["isActive", "上架", "checkbox"]
   ]} columns={["title", "targetType", "targetId", "sortOrder", "isActive"]} />;
+}
+
+function WechatEntryAdmin({ token }: { token: string }) {
+  const defaults = { title: "加入西大圈微信", description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。", buttonText: "添加微信", imageUrl: "/assets/images/h5-wechat-promo.png", isActive: true };
+  const [form, setForm] = useState<Dict>(defaults);
+  const [message, setMessage] = useState("");
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    api<Dict>(token, "/api/admin/wechat-entry")
+      .then((data) => setForm({ ...defaults, ...data }))
+      .catch((err) => setError(err instanceof Error ? err.message : "加载失败"));
+  }, [token]);
+
+  async function save(event: React.FormEvent) {
+    event.preventDefault();
+    setError("");
+    setMessage("");
+    try {
+      const payload = { ...form, imageUrl: form.imageUrl || null };
+      const data = await api<Dict>(token, "/api/admin/wechat-entry", { method: "PATCH", body: JSON.stringify(payload) });
+      setForm({ ...defaults, ...data });
+      setMessage("已保存，H5 首页会读取最新入口配置。");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "保存失败");
+    }
+  }
+
+  return (
+    <Page title="西大圈入口" hint="维护 H5 首页底部微信入口。图片和二维码使用 URL，不做本地上传。">
+      <div className="crud-block">
+        <form className="editor" onSubmit={save}>
+          <Field name="title" label="标题" value={form.title} onChange={(value) => setForm((current) => ({ ...current, title: value }))} />
+          <Field name="description" label="说明" type="textarea" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} />
+          <Field name="buttonText" label="按钮文案" value={form.buttonText} onChange={(value) => setForm((current) => ({ ...current, buttonText: value }))} />
+          <Field name="imageUrl" label="二维码/宣传图 URL" value={form.imageUrl} onChange={(value) => setForm((current) => ({ ...current, imageUrl: value }))} />
+          <Field name="isActive" label="启用" type="checkbox" value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: value }))} />
+          {message && <p className="success">{message}</p>}
+          {error && <p className="error">{error}</p>}
+          <div className="actions"><button className="primary">保存入口</button></div>
+        </form>
+        <section className="wechat-preview">
+          <WechatBlock entry={form} />
+        </section>
+      </div>
+    </Page>
+  );
 }
 
 function Food({ token }: { token: string }) {

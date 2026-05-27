@@ -58,6 +58,14 @@ const bannerSchema = z.object({
   isActive: z.boolean().default(true)
 });
 
+const wechatEntrySchema = z.object({
+  title: z.string().min(1),
+  description: z.string().min(1),
+  buttonText: z.string().min(1),
+  imageUrl: z.string().nullable().optional(),
+  isActive: z.boolean().default(true)
+});
+
 const serviceCategorySchema = z.object({
   name: z.string().min(1),
   key: z.string().min(1).regex(/^[a-z0-9-]+$/),
@@ -143,6 +151,10 @@ const promotionSchema = z.object({
   cpa: z.coerce.number().nullable().optional(),
   isActive: z.boolean().default(true)
 });
+
+function countGroup(row: { _count?: number | true | Record<string, number | undefined> }) {
+  return typeof row._count === "number" ? row._count : typeof row._count === "object" ? row._count._all ?? Object.values(row._count)[0] ?? 0 : 0;
+}
 
 const activitySchema = z.object({
   title: z.string().min(1),
@@ -494,7 +506,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount] = await prisma.$transaction([
+    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, todayClaims, todayRedemptions, redemptionAmount, topMerchantExposures, topMerchantClicks, topMerchantClaims, topMerchantRedemptions, topCouponClaims, topCouponRedemptions, topChannelExposures, topChannelClicks, topChannelClaims, topChannelRedemptions] = await prisma.$transaction([
       prisma.merchant.count(),
       prisma.merchant.count({ where: { status: "APPROVED" } }),
       prisma.coupon.count(),
@@ -507,9 +519,60 @@ export async function adminRoutes(app: FastifyInstance) {
       prisma.couponRedemption.count(),
       prisma.exposureLog.count({ where: { createdAt: { gte: today } } }),
       prisma.clickLog.count({ where: { createdAt: { gte: today } } }),
-      prisma.couponRedemption.aggregate({ _sum: { amount: true } })
+      prisma.userCoupon.count({ where: { claimedAt: { gte: today } } }),
+      prisma.couponRedemption.count({ where: { redeemedAt: { gte: today } } }),
+      prisma.couponRedemption.aggregate({ _sum: { amount: true } }),
+      prisma.exposureLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
+      prisma.clickLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
+      prisma.userCoupon.groupBy({ by: ["merchantId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
+      prisma.couponRedemption.groupBy({ by: ["merchantId"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
+      prisma.userCoupon.groupBy({ by: ["couponId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { couponId: "desc" } }, take: 10 }),
+      prisma.couponRedemption.groupBy({ by: ["couponId"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { couponId: "desc" } }, take: 10 }),
+      prisma.exposureLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
+      prisma.clickLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
+      prisma.userCoupon.groupBy({ by: ["channel"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
+      prisma.couponRedemption.groupBy({ by: ["channel"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 })
     ]);
-    return ok(reply, { merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, redemptionAmount: redemptionAmount._sum.amount ?? 0 });
+    const merchantScores = new Map<string, { id: string; exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number; score: number }>();
+    const ensureMerchant = (id: string) => {
+      if (!merchantScores.has(id)) merchantScores.set(id, { id, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0, score: 0 });
+      return merchantScores.get(id)!;
+    };
+    topMerchantExposures.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.exposureCount = value; item.score += value; });
+    topMerchantClicks.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.clickCount = value; item.score += value * 2; });
+    topMerchantClaims.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.claimCount = value; item.score += value * 4; });
+    topMerchantRedemptions.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.redemptionCount = value; item.score += value * 6; });
+    const merchantNames = await prisma.merchant.findMany({ where: { id: { in: [...merchantScores.keys()] } }, select: { id: true, name: true } });
+    const nameByMerchant = new Map(merchantNames.map((item) => [item.id, item.name]));
+
+    const couponScores = new Map<string, { id: string; claimCount: number; redemptionCount: number }>();
+    const ensureCoupon = (id: string) => {
+      if (!couponScores.has(id)) couponScores.set(id, { id, claimCount: 0, redemptionCount: 0 });
+      return couponScores.get(id)!;
+    };
+    topCouponClaims.forEach((row) => { ensureCoupon(row.couponId).claimCount = countGroup(row); });
+    topCouponRedemptions.forEach((row) => { ensureCoupon(row.couponId).redemptionCount = countGroup(row); });
+    const couponNames = await prisma.coupon.findMany({ where: { id: { in: [...couponScores.keys()] } }, select: { id: true, title: true } });
+    const titleByCoupon = new Map(couponNames.map((item) => [item.id, item.title]));
+
+    const channelScores = new Map<string, { channel: string; exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number }>();
+    const ensureChannel = (channel: string | null) => {
+      const key = channel || "direct";
+      if (!channelScores.has(key)) channelScores.set(key, { channel: key, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0 });
+      return channelScores.get(key)!;
+    };
+    topChannelExposures.forEach((row) => { ensureChannel(row.channel).exposureCount = countGroup(row); });
+    topChannelClicks.forEach((row) => { ensureChannel(row.channel).clickCount = countGroup(row); });
+    topChannelClaims.forEach((row) => { ensureChannel(row.channel).claimCount = countGroup(row); });
+    topChannelRedemptions.forEach((row) => { ensureChannel(row.channel).redemptionCount = countGroup(row); });
+
+    return ok(reply, {
+      merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount,
+      claimCount, redemptionCount, todayExposures, todayClicks, todayClaims, todayRedemptions, redemptionAmount: redemptionAmount._sum.amount ?? 0,
+      topMerchants: [...merchantScores.values()].map((item) => ({ ...item, name: nameByMerchant.get(item.id) || item.id })).sort((a, b) => b.score - a.score).slice(0, 5),
+      topCoupons: [...couponScores.values()].map((item) => ({ ...item, title: titleByCoupon.get(item.id) || item.id })).sort((a, b) => b.claimCount - a.claimCount || b.redemptionCount - a.redemptionCount).slice(0, 5),
+      topChannels: [...channelScores.values()].sort((a, b) => b.exposureCount - a.exposureCount || b.clickCount - a.clickCount).slice(0, 5)
+    });
   });
 
   app.get("/api/admin/banners", async (_request, reply) => {
@@ -533,6 +596,39 @@ export async function adminRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const { isActive } = z.object({ isActive: z.boolean() }).parse(request.body);
     return ok(reply, await prisma.banner.update({ where: { id }, data: { isActive } }));
+  });
+
+  app.get("/api/admin/wechat-entry", async (_request, reply) => {
+    const item = await prisma.wechatEntryConfig.upsert({
+      where: { id: "home-wechat-entry" },
+      update: {},
+      create: {
+        id: "home-wechat-entry",
+        title: "加入西大圈微信",
+        description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
+        buttonText: "添加微信",
+        imageUrl: "/assets/images/h5-wechat-promo.png",
+        isActive: true
+      }
+    });
+    return ok(reply, item);
+  });
+
+  app.patch("/api/admin/wechat-entry", async (request, reply) => {
+    const parsed = wechatEntrySchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "西大圈入口参数错误");
+    return ok(reply, await prisma.wechatEntryConfig.upsert({
+      where: { id: "home-wechat-entry" },
+      update: parsed.data,
+      create: {
+        id: "home-wechat-entry",
+        title: parsed.data.title || "加入西大圈微信",
+        description: parsed.data.description || "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
+        buttonText: parsed.data.buttonText || "添加微信",
+        imageUrl: parsed.data.imageUrl || "/assets/images/h5-wechat-promo.png",
+        isActive: parsed.data.isActive ?? true
+      }
+    }));
   });
 
   app.get("/api/admin/service-categories", async (_request, reply) => {

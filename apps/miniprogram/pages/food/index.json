@@ -1,7 +1,0 @@
-{
-  "navigationBarTitleText": "美食",
-  "usingComponents": {
-    "merchant-card": "/components/merchant-card/index",
-    "empty-state": "/components/empty-state/index"
-  }
-}
