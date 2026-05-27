@@ -456,7 +456,7 @@ h1, h2, p { margin: 0; letter-spacing: 0; }
   gap: 10px;
 }
 
-.claim-form label, .merchant-login label, .redeem-panel label {
+.claim-form label {
   display: grid;
   gap: 6px;
   color: var(--muted);
@@ -464,7 +464,7 @@ h1, h2, p { margin: 0; letter-spacing: 0; }
   font-weight: 800;
 }
 
-.claim-form input, .merchant-login input, .redeem-panel input {
+.claim-form input {
   width: 100%;
   min-height: 42px;
   border: 1px solid var(--line);
@@ -1052,7 +1052,7 @@ tr:last-child td { border-bottom: 0; }
   padding: 18px;
 }
 
-.entry-shell, .merchant-console, .merchant-login {
+.entry-shell {
   width: min(100%, 880px);
   margin: 0 auto;
 }
@@ -1104,98 +1104,6 @@ tr:last-child td { border-bottom: 0; }
 .entry-grid strong { font-size: 20px; }
 .entry-grid span { color: var(--muted); line-height: 1.45; }
 
-.merchant-login {
-  max-width: 420px;
-  margin-top: 8vh;
-  padding: 22px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  display: grid;
-  gap: 14px;
-}
-
-.merchant-console {
-  display: grid;
-  gap: 16px;
-}
-
-.merchant-console header {
-  padding: 18px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 14px;
-}
-
-.merchant-console header span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.merchant-console header h1 {
-  margin-top: 4px;
-  font-size: 26px;
-}
-
-.merchant-console header button {
-  min-height: 36px;
-  border-radius: 8px;
-  padding: 0 12px;
-  background: #eef2f7;
-  color: var(--ink);
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.merchant-stat-grid {
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 12px;
-}
-
-.merchant-stat-grid div, .redeem-panel, .redeem-preview, .rank-list {
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: #fff;
-}
-
-.merchant-stat-grid span, .rank-list p {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-.merchant-stat-grid strong {
-  display: block;
-  margin-top: 10px;
-  font-size: 30px;
-}
-
-.redeem-panel {
-  display: grid;
-  grid-template-columns: 1fr 120px;
-  gap: 12px;
-  align-items: end;
-}
-
-.redeem-preview {
-  display: grid;
-  gap: 10px;
-}
-
-.redeem-preview span {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: #0f766e;
-  font-weight: 850;
-}
-
 .rank-grid {
   margin-top: 16px;
   display: grid;
@@ -1225,15 +1133,11 @@ tr:last-child td { border-bottom: 0; }
 }
 
 @media (max-width: 720px) {
-  .entry-grid, .merchant-stat-grid, .rank-grid {
+  .entry-grid, .rank-grid {
     grid-template-columns: 1fr;
   }
 
   .entry-brand h1 {
     font-size: 31px;
-  }
-
-  .redeem-panel {
-    grid-template-columns: 1fr;
   }
 }

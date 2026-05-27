@@ -911,7 +911,6 @@ function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
 function App() {
   const path = window.location.pathname;
   if (path === "/") return <EntryPage />;
-  if (path === "/merchant" || path.startsWith("/merchant/")) return <MerchantApp />;
   const isAdmin = path === "/admin" || path.startsWith("/admin/");
   if (!isAdmin) return <StudentHome />;
   return <AdminApp />;
@@ -924,135 +923,12 @@ function EntryPage() {
         <div className="entry-brand">
           <span><Sparkles size={16} />西大圈试点版</span>
           <h1>摸摸圈圈头，万事不用愁</h1>
-          <p>学生领券、商家核销、平台看板从同一个地址进入。</p>
+          <p>学生领券、平台看板从同一个地址进入。</p>
         </div>
         <div className="entry-grid">
           <a href="/student"><Utensils size={24} /><strong>学生端</strong><span>找美食服务，领周边优惠</span></a>
-          <a href="/merchant"><Store size={24} /><strong>商家核销端</strong><span>核销优惠券，查看今日数据</span></a>
           <a href="/admin"><BarChart3 size={24} /><strong>管理后台</strong><span>维护内容，查看试点转化</span></a>
         </div>
-      </section>
-    </main>
-  );
-}
-
-function MerchantApp() {
-  const [token, setToken] = useState(localStorage.getItem("merchantToken") || "");
-  const [user, setUser] = useState<Dict | null>(() => JSON.parse(localStorage.getItem("merchantUser") || "null"));
-  if (!token) return <MerchantLogin onLogin={(nextToken, nextUser) => { setToken(nextToken); setUser(nextUser); }} />;
-  return <MerchantConsole token={token} user={user} onLogout={() => {
-    localStorage.removeItem("merchantToken");
-    localStorage.removeItem("merchantUser");
-    setToken("");
-    setUser(null);
-  }} />;
-}
-
-function MerchantLogin({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
-  const [account, setAccount] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ account, password }) });
-      const body = await res.json();
-      if (!res.ok || body.success === false) throw new Error(body.message || "登录失败");
-      if (body.data.user.role !== "MERCHANT" && body.data.user.role !== "ADMIN") throw new Error("当前账号不是商家账号");
-      localStorage.setItem("merchantToken", body.data.token);
-      localStorage.setItem("merchantUser", JSON.stringify(body.data.user));
-      onLogin(body.data.token, body.data.user);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
-    }
-  }
-
-  return (
-    <main className="merchant-page">
-      <form className="merchant-login" onSubmit={submit}>
-        <h1>商家核销端</h1>
-        <label>账号<input value={account} autoComplete="username" onChange={(event) => setAccount(event.target.value)} /></label>
-        <label>密码<input type="password" value={password} autoComplete="current-password" onChange={(event) => setPassword(event.target.value)} /></label>
-        {error && <p className="error">{error}</p>}
-        <button className="primary">登录</button>
-      </form>
-    </main>
-  );
-}
-
-function MerchantConsole({ token, user, onLogout }: { token: string; user: Dict | null; onLogout: () => void }) {
-  const [overview, setOverview] = useState<Dict>({});
-  const [summary, setSummary] = useState<Dict>({});
-  const [code, setCode] = useState("");
-  const [preview, setPreview] = useState<Dict | null>(null);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  async function load() {
-    const [nextOverview, nextSummary] = await Promise.all([
-      api<Dict>(token, "/api/merchant/overview"),
-      api<Dict>(token, "/api/merchant/analytics/summary?range=today")
-    ]);
-    setOverview(nextOverview);
-    setSummary(nextSummary);
-  }
-
-  useEffect(() => { load().catch((err) => setError(err instanceof Error ? err.message : "数据加载失败")); }, [token]);
-
-  async function previewCode(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-    setPreview(null);
-    try {
-      setPreview(await api<Dict>(token, `/api/merchant/redeem/preview?code=${encodeURIComponent(code.trim())}`));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "核销码不可用");
-    }
-  }
-
-  async function redeem() {
-    setError("");
-    setMessage("");
-    try {
-      await api<Dict>(token, "/api/merchant/redeem", { method: "POST", body: JSON.stringify({ code: code.trim() }) });
-      setMessage("核销成功");
-      setPreview(null);
-      setCode("");
-      await load();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "核销失败");
-    }
-  }
-
-  const cards = [
-    ["今日核销", summary.redemptionCount], ["今日领取", summary.claimCount], ["今日曝光", summary.exposureCount], ["今日点击", summary.clickCount]
-  ];
-
-  return (
-    <main className="merchant-page">
-      <section className="merchant-console">
-        <header>
-          <div><span>{user?.name || "商家账号"}</span><h1>{overview.merchant?.name || "商家核销台"}</h1></div>
-          <button onClick={onLogout}><LogOut size={16} />退出</button>
-        </header>
-        <div className="merchant-stat-grid">{cards.map(([label, value]) => <div key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div>
-        <form className="redeem-panel" onSubmit={previewCode}>
-          <label>核销码<input value={code} placeholder="输入学生出示的核销码" onChange={(event) => setCode(event.target.value.toUpperCase())} /></label>
-          <button className="primary">预览</button>
-        </form>
-        {preview && (
-          <section className="redeem-preview">
-            <span><Ticket size={15} />待核销优惠券</span>
-            <h2>{preview.couponTitle || preview.coupon?.title || preview.userCoupon?.coupon?.title || "优惠券"}</h2>
-            <p>核销码 {preview.code || code} · {preview.maskedPhone || preview.user?.phone || preview.student?.phone || "手机号未返回"}</p>
-            <button className="primary" onClick={redeem}>确认核销</button>
-          </section>
-        )}
-        {message && <p className="success">{message}</p>}
-        {error && <p className="error">{error}</p>}
       </section>
     </main>
   );

@@ -1,6 +1,6 @@
 import { getExportRows, type AnalyticsScope } from "./analyticsService.js";
 
-const header = ["date", "merchant", "coupon", "source", "channel", "exposures", "clicks", "claims", "redemptions", "clickRate", "redemptionRate"];
+const header = ["date", "merchant", "coupon", "source", "channel", "exposures", "clicks", "claims", "clickRate"];
 
 export function escapeCsvCell(value: unknown) {
   const text = String(value ?? "");

@@ -107,7 +107,6 @@ model User {
   status          UserStatus         @default(ACTIVE)
   merchantProfile Merchant?
   userCoupons     UserCoupon[]       @relation("StudentCoupons")
-  redemptions     CouponRedemption[] @relation("StudentRedemptions")
   shareLinks      ShareLink[]
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
@@ -157,7 +156,6 @@ model Merchant {
   ownerUser     User?              @relation(fields: [ownerUserId], references: [id])
   coupons       Coupon[]
   userCoupons   UserCoupon[]
-  redemptions   CouponRedemption[]
   exposureLogs  ExposureLog[]
   clickLogs     ClickLog[]
   promotions    MerchantPromotion[]
@@ -250,7 +248,6 @@ model Coupon {
   status         CouponStatus       @default(ACTIVE)
   merchant       Merchant           @relation(fields: [merchantId], references: [id])
   userCoupons    UserCoupon[]
-  redemptions    CouponRedemption[]
   promotions     MerchantPromotion[]
   activities     Activity[]
   shareLinks     ShareLink[]
@@ -283,42 +280,11 @@ model UserCoupon {
   merchant         Merchant           @relation(fields: [merchantId], references: [id])
   activity         Activity?          @relation(fields: [activityId], references: [id])
   shareLink        ShareLink?         @relation(fields: [shareLinkId], references: [id])
-  redemption       CouponRedemption?
 
   @@unique([userId, couponId])
   @@index([merchantId, status, claimedAt])
   @@index([merchantId, source, channel, claimedAt])
   @@index([activityId, claimedAt])
-  @@index([shareLinkId])
-  @@index([referrerId])
-}
-
-model CouponRedemption {
-  id               String     @id @default(cuid())
-  userCouponId     String     @unique
-  couponId         String
-  merchantId       String
-  studentId        String
-  amount           Decimal?
-  redeemedAt       DateTime   @default(now())
-  source           String?
-  channel          String?
-  scene            String?
-  campaign         String?
-  activityId       String?
-  shareLinkId      String?
-  referrerId       String?
-  claimedSessionId String?
-  userCoupon       UserCoupon @relation(fields: [userCouponId], references: [id])
-  coupon           Coupon     @relation(fields: [couponId], references: [id])
-  merchant         Merchant   @relation(fields: [merchantId], references: [id])
-  student          User       @relation("StudentRedemptions", fields: [studentId], references: [id])
-  activity         Activity?  @relation(fields: [activityId], references: [id])
-  shareLink        ShareLink? @relation(fields: [shareLinkId], references: [id])
-
-  @@index([merchantId, redeemedAt])
-  @@index([merchantId, source, channel, redeemedAt])
-  @@index([activityId, redeemedAt])
   @@index([shareLinkId])
   @@index([referrerId])
 }
@@ -395,7 +361,6 @@ model Activity {
   exposureLogs  ExposureLog[]
   clickLogs     ClickLog[]
   userCoupons   UserCoupon[]
-  redemptions   CouponRedemption[]
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -427,7 +392,6 @@ model ShareLink {
   exposureLogs ExposureLog[]
   clickLogs    ClickLog[]
   userCoupons  UserCoupon[]
-  redemptions  CouponRedemption[]
 
   @@index([targetType, targetId])
   @@index([activityId])

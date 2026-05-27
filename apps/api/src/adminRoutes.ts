@@ -4,7 +4,6 @@ import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
 import { getActivityPerformance, getBySource, getChannelPerformance, getCouponPerformance, getSummary, getTrends, parseAnalyticsScope } from "./services/analyticsService.js";
 import { buildAnalyticsCsv } from "./services/exportService.js";
-import { previewRedemptionCode, redeemCouponCode } from "./services/redemptionService.js";
 
 const pagination = z.object({
   page: z.coerce.number().int().positive().default(1),
@@ -132,11 +131,6 @@ const merchantUserSchema = z.object({
   passwordHash: z.string().optional()
 });
 
-const redeemSchema = z.object({
-  code: z.string().min(1),
-  amount: z.coerce.number().positive().optional()
-});
-
 const promotionSchema = z.object({
   merchantId: z.string().min(1),
   couponId: z.string().nullable().optional(),
@@ -208,16 +202,15 @@ export async function adminRoutes(app: FastifyInstance) {
     const merchantId = await merchantIdForUser(auth.sub);
     if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
 
-    const [merchant, coupons, claims, used, exposureCount, clickCount, redemptionAmount] = await prisma.$transaction([
+    const [merchant, coupons, claims, used, exposureCount, clickCount] = await prisma.$transaction([
       prisma.merchant.findUnique({ where: { id: merchantId }, include: { category: true } }),
       prisma.coupon.findMany({ where: { merchantId }, orderBy: { createdAt: "desc" } }),
       prisma.userCoupon.count({ where: { merchantId } }),
       prisma.userCoupon.count({ where: { merchantId, status: "USED" } }),
       prisma.exposureLog.count({ where: { merchantId } }),
-      prisma.clickLog.count({ where: { merchantId } }),
-      prisma.couponRedemption.aggregate({ where: { merchantId }, _sum: { amount: true } })
+      prisma.clickLog.count({ where: { merchantId } })
     ]);
-    return ok(reply, { merchant, coupons, stats: { claims, used, exposureCount, clickCount, redemptionAmount: redemptionAmount._sum.amount ?? 0 } });
+    return ok(reply, { merchant, coupons, stats: { claims, used, exposureCount, clickCount } });
   });
 
   app.get("/api/merchant/coupons", async (request, reply) => {
@@ -275,54 +268,10 @@ export async function adminRoutes(app: FastifyInstance) {
     if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
     const items = await prisma.userCoupon.findMany({
       where: { merchantId },
-      include: { coupon: true, user: true, redemption: true },
+      include: { coupon: true, user: true },
       orderBy: { claimedAt: "desc" }
     });
     return ok(reply, items);
-  });
-
-  app.get("/api/merchant/redemptions", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const items = await prisma.couponRedemption.findMany({
-      where: { merchantId },
-      include: { coupon: true, student: true, userCoupon: true },
-      orderBy: { redeemedAt: "desc" }
-    });
-    return ok(reply, items);
-  });
-
-  app.post("/api/merchant/redeem", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const parsed = redeemSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "核销参数错误");
-
-    try {
-      const redemption = await redeemCouponCode(merchantId, parsed.data.code, parsed.data.amount);
-      return ok(reply, redemption, "核销成功");
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "";
-      if (message === "CODE_NOT_FOUND") return fail(reply, "NOT_FOUND", "核销码不存在", 404);
-      if (message === "ALREADY_USED") return fail(reply, "ALREADY_USED", "该券已核销");
-      if (message === "COUPON_EXPIRED") return fail(reply, "COUPON_EXPIRED", "该券已过期");
-      throw error;
-    }
-  });
-
-  app.get("/api/merchant/redeem/preview", async (request, reply) => {
-    const auth = authUser(request);
-    const merchantId = await merchantIdForUser(auth.sub);
-    if (!merchantId) return fail(reply, "FORBIDDEN", "当前账号未绑定商家", 403);
-    const { code } = z.object({ code: z.string().min(1) }).parse(request.query);
-    try {
-      return ok(reply, await previewRedemptionCode(merchantId, code));
-    } catch (error) {
-      if (error instanceof Error && error.message === "CODE_NOT_FOUND") return fail(reply, "NOT_FOUND", "核销码不存在", 404);
-      throw error;
-    }
   });
 
   app.get("/api/merchant/analytics/summary", async (request, reply) => {
@@ -506,7 +455,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, redemptionCount, todayExposures, todayClicks, todayClaims, todayRedemptions, redemptionAmount, topMerchantExposures, topMerchantClicks, topMerchantClaims, topMerchantRedemptions, topCouponClaims, topCouponRedemptions, topChannelExposures, topChannelClicks, topChannelClaims, topChannelRedemptions] = await prisma.$transaction([
+    const [merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount, claimCount, todayExposures, todayClicks, todayClaims, topMerchantExposures, topMerchantClicks, topMerchantClaims, topCouponClaims, topChannelExposures, topChannelClicks, topChannelClaims] = await prisma.$transaction([
       prisma.merchant.count(),
       prisma.merchant.count({ where: { status: "APPROVED" } }),
       prisma.coupon.count(),
@@ -516,61 +465,52 @@ export async function adminRoutes(app: FastifyInstance) {
       prisma.communityPost.count({ where: { status: "PENDING" } }),
       prisma.communityPost.count({ where: { status: "VISIBLE" } }),
       prisma.userCoupon.count(),
-      prisma.couponRedemption.count(),
       prisma.exposureLog.count({ where: { createdAt: { gte: today } } }),
       prisma.clickLog.count({ where: { createdAt: { gte: today } } }),
       prisma.userCoupon.count({ where: { claimedAt: { gte: today } } }),
-      prisma.couponRedemption.count({ where: { redeemedAt: { gte: today } } }),
-      prisma.couponRedemption.aggregate({ _sum: { amount: true } }),
       prisma.exposureLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
       prisma.clickLog.groupBy({ by: ["merchantId"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
       prisma.userCoupon.groupBy({ by: ["merchantId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
-      prisma.couponRedemption.groupBy({ by: ["merchantId"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { merchantId: "desc" } }, take: 10 }),
       prisma.userCoupon.groupBy({ by: ["couponId"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { couponId: "desc" } }, take: 10 }),
-      prisma.couponRedemption.groupBy({ by: ["couponId"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { couponId: "desc" } }, take: 10 }),
       prisma.exposureLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
       prisma.clickLog.groupBy({ by: ["channel"], where: { createdAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
-      prisma.userCoupon.groupBy({ by: ["channel"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 }),
-      prisma.couponRedemption.groupBy({ by: ["channel"], where: { redeemedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 })
+      prisma.userCoupon.groupBy({ by: ["channel"], where: { claimedAt: { gte: today } }, _count: true, orderBy: { _count: { channel: "desc" } }, take: 10 })
     ]);
-    const merchantScores = new Map<string, { id: string; exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number; score: number }>();
+    const merchantScores = new Map<string, { id: string; exposureCount: number; clickCount: number; claimCount: number; score: number }>();
     const ensureMerchant = (id: string) => {
-      if (!merchantScores.has(id)) merchantScores.set(id, { id, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0, score: 0 });
+      if (!merchantScores.has(id)) merchantScores.set(id, { id, exposureCount: 0, clickCount: 0, claimCount: 0, score: 0 });
       return merchantScores.get(id)!;
     };
     topMerchantExposures.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.exposureCount = value; item.score += value; });
     topMerchantClicks.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.clickCount = value; item.score += value * 2; });
     topMerchantClaims.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.claimCount = value; item.score += value * 4; });
-    topMerchantRedemptions.forEach((row) => { const value = countGroup(row); const item = ensureMerchant(row.merchantId); item.redemptionCount = value; item.score += value * 6; });
     const merchantNames = await prisma.merchant.findMany({ where: { id: { in: [...merchantScores.keys()] } }, select: { id: true, name: true } });
     const nameByMerchant = new Map(merchantNames.map((item) => [item.id, item.name]));
 
-    const couponScores = new Map<string, { id: string; claimCount: number; redemptionCount: number }>();
+    const couponScores = new Map<string, { id: string; claimCount: number }>();
     const ensureCoupon = (id: string) => {
-      if (!couponScores.has(id)) couponScores.set(id, { id, claimCount: 0, redemptionCount: 0 });
+      if (!couponScores.has(id)) couponScores.set(id, { id, claimCount: 0 });
       return couponScores.get(id)!;
     };
     topCouponClaims.forEach((row) => { ensureCoupon(row.couponId).claimCount = countGroup(row); });
-    topCouponRedemptions.forEach((row) => { ensureCoupon(row.couponId).redemptionCount = countGroup(row); });
     const couponNames = await prisma.coupon.findMany({ where: { id: { in: [...couponScores.keys()] } }, select: { id: true, title: true } });
     const titleByCoupon = new Map(couponNames.map((item) => [item.id, item.title]));
 
-    const channelScores = new Map<string, { channel: string; exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number }>();
+    const channelScores = new Map<string, { channel: string; exposureCount: number; clickCount: number; claimCount: number }>();
     const ensureChannel = (channel: string | null) => {
       const key = channel || "direct";
-      if (!channelScores.has(key)) channelScores.set(key, { channel: key, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0 });
+      if (!channelScores.has(key)) channelScores.set(key, { channel: key, exposureCount: 0, clickCount: 0, claimCount: 0 });
       return channelScores.get(key)!;
     };
     topChannelExposures.forEach((row) => { ensureChannel(row.channel).exposureCount = countGroup(row); });
     topChannelClicks.forEach((row) => { ensureChannel(row.channel).clickCount = countGroup(row); });
     topChannelClaims.forEach((row) => { ensureChannel(row.channel).claimCount = countGroup(row); });
-    topChannelRedemptions.forEach((row) => { ensureChannel(row.channel).redemptionCount = countGroup(row); });
 
     return ok(reply, {
       merchantCount, approvedMerchantCount, couponCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, visibleCommunityPostCount,
-      claimCount, redemptionCount, todayExposures, todayClicks, todayClaims, todayRedemptions, redemptionAmount: redemptionAmount._sum.amount ?? 0,
+      claimCount, todayExposures, todayClicks, todayClaims,
       topMerchants: [...merchantScores.values()].map((item) => ({ ...item, name: nameByMerchant.get(item.id) || item.id })).sort((a, b) => b.score - a.score).slice(0, 5),
-      topCoupons: [...couponScores.values()].map((item) => ({ ...item, title: titleByCoupon.get(item.id) || item.id })).sort((a, b) => b.claimCount - a.claimCount || b.redemptionCount - a.redemptionCount).slice(0, 5),
+      topCoupons: [...couponScores.values()].map((item) => ({ ...item, title: titleByCoupon.get(item.id) || item.id })).sort((a, b) => b.claimCount - a.claimCount).slice(0, 5),
       topChannels: [...channelScores.values()].sort((a, b) => b.exposureCount - a.exposureCount || b.clickCount - a.clickCount).slice(0, 5)
     });
   });
@@ -693,7 +633,7 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.get("/api/admin/reports/merchants", async (_request, reply) => {
     const merchants = await prisma.merchant.findMany({
-      include: { category: true, userCoupons: true, redemptions: true, exposureLogs: true, clickLogs: true },
+      include: { category: true, userCoupons: true, exposureLogs: true, clickLogs: true },
       orderBy: [{ platformBoost: "desc" }, { sortOrder: "asc" }]
     });
     return ok(reply, merchants.map((merchant) => ({
@@ -703,10 +643,7 @@ export async function adminRoutes(app: FastifyInstance) {
       status: merchant.status,
       exposures: merchant.exposureLogs.length,
       clicks: merchant.clickLogs.length,
-      claims: merchant.userCoupons.length,
-      redemptions: merchant.redemptions.length,
-      redemptionRate: merchant.userCoupons.length ? Number((merchant.redemptions.length / merchant.userCoupons.length).toFixed(4)) : 0,
-      redemptionAmount: merchant.redemptions.reduce((sum, item) => sum + Number(item.amount ?? 0), 0)
+      claims: merchant.userCoupons.length
     })));
   });
 

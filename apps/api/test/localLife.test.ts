@@ -79,7 +79,7 @@ describe("exportService", () => {
   });
 
   it("uses the expected analytics csv header order", () => {
-    const csv = toCsv([{ date: "all", merchant: "店铺", coupon: "券", source: "poster", channel: "offline", exposures: 1, clicks: 1, claims: 1, redemptions: 0, clickRate: 1, redemptionRate: 0 }]);
-    expect(csv.split("\n")[0]).toBe("date,merchant,coupon,source,channel,exposures,clicks,claims,redemptions,clickRate,redemptionRate");
+    const csv = toCsv([{ date: "all", merchant: "店铺", coupon: "券", source: "poster", channel: "offline", exposures: 1, clicks: 1, claims: 1, clickRate: 1 }]);
+    expect(csv.split("\n")[0]).toBe("date,merchant,coupon,source,channel,exposures,clicks,claims,clickRate");
   });
 });

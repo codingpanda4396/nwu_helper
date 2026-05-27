@@ -8,7 +8,3 @@ export function assertCouponClaimable(coupon: Pick<Coupon, "status" | "remaining
   if (coupon.remainingStock <= 0) return { ok: false as const, code: "COUPON_SOLD_OUT", message: "优惠券已领完" };
   return { ok: true as const };
 }
-
-export function makeRedemptionCode() {
-  return Math.random().toString(36).slice(2, 6).toUpperCase() + Date.now().toString().slice(-6);
-}

@@ -10,7 +10,7 @@ export type AnalyticsScope = {
   endDate?: Date;
 };
 
-function dateFilter(field: "createdAt" | "claimedAt" | "redeemedAt", scope: AnalyticsScope) {
+function dateFilter(field: "createdAt" | "claimedAt", scope: AnalyticsScope) {
   const range: { gte?: Date; lte?: Date } = {};
   if (scope.startDate) range.gte = scope.startDate;
   if (scope.endDate) range.lte = scope.endDate;
@@ -40,7 +40,7 @@ export function parseAnalyticsScope(query: unknown, forcedMerchantId?: string): 
   };
 }
 
-function merchantWhere(scope: AnalyticsScope, field: "createdAt" | "claimedAt" | "redeemedAt") {
+function merchantWhere(scope: AnalyticsScope, field: "createdAt" | "claimedAt") {
   return {
     merchantId: scope.merchantId,
     activityId: scope.activityId,
@@ -48,7 +48,7 @@ function merchantWhere(scope: AnalyticsScope, field: "createdAt" | "claimedAt" |
   };
 }
 
-function couponWhere(scope: AnalyticsScope, field: "claimedAt" | "redeemedAt") {
+function couponWhere(scope: AnalyticsScope, field: "claimedAt") {
   return {
     merchantId: scope.merchantId,
     couponId: scope.couponId,
@@ -58,24 +58,21 @@ function couponWhere(scope: AnalyticsScope, field: "claimedAt" | "redeemedAt") {
 }
 
 export async function getSummary(scope: AnalyticsScope) {
-  const [exposureCount, clickCount, claimCount, redemptionCount] = await prisma.$transaction([
+  const [exposureCount, clickCount, claimCount] = await prisma.$transaction([
     prisma.exposureLog.count({ where: merchantWhere(scope, "createdAt") }),
     prisma.clickLog.count({ where: merchantWhere(scope, "createdAt") }),
-    prisma.userCoupon.count({ where: couponWhere(scope, "claimedAt") }),
-    prisma.couponRedemption.count({ where: couponWhere(scope, "redeemedAt") })
+    prisma.userCoupon.count({ where: couponWhere(scope, "claimedAt") })
   ]);
   return {
     exposureCount,
     clickCount,
     claimCount,
-    redemptionCount,
-    clickRate: rate(clickCount, exposureCount),
-    redemptionRate: rate(redemptionCount, claimCount)
+    clickRate: rate(clickCount, exposureCount)
   };
 }
 
 type GroupKey = { source: string; channel: string };
-type Counts = GroupKey & { exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number };
+type Counts = GroupKey & { exposureCount: number; clickCount: number; claimCount: number };
 
 function key(source: string | null | undefined, channel: string | null | undefined) {
   return `${unknownAttributionGroup(source)}\u0000${unknownAttributionGroup(channel)}`;
@@ -85,7 +82,7 @@ function ensure(map: Map<string, Counts>, source: string | null | undefined, cha
   const sourceKey = unknownAttributionGroup(source);
   const channelKey = unknownAttributionGroup(channel);
   const mapKey = key(source, channel);
-  if (!map.has(mapKey)) map.set(mapKey, { source: sourceKey, channel: channelKey, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0 });
+  if (!map.has(mapKey)) map.set(mapKey, { source: sourceKey, channel: channelKey, exposureCount: 0, clickCount: 0, claimCount: 0 });
   return map.get(mapKey)!;
 }
 
@@ -94,19 +91,17 @@ function groupCount(row: { _count?: number | true | { _all?: number } }) {
 }
 
 export async function getBySource(scope: AnalyticsScope) {
-  const [exposures, clicks, claims, redemptions] = await prisma.$transaction([
+  const [exposures, clicks, claims] = await prisma.$transaction([
     prisma.exposureLog.groupBy({ by: ["source", "channel"], where: merchantWhere(scope, "createdAt"), orderBy: [{ source: "asc" }, { channel: "asc" }], _count: true }),
     prisma.clickLog.groupBy({ by: ["source", "channel"], where: merchantWhere(scope, "createdAt"), orderBy: [{ source: "asc" }, { channel: "asc" }], _count: true }),
-    prisma.userCoupon.groupBy({ by: ["source", "channel"], where: couponWhere(scope, "claimedAt"), orderBy: [{ source: "asc" }, { channel: "asc" }], _count: true }),
-    prisma.couponRedemption.groupBy({ by: ["source", "channel"], where: couponWhere(scope, "redeemedAt"), orderBy: [{ source: "asc" }, { channel: "asc" }], _count: true })
+    prisma.userCoupon.groupBy({ by: ["source", "channel"], where: couponWhere(scope, "claimedAt"), orderBy: [{ source: "asc" }, { channel: "asc" }], _count: true })
   ]);
   const groups = new Map<string, Counts>();
   for (const row of exposures) ensure(groups, row.source, row.channel).exposureCount = groupCount(row);
   for (const row of clicks) ensure(groups, row.source, row.channel).clickCount = groupCount(row);
   for (const row of claims) ensure(groups, row.source, row.channel).claimCount = groupCount(row);
-  for (const row of redemptions) ensure(groups, row.source, row.channel).redemptionCount = groupCount(row);
   return [...groups.values()]
-    .map((row) => ({ ...row, clickRate: rate(row.clickCount, row.exposureCount), redemptionRate: rate(row.redemptionCount, row.claimCount) }))
+    .map((row) => ({ ...row, clickRate: rate(row.clickCount, row.exposureCount) }))
     .sort((a, b) => b.exposureCount - a.exposureCount || b.clickCount - a.clickCount || a.source.localeCompare(b.source));
 }
 
@@ -157,21 +152,19 @@ function day(value: Date) {
 }
 
 export async function getTrends(scope: AnalyticsScope) {
-  const [exposures, clicks, claims, redemptions] = await prisma.$transaction([
+  const [exposures, clicks, claims] = await prisma.$transaction([
     prisma.exposureLog.findMany({ where: merchantWhere(scope, "createdAt"), select: { createdAt: true } }),
     prisma.clickLog.findMany({ where: merchantWhere(scope, "createdAt"), select: { createdAt: true } }),
-    prisma.userCoupon.findMany({ where: couponWhere(scope, "claimedAt"), select: { claimedAt: true } }),
-    prisma.couponRedemption.findMany({ where: couponWhere(scope, "redeemedAt"), select: { redeemedAt: true } })
+    prisma.userCoupon.findMany({ where: couponWhere(scope, "claimedAt"), select: { claimedAt: true } })
   ]);
-  const rows = new Map<string, { date: string; exposureCount: number; clickCount: number; claimCount: number; redemptionCount: number }>();
+  const rows = new Map<string, { date: string; exposureCount: number; clickCount: number; claimCount: number }>();
   const ensureDay = (date: string) => {
-    if (!rows.has(date)) rows.set(date, { date, exposureCount: 0, clickCount: 0, claimCount: 0, redemptionCount: 0 });
+    if (!rows.has(date)) rows.set(date, { date, exposureCount: 0, clickCount: 0, claimCount: 0 });
     return rows.get(date)!;
   };
   for (const item of exposures) ensureDay(day(item.createdAt)).exposureCount += 1;
   for (const item of clicks) ensureDay(day(item.createdAt)).clickCount += 1;
   for (const item of claims) ensureDay(day(item.claimedAt)).claimCount += 1;
-  for (const item of redemptions) ensureDay(day(item.redeemedAt)).redemptionCount += 1;
   return [...rows.values()].sort((a, b) => a.date.localeCompare(b.date));
 }
 
@@ -184,9 +177,7 @@ export type AnalyticsCsvRow = {
   exposures: number;
   clicks: number;
   claims: number;
-  redemptions: number;
   clickRate: number;
-  redemptionRate: number;
 };
 
 export async function getExportRows(scope: AnalyticsScope): Promise<AnalyticsCsvRow[]> {
@@ -196,24 +187,16 @@ export async function getExportRows(scope: AnalyticsScope): Promise<AnalyticsCsv
     orderBy: [{ merchantId: "asc" }, { couponId: "asc" }, { source: "asc" }, { channel: "asc" }],
     _count: true
   });
-  const redemptions = await prisma.couponRedemption.groupBy({
-    by: ["merchantId", "couponId", "source", "channel"],
-    where: couponWhere(scope, "redeemedAt"),
-    orderBy: [{ merchantId: "asc" }, { couponId: "asc" }, { source: "asc" }, { channel: "asc" }],
-    _count: true
-  });
   const merchants = await prisma.merchant.findMany({ select: { id: true, name: true } });
   const coupons = await prisma.coupon.findMany({ select: { id: true, title: true } });
   const merchantNames = new Map(merchants.map((item) => [item.id, item.name]));
   const couponNames = new Map(coupons.map((item) => [item.id, item.title]));
-  const redemptionCounts = new Map(redemptions.map((item) => [`${item.merchantId}:${item.couponId}:${key(item.source, item.channel)}`, groupCount(item)]));
   const dateLabel = scope.startDate || scope.endDate ? `${scope.startDate ? day(scope.startDate) : ""}..${scope.endDate ? day(scope.endDate) : ""}` : "all";
   const result: AnalyticsCsvRow[] = [];
   for (const row of rows) {
     const source = unknownAttributionGroup(row.source);
     const channel = unknownAttributionGroup(row.channel);
     const claimCount = groupCount(row);
-    const redemptionCount = redemptionCounts.get(`${row.merchantId}:${row.couponId}:${key(row.source, row.channel)}`) ?? 0;
     const merchantScope = { ...scope, merchantId: row.merchantId, couponId: undefined } satisfies AnalyticsScope;
     const [exposureCount, clickCount] = await Promise.all([
       prisma.exposureLog.count({ where: { ...merchantWhere(merchantScope, "createdAt"), source: row.source, channel: row.channel } }),
@@ -228,9 +211,7 @@ export async function getExportRows(scope: AnalyticsScope): Promise<AnalyticsCsv
       exposures: exposureCount,
       clicks: clickCount,
       claims: claimCount,
-      redemptions: redemptionCount,
-      clickRate: rate(clickCount, exposureCount),
-      redemptionRate: rate(redemptionCount, claimCount)
+      clickRate: rate(clickCount, exposureCount)
     });
   }
   return result;

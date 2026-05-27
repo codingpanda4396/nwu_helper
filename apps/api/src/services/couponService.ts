@@ -1,5 +1,5 @@
 import type { Prisma } from "@prisma/client";
-import { assertCouponClaimable, makeRedemptionCode } from "../localLife.js";
+import { assertCouponClaimable } from "../localLife.js";
 import { prisma } from "../db.js";
 import { attributionData, type AttributionInput } from "./attributionService.js";
 
@@ -32,7 +32,7 @@ export async function claimCoupon(couponId: string, payload: ClaimCouponPayload)
         userId: user.id,
         couponId: coupon.id,
         merchantId: coupon.merchantId,
-        code: makeRedemptionCode(),
+        code: Math.random().toString(36).slice(2, 10).toUpperCase(),
         ...attributionData(payload),
         claimedSessionId: payload.sessionId || null
       } satisfies Prisma.UserCouponUncheckedCreateInput,
