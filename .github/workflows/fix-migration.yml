@@ -24,7 +24,23 @@ jobs:
               APP_DIR="/opt/nwu_helper"
             fi
             cd "$APP_DIR/current"
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api npx prisma migrate resolve --applied 20260528000000_add_new_models || true
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed || true
+            
+            # Wait for containers to be healthy
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml --env-file .env ps api | grep -q "Up"; then
+                break
+              fi
+              sleep 2
+            done
+            
+            # Resolve the failed migration
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api npx prisma migrate resolve --applied 20260528000000_add_new_models 2>&1 || echo "Migration resolve skipped"
+            
+            # Run pending migrations
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate 2>&1
+            
+            # Seed data
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed 2>&1 || echo "Seed skipped"
+            
+            # Restart API
             docker compose -f docker-compose.prod.yml --env-file .env restart api
