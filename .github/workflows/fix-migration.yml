@@ -16,7 +16,7 @@ jobs:
           username: ${{ secrets.ECS_USER }}
           key: ${{ secrets.ECS_SSH_KEY }}
           port: ${{ secrets.ECS_SSH_PORT || '22' }}
-          command_timeout: 10m
+          command_timeout: 15m
           script: |
             set -eu
             APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
@@ -25,22 +25,46 @@ jobs:
             fi
             cd "$APP_DIR/current"
             
-            # Wait for containers to be healthy
+            # Stop API container to stop the restart loop
+            docker compose -f docker-compose.prod.yml --env-file .env stop api || true
+            
+            # Wait a moment
+            sleep 3
+            
+            # Start API container
+            docker compose -f docker-compose.prod.yml --env-file .env start api
+            
+            # Wait for container to be running
             for i in $(seq 1 30); do
-              if docker compose -f docker-compose.prod.yml --env-file .env ps api | grep -q "Up"; then
+              if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
+                echo "API container is up"
                 break
               fi
-              sleep 2
+              echo "Waiting for API container... attempt $i"
+              sleep 3
             done
             
+            # Check if container is running
+            if ! docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
+              echo "API container failed to start, checking logs..."
+              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=20 api
+              exit 1
+            fi
+            
             # Resolve the failed migration
+            echo "Resolving migration..."
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api npx prisma migrate resolve --applied 20260528000000_add_new_models 2>&1 || echo "Migration resolve skipped"
             
             # Run pending migrations
+            echo "Running migrations..."
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate 2>&1
             
             # Seed data
+            echo "Seeding data..."
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed 2>&1 || echo "Seed skipped"
             
-            # Restart API
+            # Restart API to apply changes
+            echo "Restarting API..."
             docker compose -f docker-compose.prod.yml --env-file .env restart api
+            
+            echo "Done!"
