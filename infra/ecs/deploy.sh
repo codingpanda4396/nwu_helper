@@ -64,6 +64,16 @@ else
   run_compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
 fi
 
+log "Waiting for database to be ready"
+for i in $(seq 1 30); do
+  if run_compose -f docker-compose.prod.yml --env-file .env ps postgres 2>/dev/null | grep -q "healthy"; then
+    log "Database is ready"
+    break
+  fi
+  log "Waiting for database... attempt $i"
+  sleep 3
+done
+
 log "Applying database migrations"
 run_compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate
 
