@@ -22,28 +22,37 @@ jobs:
             APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
             cd "$APP_DIR/current"
             
-            echo "=== Step 1: Stop API container ==="
-            docker compose -f docker-compose.prod.yml --env-file .env stop api 2>&1 || true
-            sleep 2
+            echo "=== Step 1: Stop all containers ==="
+            docker compose -f docker-compose.prod.yml --env-file .env down 2>&1 || true
+            sleep 5
             
-            echo "=== Step 2: Check postgres status ==="
-            docker compose -f docker-compose.prod.yml --env-file .env ps postgres 2>&1 || true
+            echo "=== Step 2: Check postgres logs ==="
+            docker logs current-postgres-1 2>&1 | tail -20 || true
             
-            echo "=== Step 3: Start postgres if not running ==="
-            docker compose -f docker-compose.prod.yml --env-file .env up -d postgres 2>&1 || true
-            sleep 10
+            echo "=== Step 3: Remove postgres volume if corrupted ==="
+            # Check if postgres is corrupted
+            if docker volume ls | grep -q postgres_data; then
+              echo "Postgres volume exists"
+            fi
             
-            echo "=== Step 4: Wait for postgres ==="
-            for i in $(seq 1 20); do
+            echo "=== Step 4: Start fresh with postgres ==="
+            docker compose -f docker-compose.prod.yml --env-file .env up -d postgres 2>&1
+            
+            echo "=== Step 5: Wait for postgres to be healthy ==="
+            for i in $(seq 1 30); do
               if docker exec current-postgres-1 pg_isready -U nwu -d nwu_helper 2>/dev/null; then
                 echo "Postgres is ready"
                 break
               fi
-              echo "Waiting... attempt $i"
+              echo "Waiting for postgres... attempt $i"
               sleep 3
             done
             
-            echo "=== Step 5: Resolve failed migration directly in postgres ==="
+            echo "=== Step 6: Check if postgres is running ==="
+            docker compose -f docker-compose.prod.yml --env-file .env ps postgres 2>&1
+            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "SELECT 1;" 2>&1 || echo "Postgres not ready"
+            
+            echo "=== Step 7: Resolve failed migration ==="
             docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
               INSERT INTO \"_prisma_migrations\" (id, checksum, migration_name, started_at, finished_at, applied_steps_count)
               VALUES (
@@ -55,12 +64,9 @@ jobs:
                 1
               )
               ON CONFLICT (id) DO UPDATE SET finished_at = NOW(), applied_steps_count = 1;
-            " 2>&1 || echo "Migration record might already exist"
+            " 2>&1 || echo "Migration record issue"
             
-            echo "=== Step 6: Check migration status ==="
-            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "SELECT id, migration_name, finished_at FROM \"_prisma_migrations\" ORDER BY started_at DESC LIMIT 5;" 2>&1
-            
-            echo "=== Step 7: Create missing tables if needed ==="
+            echo "=== Step 8: Create missing tables ==="
             docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
               CREATE TABLE IF NOT EXISTS \"MerchantImage\" (
                 id TEXT NOT NULL PRIMARY KEY,
@@ -103,9 +109,9 @@ jobs:
                 \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 \"updatedAt\" TIMESTAMP(3) NOT NULL
               );
-            " 2>&1 || echo "Tables might already exist"
+            " 2>&1 || echo "Tables issue"
             
-            echo "=== Step 8: Add missing columns to Merchant ==="
+            echo "=== Step 9: Add missing columns ==="
             docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
               DO \$\$ BEGIN
                 ALTER TABLE \"Merchant\" ADD COLUMN IF NOT EXISTS \"avgPrice\" DOUBLE PRECISION;
@@ -125,12 +131,11 @@ jobs:
               END \$\$;
             " 2>&1
             
-            echo "=== Step 9: Start API container ==="
-            docker compose -f docker-compose.prod.yml --env-file .env start api 2>&1
+            echo "=== Step 10: Start API ==="
+            docker compose -f docker-compose.prod.yml --env-file .env up -d api 2>&1
             
-            echo "=== Step 10: Wait for API ==="
-            sleep 10
-            for i in $(seq 1 20); do
+            echo "=== Step 11: Wait for API ==="
+            for i in $(seq 1 30); do
               if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
                 echo "API is up"
                 break
@@ -139,7 +144,8 @@ jobs:
               sleep 3
             done
             
-            echo "=== Step 11: Check API health ==="
+            echo "=== Step 12: Check API health ==="
+            sleep 5
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "
               fetch('http://127.0.0.1:4000/api/health')
                 .then(async r => { 
@@ -147,10 +153,15 @@ jobs:
                   console.log('Health check passed:', await r.text()); 
                 })
                 .catch(e => { console.error('Health check failed:', e.message); process.exit(1); })
-            " 2>&1 || echo "Health check failed, checking logs..."
+            " 2>&1 || echo "Health check failed"
             
-            echo "=== Step 12: Seed data ==="
+            echo "=== Step 13: Start web and student ==="
+            docker compose -f docker-compose.prod.yml --env-file .env up -d web student 2>&1
+            
+            echo "=== Step 14: Seed data ==="
             docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed 2>&1 || echo "Seed failed"
             
-            echo "=== Done ==="
+            echo "=== Step 15: Final status ==="
             docker compose -f docker-compose.prod.yml --env-file .env ps 2>&1
+            
+            echo "=== Done ==="
