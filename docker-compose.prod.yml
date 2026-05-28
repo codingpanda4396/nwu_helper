@@ -14,6 +14,10 @@ services:
       timeout: 10s
       retries: 10
       start_period: 30s
+    deploy:
+      resources:
+        limits:
+          memory: 512M
 
   api:
     image: nwu-helper-api:latest
@@ -23,22 +27,34 @@ services:
     restart: unless-stopped
     env_file:
       - .env
+    environment:
+      - NODE_ENV=production
+      - LOG_LEVEL=warn
     depends_on:
       postgres:
         condition: service_healthy
     ports:
       - "${API_BIND:-127.0.0.1:4000}:4000"
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    command: ["node", "dist/src/cluster.js"]
 
-  web:
-    image: nwu-helper-web:latest
+  admin:
+    image: nwu-helper-admin:latest
     build:
       context: .
-      target: web
+      target: admin
     restart: unless-stopped
     depends_on:
       - api
     ports:
-      - "${WEB_BIND:-0.0.0.0:8080}:80"
+      - "${ADMIN_BIND:-0.0.0.0:18080}:80"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
   student:
     image: nwu-helper-student:latest
@@ -50,6 +66,10 @@ services:
       - api
     ports:
       - "${STUDENT_BIND:-0.0.0.0:8081}:80"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
 
 volumes:
   postgres_data:

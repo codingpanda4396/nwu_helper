@@ -29,15 +29,25 @@ services:
     ports:
       - "4000:4000"
 
-  web:
+  admin:
     build:
       context: .
-      target: web
+      target: admin
     restart: unless-stopped
     depends_on:
       - api
     ports:
       - "8080:80"
+
+  student:
+    build:
+      context: .
+      target: student
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "8081:80"
 
 volumes:
   postgres_data:

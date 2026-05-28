@@ -5,6 +5,7 @@ WORKDIR /app
 FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json apps/api/package.json
+COPY apps/admin/package.json apps/admin/package.json
 COPY apps/web/package.json apps/web/package.json
 COPY apps/student/package.json apps/student/package.json
 COPY packages/shared/package.json packages/shared/package.json
@@ -22,11 +23,16 @@ COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["pnpm", "start"]
+CMD ["pnpm", "start:cluster"]
 
 FROM nginx:1.27-alpine AS web
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+
+FROM nginx:1.27-alpine AS admin
+COPY --from=build /app/apps/admin/dist /usr/share/nginx/html
+COPY infra/nginx/admin.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 FROM nginx:1.27-alpine AS student
