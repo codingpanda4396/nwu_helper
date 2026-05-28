@@ -1,0 +1,102 @@
+{
+  "pages": [
+    {
+      "path": "pages/index/index",
+      "style": {
+        "navigationBarTitleText": "西大圈"
+      }
+    },
+    {
+      "path": "pages/food/food",
+      "style": {
+        "navigationBarTitleText": "美食"
+      }
+    },
+    {
+      "path": "pages/driving/driving",
+      "style": {
+        "navigationBarTitleText": "驾校"
+      }
+    },
+    {
+      "path": "pages/services/services",
+      "style": {
+        "navigationBarTitleText": "生活服务"
+      }
+    },
+    {
+      "path": "pages/community/community",
+      "style": {
+        "navigationBarTitleText": "讨论区"
+      }
+    },
+    {
+      "path": "pages/about/about",
+      "style": {
+        "navigationBarTitleText": "关于"
+      }
+    },
+    {
+      "path": "pages/merchant/merchant",
+      "style": {
+        "navigationBarTitleText": "商家详情"
+      }
+    },
+    {
+      "path": "pages/post/post",
+      "style": {
+        "navigationBarTitleText": "帖子详情"
+      }
+    }
+  ],
+  "globalStyle": {
+    "navigationBarTextStyle": "white",
+    "navigationBarTitleText": "西大圈",
+    "navigationBarBackgroundColor": "#FF6B35",
+    "backgroundColor": "#F5F5F5"
+  },
+  "tabBar": {
+    "color": "#999999",
+    "selectedColor": "#FF6B35",
+    "borderStyle": "black",
+    "backgroundColor": "#ffffff",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "首页",
+        "iconPath": "static/tabbar/home.png",
+        "selectedIconPath": "static/tabbar/home-active.png"
+      },
+      {
+        "pagePath": "pages/food/food",
+        "text": "美食",
+        "iconPath": "static/tabbar/food.png",
+        "selectedIconPath": "static/tabbar/food-active.png"
+      },
+      {
+        "pagePath": "pages/driving/driving",
+        "text": "驾校",
+        "iconPath": "static/tabbar/driving.png",
+        "selectedIconPath": "static/tabbar/driving-active.png"
+      },
+      {
+        "pagePath": "pages/services/services",
+        "text": "生活服务",
+        "iconPath": "static/tabbar/service.png",
+        "selectedIconPath": "static/tabbar/service-active.png"
+      },
+      {
+        "pagePath": "pages/community/community",
+        "text": "讨论区",
+        "iconPath": "static/tabbar/community.png",
+        "selectedIconPath": "static/tabbar/community-active.png"
+      },
+      {
+        "pagePath": "pages/about/about",
+        "text": "关于",
+        "iconPath": "static/tabbar/about.png",
+        "selectedIconPath": "static/tabbar/about-active.png"
+      }
+    ]
+  }
+}
