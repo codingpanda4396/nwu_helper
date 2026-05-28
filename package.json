@@ -8,7 +8,7 @@
     "dev": "pnpm --parallel --filter @nwu-helper/api --filter @nwu-helper/web dev",
     "dev:all": "pnpm --parallel --filter @nwu-helper/api --filter @nwu-helper/web --filter @nwu-helper/student dev",
     "dev:student": "pnpm --filter @nwu-helper/student dev:h5",
-    "build": "pnpm -r build",
+    "build": "pnpm -r build && pnpm build:student",
     "build:student": "pnpm --filter @nwu-helper/student build:h5",
     "typecheck": "pnpm -r typecheck",
     "test": "pnpm -r test",

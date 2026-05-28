@@ -86,6 +86,7 @@ jobs:
         run: |
           docker build --target api -t nwu-helper-api:${{ github.sha }} .
           docker build --target web -t nwu-helper-web:${{ github.sha }} .
+          docker build --target student -t nwu-helper-student:${{ github.sha }} .
 
   deploy:
     name: Deploy to ECS
@@ -108,6 +109,7 @@ jobs:
       PUBLIC_WEB_URL: ${{ secrets.PUBLIC_WEB_URL }}
       API_BIND: ${{ secrets.API_BIND || '127.0.0.1:4000' }}
       WEB_BIND: ${{ secrets.WEB_BIND || '0.0.0.0:8080' }}
+      STUDENT_BIND: ${{ secrets.STUDENT_BIND || '0.0.0.0:8081' }}
       OSS_REGION: ${{ secrets.OSS_REGION }}
       OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
       OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -151,6 +153,7 @@ jobs:
               printf 'PUBLIC_WEB_URL=%s\n' "$PUBLIC_WEB_URL_VALUE"
               printf 'API_BIND=%s\n' "$API_BIND"
               printf 'WEB_BIND=%s\n' "$WEB_BIND"
+              printf 'STUDENT_BIND=%s\n' "$STUDENT_BIND"
               printf 'OSS_REGION=%s\n' "$OSS_REGION"
               printf 'OSS_ACCESS_KEY_ID=%s\n' "$OSS_ACCESS_KEY_ID"
               printf 'OSS_ACCESS_KEY_SECRET=%s\n' "$OSS_ACCESS_KEY_SECRET"

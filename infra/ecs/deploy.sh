@@ -57,12 +57,13 @@ cd "$APP_DIR/current"
 if [ -n "$IMAGES_PACKAGE" ] && [ -f "$IMAGES_PACKAGE" ]; then
   log "Loading Docker images from $IMAGES_PACKAGE"
   gzip -dc "$IMAGES_PACKAGE" | docker load
-  log "Starting containers from prebuilt images"
-  run_compose -f docker-compose.prod.yml --env-file .env up -d --no-build --remove-orphans
 else
-  log "Building and starting containers"
-  run_compose -f docker-compose.prod.yml --env-file .env up -d --build --remove-orphans
+  log "Building Docker images"
+  run_compose -f docker-compose.prod.yml --env-file .env build
 fi
+
+log "Starting database"
+run_compose -f docker-compose.prod.yml --env-file .env up -d postgres
 
 log "Waiting for database to be ready"
 for i in $(seq 1 30); do
@@ -75,7 +76,10 @@ for i in $(seq 1 30); do
 done
 
 log "Applying database migrations"
-run_compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate
+run_compose -f docker-compose.prod.yml --env-file .env run --rm --no-deps api pnpm db:migrate
+
+log "Starting containers"
+run_compose -f docker-compose.prod.yml --env-file .env up -d --no-build --remove-orphans
 
 log "Container status"
 run_compose -f docker-compose.prod.yml --env-file .env ps

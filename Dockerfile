@@ -6,6 +6,7 @@ FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/web/package.json apps/web/package.json
+COPY apps/student/package.json apps/student/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile=false
 
@@ -21,9 +22,14 @@ COPY --from=build /app/packages/shared ./packages/shared
 COPY --from=build /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 4000
-CMD ["sh", "-c", "pnpm db:migrate && pnpm start"]
+CMD ["pnpm", "start"]
 
 FROM nginx:1.27-alpine AS web
 COPY --from=build /app/apps/web/dist /usr/share/nginx/html
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+
+FROM nginx:1.27-alpine AS student
+COPY --from=build /app/apps/student/dist/build/h5 /usr/share/nginx/html
+COPY infra/nginx/student.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
