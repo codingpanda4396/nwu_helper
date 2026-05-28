@@ -22,23 +22,20 @@ jobs:
             APP_DIR="${{ secrets.ECS_APP_DIR || '/opt/nwu_helper' }}"
             cd "$APP_DIR/current"
             
-            echo "=== Step 1: Stop all containers ==="
+            echo "=== Step 1: Check postgres logs ==="
+            docker logs current-postgres-1 2>&1 | tail -30 || true
+            
+            echo "=== Step 2: Stop all containers ==="
             docker compose -f docker-compose.prod.yml --env-file .env down 2>&1 || true
             sleep 5
             
-            echo "=== Step 2: Check postgres logs ==="
-            docker logs current-postgres-1 2>&1 | tail -20 || true
+            echo "=== Step 3: Remove postgres volume (data will be lost) ==="
+            docker volume rm current_postgres_data 2>&1 || echo "Volume not found or in use"
             
-            echo "=== Step 3: Remove postgres volume if corrupted ==="
-            # Check if postgres is corrupted
-            if docker volume ls | grep -q postgres_data; then
-              echo "Postgres volume exists"
-            fi
-            
-            echo "=== Step 4: Start fresh with postgres ==="
+            echo "=== Step 4: Start postgres fresh ==="
             docker compose -f docker-compose.prod.yml --env-file .env up -d postgres 2>&1
             
-            echo "=== Step 5: Wait for postgres to be healthy ==="
+            echo "=== Step 5: Wait for postgres ==="
             for i in $(seq 1 30); do
               if docker exec current-postgres-1 pg_isready -U nwu -d nwu_helper 2>/dev/null; then
                 echo "Postgres is ready"
@@ -48,120 +45,22 @@ jobs:
               sleep 3
             done
             
-            echo "=== Step 6: Check if postgres is running ==="
-            docker compose -f docker-compose.prod.yml --env-file .env ps postgres 2>&1
-            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "SELECT 1;" 2>&1 || echo "Postgres not ready"
+            echo "=== Step 6: Verify postgres ==="
+            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "SELECT 1 as test;" 2>&1
             
-            echo "=== Step 7: Resolve failed migration ==="
-            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
-              INSERT INTO \"_prisma_migrations\" (id, checksum, migration_name, started_at, finished_at, applied_steps_count)
-              VALUES (
-                '20260528000000_add_new_models',
-                'manual-resolve',
-                '20260528000000_add_new_models',
-                NOW(),
-                NOW(),
-                1
-              )
-              ON CONFLICT (id) DO UPDATE SET finished_at = NOW(), applied_steps_count = 1;
-            " 2>&1 || echo "Migration record issue"
-            
-            echo "=== Step 8: Create missing tables ==="
-            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
-              CREATE TABLE IF NOT EXISTS \"MerchantImage\" (
-                id TEXT NOT NULL PRIMARY KEY,
-                \"merchantId\" TEXT NOT NULL,
-                \"imageUrl\" TEXT NOT NULL,
-                type TEXT NOT NULL DEFAULT 'OTHER',
-                \"sortOrder\" INTEGER NOT NULL DEFAULT 100,
-                \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-              );
-              CREATE TABLE IF NOT EXISTS \"ViewHistory\" (
-                id TEXT NOT NULL PRIMARY KEY,
-                \"userId\" TEXT NOT NULL,
-                \"merchantId\" TEXT NOT NULL,
-                \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-              );
-              CREATE TABLE IF NOT EXISTS \"Favorite\" (
-                id TEXT NOT NULL PRIMARY KEY,
-                \"userId\" TEXT NOT NULL,
-                \"merchantId\" TEXT NOT NULL,
-                \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP
-              );
-              CREATE TABLE IF NOT EXISTS \"Feedback\" (
-                id TEXT NOT NULL PRIMARY KEY,
-                \"userId\" TEXT,
-                content TEXT NOT NULL,
-                contact TEXT,
-                type TEXT NOT NULL DEFAULT 'SUGGESTION',
-                status TEXT NOT NULL DEFAULT 'PENDING',
-                reply TEXT,
-                \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                \"updatedAt\" TIMESTAMP(3) NOT NULL
-              );
-              CREATE TABLE IF NOT EXISTS \"CampusConfig\" (
-                id TEXT NOT NULL DEFAULT 'default',
-                name TEXT NOT NULL DEFAULT '西北大学',
-                slug TEXT NOT NULL DEFAULT 'nwu',
-                logo TEXT,
-                address TEXT,
-                \"isActive\" BOOLEAN NOT NULL DEFAULT true,
-                \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
-                \"updatedAt\" TIMESTAMP(3) NOT NULL
-              );
-            " 2>&1 || echo "Tables issue"
-            
-            echo "=== Step 9: Add missing columns ==="
-            docker exec current-postgres-1 psql -U nwu -d nwu_helper -c "
-              DO \$\$ BEGIN
-                ALTER TABLE \"Merchant\" ADD COLUMN IF NOT EXISTS \"avgPrice\" DOUBLE PRECISION;
-              EXCEPTION WHEN duplicate_column THEN NULL;
-              END \$\$;
-              DO \$\$ BEGIN
-                ALTER TABLE \"Merchant\" ADD COLUMN IF NOT EXISTS \"latitude\" DOUBLE PRECISION;
-              EXCEPTION WHEN duplicate_column THEN NULL;
-              END \$\$;
-              DO \$\$ BEGIN
-                ALTER TABLE \"Merchant\" ADD COLUMN IF NOT EXISTS \"longitude\" DOUBLE PRECISION;
-              EXCEPTION WHEN duplicate_column THEN NULL;
-              END \$\$;
-              DO \$\$ BEGIN
-                ALTER TABLE \"Merchant\" ADD COLUMN IF NOT EXISTS \"tags\" TEXT[] DEFAULT ARRAY[]::TEXT[];
-              EXCEPTION WHEN duplicate_column THEN NULL;
-              END \$\$;
-            " 2>&1
-            
-            echo "=== Step 10: Start API ==="
+            echo "=== Step 7: Run migrations ==="
             docker compose -f docker-compose.prod.yml --env-file .env up -d api 2>&1
-            
-            echo "=== Step 11: Wait for API ==="
-            for i in $(seq 1 30); do
-              if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
-                echo "API is up"
-                break
-              fi
-              echo "Waiting for API... attempt $i"
-              sleep 3
-            done
-            
-            echo "=== Step 12: Check API health ==="
             sleep 5
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api node -e "
-              fetch('http://127.0.0.1:4000/api/health')
-                .then(async r => { 
-                  if (!r.ok) throw new Error(await r.text()); 
-                  console.log('Health check passed:', await r.text()); 
-                })
-                .catch(e => { console.error('Health check failed:', e.message); process.exit(1); })
-            " 2>&1 || echo "Health check failed"
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:migrate 2>&1
             
-            echo "=== Step 13: Start web and student ==="
-            docker compose -f docker-compose.prod.yml --env-file .env up -d web student 2>&1
+            echo "=== Step 8: Seed data ==="
+            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed 2>&1
             
-            echo "=== Step 14: Seed data ==="
-            docker compose -f docker-compose.prod.yml --env-file .env exec -T api pnpm db:seed 2>&1 || echo "Seed failed"
+            echo "=== Step 9: Start all services ==="
+            docker compose -f docker-compose.prod.yml --env-file .env up -d 2>&1
             
-            echo "=== Step 15: Final status ==="
+            echo "=== Step 10: Final health check ==="
+            sleep 10
             docker compose -f docker-compose.prod.yml --env-file .env ps 2>&1
             
             echo "=== Done ==="
