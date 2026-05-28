@@ -2,34 +2,12 @@ import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BarChart3, CalendarDays, Car, ChevronLeft, ChevronRight, Clock, Coffee, Gift, Heart, Home, Image, Info, ListChecks, LogOut, MapPin, MessageCircle, MessageSquareText, Phone, Plus, QrCode, Send, Shuffle, Sparkles, Store, Utensils, Wrench } from "lucide-react";
 import { OssUploader } from "./OssUploader";
+import AdminApp from "./admin";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
 
-type Section = "overview" | "benefits" | "banners" | "wechat" | "food" | "services" | "community" | "merchants";
 type Dict = Record<string, any>;
-
-const nav: { id: Section; label: string; Icon: React.ComponentType<{ size?: number }> }[] = [
-  { id: "overview", label: "概览", Icon: BarChart3 },
-  { id: "benefits", label: "活动发布", Icon: Gift },
-  { id: "banners", label: "轮播图", Icon: Image },
-  { id: "wechat", label: "西大圈入口", Icon: QrCode },
-  { id: "food", label: "今天吃什么", Icon: Utensils },
-  { id: "services", label: "服务发布", Icon: Wrench },
-  { id: "community", label: "论坛功能", Icon: MessageSquareText },
-  { id: "merchants", label: "商家管理", Icon: Store }
-];
-
-function authHeaders(token: string) {
-  return { Authorization: `Bearer ${token}`, "Content-Type": "application/json" };
-}
-
-async function api<T>(token: string, path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers: { ...authHeaders(token), ...(options.headers || {}) } });
-  const body = await res.json().catch(() => ({}));
-  if (!res.ok || body.success === false) throw new Error(body.message || "请求失败");
-  return body.data;
-}
 
 async function publicApi<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`);
@@ -717,44 +695,6 @@ function EmptyCard({ title, text }: { title: string; text: string }) {
 }
 
 
-function Login({ onLogin }: { onLogin: (token: string, user: Dict) => void }) {
-  const [account, setAccount] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-
-  async function submit(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    try {
-      const res = await fetch(`${API_BASE}/api/auth/login`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ account, password })
-      });
-      const body = await res.json();
-      if (!res.ok || body.success === false) throw new Error(body.message || "登录失败");
-      if (body.data.user.role !== "ADMIN") throw new Error("当前账号不是平台管理员");
-      localStorage.setItem("adminToken", body.data.token);
-      localStorage.setItem("adminUser", JSON.stringify(body.data.user));
-      onLogin(body.data.token, body.data.user);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "登录失败");
-    }
-  }
-
-  return (
-    <main className="login-page">
-      <form className="login-card" onSubmit={submit}>
-        <h1>西大圈平台后台</h1>
-        <label>账号<input value={account} autoComplete="username" onChange={(e) => setAccount(e.target.value)} /></label>
-        <label>密码<input type="password" value={password} autoComplete="current-password" onChange={(e) => setPassword(e.target.value)} /></label>
-        {error && <p className="error">{error}</p>}
-        <button className="primary">登录</button>
-      </form>
-    </main>
-  );
-}
-
 function App() {
   const path = window.location.pathname;
   if (path === "/") return <EntryPage />;
@@ -762,6 +702,8 @@ function App() {
   if (!isAdmin) return <StudentHome />;
   return <AdminApp />;
 }
+
+export default App;
 
 function EntryPage() {
   return (
@@ -779,257 +721,6 @@ function EntryPage() {
       </section>
     </main>
   );
-}
-
-function AdminApp() {
-  const [token, setToken] = useState(localStorage.getItem("adminToken") || "");
-  const [user, setUser] = useState<Dict | null>(() => JSON.parse(localStorage.getItem("adminUser") || "null"));
-  const [section, setSection] = useState<Section>("overview");
-
-  if (!token) return <Login onLogin={(nextToken, nextUser) => { setToken(nextToken); setUser(nextUser); }} />;
-
-  function logout() {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
-    setToken("");
-    setUser(null);
-  }
-
-  return (
-    <main className="admin-shell">
-      <aside>
-        <div className="brand">西大圈后台<span>{user?.name || "平台管理员"}</span></div>
-        <nav>{nav.map(({ id, label, Icon }) => <button key={id} className={section === id ? "active" : ""} onClick={() => setSection(id)}><Icon size={18} />{label}</button>)}</nav>
-        <button className="logout" onClick={logout}><LogOut size={18} />退出登录</button>
-      </aside>
-      <section className="workspace">
-        {section === "overview" && <Overview token={token} />}
-        {section === "benefits" && <Activities token={token} />}
-        {section === "banners" && <Banners token={token} />}
-        {section === "wechat" && <WechatEntryAdmin token={token} />}
-        {section === "food" && <Food token={token} />}
-        {section === "services" && <Services token={token} />}
-        {section === "community" && <Community token={token} />}
-        {section === "merchants" && <Merchants token={token} />}
-      </section>
-    </main>
-  );
-}
-
-function useAdminData(token: string) {
-  const [data, setData] = useState({ merchants: [] as Dict[], categories: [] as Dict[], serviceCategories: [] as Dict[] });
-  async function load() {
-    const [merchants, categories, serviceCategories] = await Promise.all([
-      api<Dict[]>(token, "/api/admin/merchants"),
-      api<Dict[]>(token, "/api/admin/categories"),
-      api<Dict[]>(token, "/api/admin/service-categories")
-    ]);
-    setData({ merchants, categories, serviceCategories });
-  }
-  useEffect(() => { load().catch(console.error); }, [token]);
-  return { ...data, reloadBase: load };
-}
-
-function Overview({ token }: { token: string }) {
-  const [stats, setStats] = useState<Dict>({});
-  useEffect(() => { api<Dict>(token, "/api/admin/dashboard/overview").then(setStats).catch(console.error); }, [token]);
-  const cards = [
-    ["商家数", stats.merchantCount], ["活动数", stats.activityCount], ["轮播图数", stats.bannerCount], ["帖子数", stats.communityPostCount], ["待审帖子", stats.pendingCommunityPostCount]
-  ];
-  return (
-    <Page title="概览" hint="平台内容统计数据。">
-      <div className="stats">{cards.map(([label, value]) => <div className="stat" key={label}><span>{label}</span><strong>{value ?? 0}</strong></div>)}</div>
-    </Page>
-  );
-}
-
-function Activities({ token }: { token: string }) {
-  const base = useAdminData(token);
-  return <CrudPage token={token} title="活动发布" hint="管理校园活动，活动会展示在首页和商家详情页。" path="/api/admin/activities" defaults={{ status: "DRAFT", sortOrder: 100, startAt: toDateTimeLocal(new Date().toISOString()), endAt: "2026-12-31T23:59" }} fields={[
-    ["title", "标题"], ["description", "描述", "textarea"], ["merchantId", "商家", "select", base.merchants], ["coverImage", "图片", "image"], ["startAt", "开始时间", "datetime-local"], ["endAt", "结束时间", "datetime-local"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["DRAFT", "ACTIVE", "PAUSED", "ENDED"]]
-  ]} columns={["title", "merchant.name", "status", "sortOrder"]} transform={(item) => ({ ...item, startAt: new Date(item.startAt).toISOString(), endAt: new Date(item.endAt).toISOString() })} />;
-}
-
-function Banners({ token }: { token: string }) {
-  return <CrudPage token={token} title="轮播图" hint="管理首页轮播图。" path="/api/admin/banners" defaults={{ targetType: "TAB", sortOrder: 100, isActive: true }} fields={[
-    ["title", "标题"], ["subtitle", "副标题"], ["imageUrl", "图片", "image"], ["targetType", "跳转类型", "select", ["ACTIVITY", "SERVICE", "ABOUT", "TAB", "URL"]], ["targetId", "跳转目标"], ["url", "页面路径/URL"], ["sortOrder", "排序", "number"], ["isActive", "上架", "checkbox"]
-  ]} columns={["title", "targetType", "targetId", "sortOrder", "isActive"]} />;
-}
-
-function WechatEntryAdmin({ token }: { token: string }) {
-  const defaults = { title: "加入西大圈微信", description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。", buttonText: "添加微信", imageUrl: "/assets/images/h5-wechat-promo.png", isActive: true };
-  const [form, setForm] = useState<Dict>(defaults);
-  const [message, setMessage] = useState("");
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    api<Dict>(token, "/api/admin/wechat-entry")
-      .then((data) => setForm({ ...defaults, ...data }))
-      .catch((err) => setError(err instanceof Error ? err.message : "加载失败"));
-  }, [token]);
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    setMessage("");
-    try {
-      const payload = { ...form, imageUrl: form.imageUrl || null };
-      const data = await api<Dict>(token, "/api/admin/wechat-entry", { method: "PATCH", body: JSON.stringify(payload) });
-      setForm({ ...defaults, ...data });
-      setMessage("已保存，H5 首页会读取最新入口配置。");
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
-    }
-  }
-
-  return (
-    <Page title="西大圈入口" hint="维护 H5 首页底部微信入口。图片和二维码使用 URL，不做本地上传。">
-      <div className="crud-block">
-        <form className="editor" onSubmit={save}>
-          <Field name="title" label="标题" value={form.title} onChange={(value) => setForm((current) => ({ ...current, title: value }))} token={token} />
-          <Field name="description" label="说明" type="textarea" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} token={token} />
-          <Field name="buttonText" label="按钮文案" value={form.buttonText} onChange={(value) => setForm((current) => ({ ...current, buttonText: value }))} token={token} />
-          <Field name="imageUrl" label="二维码/宣传图" type="image" value={form.imageUrl} onChange={(value) => setForm((current) => ({ ...current, imageUrl: value }))} token={token} />
-          <Field name="isActive" label="启用" type="checkbox" value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: value }))} token={token} />
-          {message && <p className="success">{message}</p>}
-          {error && <p className="error">{error}</p>}
-          <div className="actions"><button className="primary">保存入口</button></div>
-        </form>
-        <section className="wechat-preview">
-          <WechatBlock entry={form} />
-        </section>
-      </div>
-    </Page>
-  );
-}
-
-function Food({ token }: { token: string }) {
-  const base = useAdminData(token);
-  const food = base.merchants.filter((item) => item.category?.slug === "food");
-  return <CrudPage token={token} title="美食商家" hint="维护美食商家，上架状态会实时影响前台列表。" path="/api/admin/merchants" sourceItems={food} defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["coverImageUrl", "封面图", "image"], ["qrImageUrl", "二维码", "image"], ["sortOrder", "排序", "number"], ["status", "上架状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"]
-  ]} columns={["name", "summary", "sortOrder", "status"]} transform={merchantTransform} onSaved={base.reloadBase} />;
-}
-
-function Services({ token }: { token: string }) {
-  const base = useAdminData(token);
-  const serviceMerchants = base.merchants.filter((item) => item.serviceCategoryId);
-  return <Page title="服务发布" hint="维护服务分类，并选择服务商家上架。"><ServiceCategories token={token} /><Crud token={token} title="服务商家" path="/api/admin/merchants" sourceItems={serviceMerchants} defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["coverImageUrl", "图片", "image"], ["qrImageUrl", "二维码", "image"], ["phone", "电话"], ["businessHours", "营业时间"]
-  ]} columns={["name", "serviceCategory.name", "summary", "status"]} transform={merchantTransform} onSaved={base.reloadBase} /></Page>;
-}
-
-function ServiceCategories({ token }: { token: string }) {
-  return <Crud token={token} title="服务分类" path="/api/admin/service-categories" defaults={{ sortOrder: 100, isActive: true }} fields={[["name", "名称"], ["key", "标识"], ["icon", "图标文案"], ["sortOrder", "排序", "number"], ["isActive", "启用", "checkbox"]]} columns={["name", "key", "icon", "sortOrder", "isActive"]} />;
-}
-
-function Community({ token }: { token: string }) {
-  return <CrudPage token={token} title="论坛审核台" hint="学生投稿默认待审，联系方式仅后台查看；通过后前台列表才会展示。" path="/api/admin/community-posts" defaults={{ type: "校园墙", status: "VISIBLE", likeCount: 0, commentCount: 0, viewCount: 0, sortOrder: 100, source: "admin" }} fields={[
-    ["type", "类型"], ["title", "标题"], ["summary", "内容摘要"], ["content", "正文", "textarea"], ["authorNickname", "昵称"], ["contact", "联系方式"], ["source", "来源"], ["likeCount", "点赞数", "number"], ["commentCount", "评论数", "number"], ["viewCount", "浏览数", "number"], ["status", "审核状态", "select", ["PENDING", "VISIBLE", "HIDDEN", "REJECTED"]], ["sortOrder", "排序", "number"]
-  ]} columns={["status", "type", "title", "authorNickname", "contact", "likeCount", "viewCount", "sortOrder"]} transform={(item) => ({ ...item, content: item.content || item.summary })} />;
-}
-
-function Merchants({ token }: { token: string }) {
-  const base = useAdminData(token);
-  return <CrudPage token={token} title="商家管理" hint="管理所有商家信息。" path="/api/admin/merchants" defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"], ["coverImageUrl", "图片", "image"], ["qrImageUrl", "二维码", "image"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]]
-  ]} columns={["name", "category.name", "serviceCategory.name", "status", "sortOrder"]} transform={merchantTransform} onSaved={base.reloadBase} />;
-}
-
-function merchantTransform(item: Dict) {
-  return {
-    ...item,
-    serviceCategoryId: item.serviceCategoryId || null
-  };
-}
-
-function Page({ title, hint, children }: { title: string; hint?: string; children: React.ReactNode }) {
-  return <div><header className="page-head"><div><h1>{title}</h1>{hint && <p>{hint}</p>}</div></header>{children}</div>;
-}
-
-function CrudPage(props: React.ComponentProps<typeof Crud> & { hint?: string }) {
-  return <Page title={props.title} hint={props.hint}><Crud {...props} /></Page>;
-}
-
-function Crud({ token, title, path, listPath, unwrap, sourceItems, defaults = {}, fields, columns, transform, onSaved }: {
-  token: string; title: string; path: string; listPath?: string; unwrap?: string; sourceItems?: Dict[]; defaults?: Dict;
-  fields: any[]; columns: string[]; transform?: (item: Dict) => Dict; onSaved?: () => void;
-}) {
-  const [items, setItems] = useState<Dict[]>(sourceItems || []);
-  const [form, setForm] = useState<Dict>(defaults);
-  const [editingId, setEditingId] = useState("");
-  const [error, setError] = useState("");
-  const effectiveItems = sourceItems || items;
-
-  async function load() {
-    if (sourceItems) return;
-    const data = await api<any>(token, listPath || path);
-    setItems(unwrap ? data[unwrap] : data);
-  }
-
-  useEffect(() => { load().catch(console.error); }, [token, path, Boolean(sourceItems)]);
-
-  function edit(item: Dict) {
-    setEditingId(item.id);
-    setForm({ ...item, startAt: toDateTimeLocal(item.startAt), endAt: toDateTimeLocal(item.endAt), publishedAt: toDateTimeLocal(item.publishedAt) });
-  }
-
-  async function save(event: React.FormEvent) {
-    event.preventDefault();
-    setError("");
-    try {
-      const payload = transform ? transform(form) : form;
-      await api(token, editingId ? `${path}/${editingId}` : path, { method: editingId ? "PATCH" : "POST", body: JSON.stringify(payload) });
-      setForm(defaults);
-      setEditingId("");
-      await load();
-      onSaved?.();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : "保存失败");
-    }
-  }
-
-  return (
-    <div className="crud-block">
-      {title !== "服务分类" && <h2>{title}</h2>}
-      <form className="editor" onSubmit={save}>
-        {fields.map(([key, label, type, options]) => <Field key={key} name={key} label={label} type={type} options={options} value={form[key]} onChange={(value) => setForm((current) => ({ ...current, [key]: value }))} token={token} />)}
-        {error && <p className="error">{error}</p>}
-        <div className="actions"><button className="primary">{editingId ? "保存修改" : "新增"}</button>{editingId && <button type="button" onClick={() => { setEditingId(""); setForm(defaults); }}>取消</button>}</div>
-      </form>
-      <table><thead><tr>{columns.map((col) => <th key={col}>{col}</th>)}<th>操作</th></tr></thead><tbody>{effectiveItems.map((item) => <tr key={item.id}>{columns.map((col) => <td key={col}>{String(read(item, col) ?? "")}</td>)}<td><button onClick={() => edit(item)}>编辑</button></td></tr>)}</tbody></table>
-    </div>
-  );
-}
-
-function Field({ name, label, type = "text", value, options, onChange, token }: { name: string; label: string; type?: string; value: any; options?: any[]; onChange: (value: any) => void; token?: string }) {
-  const normalized = value ?? (type === "checkbox" ? false : "");
-  if (type === "select") {
-    return <label>{label}<select value={normalized} onChange={(e) => onChange(e.target.value)}><option value="">未选择</option>{(options || []).map((option) => typeof option === "string" ? <option key={option} value={option}>{option}</option> : <option key={option.id} value={option.id}>{option.name || option.title}</option>)}</select></label>;
-  }
-  if (type === "checkbox") {
-    return <label className="check"><input type="checkbox" checked={Boolean(normalized)} onChange={(e) => onChange(e.target.checked)} />{label}</label>;
-  }
-  if (type === "textarea") {
-    return <label>{label}<textarea value={normalized} onChange={(e) => onChange(e.target.value)} /></label>;
-  }
-  if (type === "image") {
-    return (
-      <label>
-        {label}
-        <OssUploader
-          token={token || ""}
-          value={normalized}
-          onChange={(url) => onChange(url)}
-        />
-      </label>
-    );
-  }
-  return <label>{label}<input type={type} name={name} value={normalized} onChange={(e) => onChange(type === "number" ? Number(e.target.value) : e.target.value)} /></label>;
-}
-
-function read(item: Dict, path: string) {
-  return path.split(".").reduce<any>((current, part) => current?.[part], item);
 }
 
 createRoot(document.getElementById("root")!).render(<App />);

@@ -12,8 +12,11 @@
     "test": "echo \"web: no tests yet\""
   },
   "dependencies": {
+    "@ant-design/icons": "^6.2.3",
     "@nwu-helper/shared": "workspace:*",
     "@vitejs/plugin-react": "^4.3.4",
+    "antd": "^6.4.3",
+    "dayjs": "^1.11.21",
     "lucide-react": "^0.468.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
