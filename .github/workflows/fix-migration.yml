@@ -25,31 +25,30 @@ jobs:
             fi
             cd "$APP_DIR/current"
             
-            # Stop API container to stop the restart loop
-            docker compose -f docker-compose.prod.yml --env-file .env stop api || true
+            # Start all containers
+            docker compose -f docker-compose.prod.yml --env-file .env up -d --remove-orphans 2>&1 || true
             
-            # Wait a moment
-            sleep 3
-            
-            # Start API container
-            docker compose -f docker-compose.prod.yml --env-file .env start api
-            
-            # Wait for container to be running
+            # Wait for postgres to be healthy
+            echo "Waiting for postgres..."
             for i in $(seq 1 30); do
-              if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
-                echo "API container is up"
+              if docker compose -f docker-compose.prod.yml --env-file .env ps postgres 2>/dev/null | grep -q "healthy"; then
+                echo "Postgres is healthy"
                 break
               fi
-              echo "Waiting for API container... attempt $i"
+              echo "Waiting for postgres... attempt $i"
               sleep 3
             done
             
-            # Check if container is running
-            if ! docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
-              echo "API container failed to start, checking logs..."
-              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=20 api
-              exit 1
-            fi
+            # Wait for API to be running
+            echo "Waiting for API..."
+            for i in $(seq 1 30); do
+              if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
+                echo "API is up"
+                break
+              fi
+              echo "Waiting for API... attempt $i"
+              sleep 3
+            done
             
             # Resolve the failed migration
             echo "Resolving migration..."
@@ -66,5 +65,16 @@ jobs:
             # Restart API to apply changes
             echo "Restarting API..."
             docker compose -f docker-compose.prod.yml --env-file .env restart api
+            
+            # Final health check
+            echo "Health check..."
+            sleep 5
+            if docker compose -f docker-compose.prod.yml --env-file .env ps api 2>/dev/null | grep -q "Up"; then
+              echo "API is running"
+            else
+              echo "API failed to start"
+              docker compose -f docker-compose.prod.yml --env-file .env logs --tail=20 api
+              exit 1
+            fi
             
             echo "Done!"
