@@ -108,6 +108,12 @@ jobs:
       PUBLIC_WEB_URL: ${{ secrets.PUBLIC_WEB_URL }}
       API_BIND: ${{ secrets.API_BIND || '127.0.0.1:4000' }}
       WEB_BIND: ${{ secrets.WEB_BIND || '0.0.0.0:8080' }}
+      OSS_REGION: ${{ secrets.OSS_REGION }}
+      OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
+      OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
+      OSS_BUCKET: ${{ secrets.OSS_BUCKET }}
+      OSS_ENDPOINT: ${{ secrets.OSS_ENDPOINT }}
+      OSS_CDN_DOMAIN: ${{ secrets.OSS_CDN_DOMAIN }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -145,6 +151,12 @@ jobs:
               printf 'PUBLIC_WEB_URL=%s\n' "$PUBLIC_WEB_URL_VALUE"
               printf 'API_BIND=%s\n' "$API_BIND"
               printf 'WEB_BIND=%s\n' "$WEB_BIND"
+              printf 'OSS_REGION=%s\n' "$OSS_REGION"
+              printf 'OSS_ACCESS_KEY_ID=%s\n' "$OSS_ACCESS_KEY_ID"
+              printf 'OSS_ACCESS_KEY_SECRET=%s\n' "$OSS_ACCESS_KEY_SECRET"
+              printf 'OSS_BUCKET=%s\n' "$OSS_BUCKET"
+              printf 'OSS_ENDPOINT=%s\n' "$OSS_ENDPOINT"
+              printf 'OSS_CDN_DOMAIN=%s\n' "$OSS_CDN_DOMAIN"
             } > deploy/production.env
           fi
 
