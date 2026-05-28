@@ -37,7 +37,8 @@ export async function uploadRoutes(app: FastifyInstance) {
       return ok(reply, { url, key });
     } catch (err) {
       console.error("Upload failed:", err);
-      return fail(reply, "UPLOAD_FAILED", "上传失败，请重试", 500);
+      const message = err instanceof Error ? err.message : "上传失败，请重试";
+      return fail(reply, "UPLOAD_FAILED", message, 500);
     }
   });
 

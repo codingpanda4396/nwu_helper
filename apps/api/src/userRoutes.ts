@@ -104,11 +104,23 @@ export async function userRoutes(app: FastifyInstance) {
     
     const { merchantId } = z.object({ merchantId: z.string() }).parse(request.params);
     
-    await prisma.viewHistory.upsert({
-      where: { userId_merchantId: { userId: auth.sub, merchantId } },
-      update: { createdAt: new Date() },
-      create: { userId: auth.sub, merchantId }
+    // 查找现有的浏览记录
+    const existing = await prisma.viewHistory.findFirst({
+      where: { userId: auth.sub, merchantId },
     });
+
+    if (existing) {
+      // 更新现有记录的时间
+      await prisma.viewHistory.update({
+        where: { id: existing.id },
+        data: { createdAt: new Date() },
+      });
+    } else {
+      // 创建新记录
+      await prisma.viewHistory.create({
+        data: { userId: auth.sub, merchantId },
+      });
+    }
     
     return ok(reply, { success: true });
   });

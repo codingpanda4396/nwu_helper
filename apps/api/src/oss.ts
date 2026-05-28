@@ -8,7 +8,7 @@ export function getOssClient(): OSS {
   if (!ossClient) {
     const { region, accessKeyId, accessKeySecret, bucket, endpoint } = config.oss;
     if (!accessKeyId || !accessKeySecret) {
-      throw new Error("OSS credentials not configured");
+      throw new Error("OSS 凭证未配置，请在 .env 文件中设置 OSS_ACCESS_KEY_ID 和 OSS_ACCESS_KEY_SECRET");
     }
     ossClient = new OSS({
       region,

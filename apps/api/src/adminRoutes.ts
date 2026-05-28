@@ -11,20 +11,6 @@ const categorySchema = z.object({
   isActive: z.boolean().default(true)
 });
 
-const merchantSchema = z.object({
-  name: z.string().min(1),
-  summary: z.string().optional(),
-  categoryId: z.string().min(1),
-  serviceCategoryId: z.string().nullable().optional(),
-  address: z.string().min(1),
-  phone: z.string().optional(),
-  businessHours: z.string().optional(),
-  coverImageUrl: z.string().optional(),
-  qrImageUrl: z.string().nullable().optional(),
-  sortOrder: z.coerce.number().int().default(100),
-  status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]).default("APPROVED")
-});
-
 const bannerSchema = z.object({
   title: z.string().min(1),
   subtitle: z.string().nullable().optional(),
@@ -68,17 +54,6 @@ const communityPostSchema = z.object({
   publishedAt: z.coerce.date().optional()
 });
 
-const activitySchema = z.object({
-  title: z.string().min(1),
-  description: z.string().nullable().optional(),
-  merchantId: z.string().min(1),
-  coverImage: z.string().nullable().optional(),
-  sortOrder: z.coerce.number().int().default(100),
-  status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT"),
-  startAt: z.coerce.date(),
-  endAt: z.coerce.date()
-});
-
 function authUser(request: { user?: unknown }) {
   return request.user as { sub: string; role: "STUDENT" | "ADMIN"; name: string };
 }
@@ -113,55 +88,6 @@ export async function adminRoutes(app: FastifyInstance) {
     const parsed = categorySchema.partial().safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "类目参数错误");
     return ok(reply, await prisma.category.update({ where: { id }, data: parsed.data }));
-  });
-
-  app.get("/api/admin/merchants", async (_request, reply) => {
-    const items = await prisma.merchant.findMany({
-      include: { category: true, serviceCategory: true, activities: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
-    });
-    return ok(reply, items);
-  });
-
-  app.post("/api/admin/merchants", async (request, reply) => {
-    const parsed = merchantSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
-    return ok(reply, await prisma.merchant.create({ data: { ...parsed.data, serviceCategoryId: parsed.data.serviceCategoryId || null } }));
-  });
-
-  app.patch("/api/admin/merchants/:id", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = merchantSchema.partial().safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
-    const data = { ...parsed.data };
-    if ("serviceCategoryId" in data) data.serviceCategoryId = data.serviceCategoryId || null;
-    return ok(reply, await prisma.merchant.update({ where: { id }, data }));
-  });
-
-  app.get("/api/admin/activities", async (_request, reply) => {
-    return ok(reply, await prisma.activity.findMany({
-      include: { merchant: true },
-      orderBy: [{ sortOrder: "asc" }, { startAt: "desc" }]
-    }));
-  });
-
-  app.post("/api/admin/activities", async (request, reply) => {
-    const parsed = activitySchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
-    return ok(reply, await prisma.activity.create({ data: parsed.data }));
-  });
-
-  app.patch("/api/admin/activities/:id", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = activitySchema.partial().safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
-    return ok(reply, await prisma.activity.update({ where: { id }, data: parsed.data }));
-  });
-
-  app.patch("/api/admin/activities/:id/status", async (request, reply) => {
-    const { id } = z.object({ id: z.string() }).parse(request.params);
-    const { status } = z.object({ status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]) }).parse(request.body);
-    return ok(reply, await prisma.activity.update({ where: { id }, data: { status } }));
   });
 
   app.get("/api/admin/banners", async (_request, reply) => {
@@ -258,6 +184,12 @@ export async function adminRoutes(app: FastifyInstance) {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const { status } = z.object({ status: z.enum(["PENDING", "VISIBLE", "HIDDEN", "REJECTED"]) }).parse(request.body);
     return ok(reply, await prisma.communityPost.update({ where: { id }, data: { status } }));
+  });
+
+  app.delete("/api/admin/community-posts/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    await prisma.communityPost.delete({ where: { id } });
+    return ok(reply, { deleted: true });
   });
 
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {

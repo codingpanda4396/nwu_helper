@@ -66,19 +66,25 @@ enum FeedbackStatus {
 }
 
 model User {
-  id           String     @id @default(cuid())
-  name         String
-  username     String?    @unique
-  phone        String?    @unique
-  openid       String?    @unique
-  role         UserRole   @default(STUDENT)
-  passwordHash String?
-  status       UserStatus @default(ACTIVE)
-  viewHistories ViewHistory[]
-  favorites     Favorite[]
-  feedbacks     Feedback[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  id             String     @id @default(cuid())
+  name           String
+  username       String?    @unique
+  phone          String?    @unique
+  openid         String?    @unique
+  role           UserRole   @default(STUDENT)
+  passwordHash   String?
+  status         UserStatus @default(ACTIVE)
+  lastLoginAt    DateTime?
+  lastActiveAt   DateTime?
+  loginCount     Int        @default(0)
+  registerSource String?
+  viewHistories  ViewHistory[]
+  favorites      Favorite[]
+  feedbacks      Feedback[]
+  loginLogs      UserLoginLog[]
+  activities     UserActivity[]
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
 }
 
 model Category {
@@ -219,14 +225,16 @@ model Activity {
 
 model ViewHistory {
   id         String   @id @default(cuid())
-  userId     String
+  userId     String?
   merchantId String
-  user       User     @relation(fields: [userId], references: [id])
+  sessionId  String?
+  user       User?    @relation(fields: [userId], references: [id])
   merchant   Merchant @relation(fields: [merchantId], references: [id])
   createdAt  DateTime @default(now())
 
-  @@unique([userId, merchantId])
-  @@index([userId])
+  @@index([userId, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([createdAt])
 }
 
 model Favorite {
@@ -265,4 +273,53 @@ model CampusConfig {
   isActive  Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+}
+
+model UserActivity {
+  id        String   @id @default(cuid())
+  userId    String?
+  sessionId String?
+  action    String
+  page      String?
+  targetId  String?
+  platform  String
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([action, createdAt])
+  @@index([createdAt])
+  @@index([page, createdAt])
+}
+
+model UserLoginLog {
+  id        String   @id @default(cuid())
+  userId    String
+  method    String
+  platform  String
+  ip        String?
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([method, createdAt])
+}
+
+model UserDailySnapshot {
+  id          String   @id @default(cuid())
+  date        DateTime @db.Date
+  newUsers    Int      @default(0)
+  activeUsers Int      @default(0)
+  loginCount  Int      @default(0)
+  pageViews   Int      @default(0)
+  createdAt   DateTime @default(now())
+
+  @@unique([date])
+  @@index([date])
 }

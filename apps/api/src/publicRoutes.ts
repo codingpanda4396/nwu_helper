@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "./db.js";
+import { getCached } from "./cache.js";
 import { fail, ok } from "./response.js";
 import { getHomeActivities, getPublicActivity, listPublicActivities } from "./services/activityService.js";
 
@@ -96,10 +97,11 @@ function communityPostCard(item: any) {
 
 export async function publicRoutes(app: FastifyInstance) {
   app.get("/api/public/banners", async (_request, reply) => {
-    const items = await prisma.banner.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
-    });
+    const items = await getCached("banners", () =>
+      prisma.banner.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
+      }), 600);
     return ok(reply, items.map((item) => ({
       id: item.id,
       title: item.title,
@@ -113,37 +115,42 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/public/home", async (_request, reply) => {
-    const [banners, activities, wechatEntry] = await Promise.all([
-      prisma.banner.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
-      getHomeActivities(),
-      prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } })
-    ]);
-    return ok(reply, {
-      banners: banners.map((item) => ({
-        id: item.id,
-        title: item.title,
-        subtitle: item.subtitle,
-        image: item.imageUrl,
-        imageUrl: item.imageUrl,
-        targetType: item.targetType.toLowerCase(),
-        targetId: item.targetId,
-        url: item.url
-      })),
-      activities: activities.map(activityCard),
-      wechatEntry: wechatEntryCard(wechatEntry)
-    });
+    const data = await getCached("home:data", async () => {
+      const [banners, activities, wechatEntry] = await Promise.all([
+        prisma.banner.findMany({ where: { isActive: true }, orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }),
+        getHomeActivities(),
+        prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } })
+      ]);
+      return {
+        banners: banners.map((item) => ({
+          id: item.id,
+          title: item.title,
+          subtitle: item.subtitle,
+          image: item.imageUrl,
+          imageUrl: item.imageUrl,
+          targetType: item.targetType.toLowerCase(),
+          targetId: item.targetId,
+          url: item.url
+        })),
+        activities: activities.map(activityCard),
+        wechatEntry: wechatEntryCard(wechatEntry)
+      };
+    }, 300);
+    return ok(reply, data);
   });
 
   app.get("/api/public/wechat-entry", async (_request, reply) => {
-    const item = await prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } });
+    const item = await getCached("wechat-entry", () =>
+      prisma.wechatEntryConfig.findUnique({ where: { id: "home-wechat-entry" } }), 600);
     return ok(reply, wechatEntryCard(item));
   });
 
   app.get("/api/public/categories", async (_request, reply) => {
-    const items = await prisma.category.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
-    });
+    const items = await getCached("categories", () =>
+      prisma.category.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+      }), 1800);
     return ok(reply, items);
   });
 
@@ -266,10 +273,12 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/public/services/categories", async (_request, reply) => {
-    return ok(reply, await prisma.serviceCategory.findMany({
-      where: { isActive: true },
-      orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
-    }));
+    const items = await getCached("service-categories", () =>
+      prisma.serviceCategory.findMany({
+        where: { isActive: true },
+        orderBy: [{ sortOrder: "asc" }, { name: "asc" }]
+      }), 1800);
+    return ok(reply, items);
   });
 
   app.get("/api/public/services/merchants", async (request, reply) => {
