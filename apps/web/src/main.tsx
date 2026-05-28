@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { BarChart3, CalendarDays, Car, ChevronLeft, ChevronRight, Clock, Coffee, Gift, Heart, Home, Image, Info, ListChecks, LogOut, MapPin, MessageCircle, MessageSquareText, Phone, Plus, QrCode, Send, Shuffle, Sparkles, Store, Utensils, Wrench } from "lucide-react";
+import { OssUploader } from "./OssUploader";
 import "./styles.css";
 
 const API_BASE = import.meta.env.VITE_API_BASE ?? "";
@@ -845,13 +846,13 @@ function Overview({ token }: { token: string }) {
 function Activities({ token }: { token: string }) {
   const base = useAdminData(token);
   return <CrudPage token={token} title="活动发布" hint="管理校园活动，活动会展示在首页和商家详情页。" path="/api/admin/activities" defaults={{ status: "DRAFT", sortOrder: 100, startAt: toDateTimeLocal(new Date().toISOString()), endAt: "2026-12-31T23:59" }} fields={[
-    ["title", "标题"], ["description", "描述", "textarea"], ["merchantId", "商家", "select", base.merchants], ["coverImage", "图片 URL"], ["startAt", "开始时间", "datetime-local"], ["endAt", "结束时间", "datetime-local"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["DRAFT", "ACTIVE", "PAUSED", "ENDED"]]
+    ["title", "标题"], ["description", "描述", "textarea"], ["merchantId", "商家", "select", base.merchants], ["coverImage", "图片", "image"], ["startAt", "开始时间", "datetime-local"], ["endAt", "结束时间", "datetime-local"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["DRAFT", "ACTIVE", "PAUSED", "ENDED"]]
   ]} columns={["title", "merchant.name", "status", "sortOrder"]} transform={(item) => ({ ...item, startAt: new Date(item.startAt).toISOString(), endAt: new Date(item.endAt).toISOString() })} />;
 }
 
 function Banners({ token }: { token: string }) {
   return <CrudPage token={token} title="轮播图" hint="管理首页轮播图。" path="/api/admin/banners" defaults={{ targetType: "TAB", sortOrder: 100, isActive: true }} fields={[
-    ["title", "标题"], ["subtitle", "副标题"], ["imageUrl", "图片 URL"], ["targetType", "跳转类型", "select", ["ACTIVITY", "SERVICE", "ABOUT", "TAB", "URL"]], ["targetId", "跳转目标"], ["url", "页面路径/URL"], ["sortOrder", "排序", "number"], ["isActive", "上架", "checkbox"]
+    ["title", "标题"], ["subtitle", "副标题"], ["imageUrl", "图片", "image"], ["targetType", "跳转类型", "select", ["ACTIVITY", "SERVICE", "ABOUT", "TAB", "URL"]], ["targetId", "跳转目标"], ["url", "页面路径/URL"], ["sortOrder", "排序", "number"], ["isActive", "上架", "checkbox"]
   ]} columns={["title", "targetType", "targetId", "sortOrder", "isActive"]} />;
 }
 
@@ -885,11 +886,11 @@ function WechatEntryAdmin({ token }: { token: string }) {
     <Page title="西大圈入口" hint="维护 H5 首页底部微信入口。图片和二维码使用 URL，不做本地上传。">
       <div className="crud-block">
         <form className="editor" onSubmit={save}>
-          <Field name="title" label="标题" value={form.title} onChange={(value) => setForm((current) => ({ ...current, title: value }))} />
-          <Field name="description" label="说明" type="textarea" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} />
-          <Field name="buttonText" label="按钮文案" value={form.buttonText} onChange={(value) => setForm((current) => ({ ...current, buttonText: value }))} />
-          <Field name="imageUrl" label="二维码/宣传图 URL" value={form.imageUrl} onChange={(value) => setForm((current) => ({ ...current, imageUrl: value }))} />
-          <Field name="isActive" label="启用" type="checkbox" value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: value }))} />
+          <Field name="title" label="标题" value={form.title} onChange={(value) => setForm((current) => ({ ...current, title: value }))} token={token} />
+          <Field name="description" label="说明" type="textarea" value={form.description} onChange={(value) => setForm((current) => ({ ...current, description: value }))} token={token} />
+          <Field name="buttonText" label="按钮文案" value={form.buttonText} onChange={(value) => setForm((current) => ({ ...current, buttonText: value }))} token={token} />
+          <Field name="imageUrl" label="二维码/宣传图" type="image" value={form.imageUrl} onChange={(value) => setForm((current) => ({ ...current, imageUrl: value }))} token={token} />
+          <Field name="isActive" label="启用" type="checkbox" value={form.isActive} onChange={(value) => setForm((current) => ({ ...current, isActive: value }))} token={token} />
           {message && <p className="success">{message}</p>}
           {error && <p className="error">{error}</p>}
           <div className="actions"><button className="primary">保存入口</button></div>
@@ -906,7 +907,7 @@ function Food({ token }: { token: string }) {
   const base = useAdminData(token);
   const food = base.merchants.filter((item) => item.category?.slug === "food");
   return <CrudPage token={token} title="美食商家" hint="维护美食商家，上架状态会实时影响前台列表。" path="/api/admin/merchants" sourceItems={food} defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["coverImageUrl", "封面图 URL"], ["qrImageUrl", "二维码 URL"], ["sortOrder", "排序", "number"], ["status", "上架状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"]
+    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["coverImageUrl", "封面图", "image"], ["qrImageUrl", "二维码", "image"], ["sortOrder", "排序", "number"], ["status", "上架状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"]
   ]} columns={["name", "summary", "sortOrder", "status"]} transform={merchantTransform} onSaved={base.reloadBase} />;
 }
 
@@ -914,7 +915,7 @@ function Services({ token }: { token: string }) {
   const base = useAdminData(token);
   const serviceMerchants = base.merchants.filter((item) => item.serviceCategoryId);
   return <Page title="服务发布" hint="维护服务分类，并选择服务商家上架。"><ServiceCategories token={token} /><Crud token={token} title="服务商家" path="/api/admin/merchants" sourceItems={serviceMerchants} defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["coverImageUrl", "图片 URL"], ["qrImageUrl", "二维码 URL"], ["phone", "电话"], ["businessHours", "营业时间"]
+    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]], ["address", "地址"], ["coverImageUrl", "图片", "image"], ["qrImageUrl", "二维码", "image"], ["phone", "电话"], ["businessHours", "营业时间"]
   ]} columns={["name", "serviceCategory.name", "summary", "status"]} transform={merchantTransform} onSaved={base.reloadBase} /></Page>;
 }
 
@@ -931,7 +932,7 @@ function Community({ token }: { token: string }) {
 function Merchants({ token }: { token: string }) {
   const base = useAdminData(token);
   return <CrudPage token={token} title="商家管理" hint="管理所有商家信息。" path="/api/admin/merchants" defaults={{ status: "APPROVED", sortOrder: 100 }} fields={[
-    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"], ["coverImageUrl", "图片 URL"], ["qrImageUrl", "二维码 URL"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]]
+    ["name", "商家名"], ["summary", "简介"], ["categoryId", "基础类目", "select", base.categories], ["serviceCategoryId", "服务分类", "select", base.serviceCategories], ["address", "地址"], ["phone", "电话"], ["businessHours", "营业时间"], ["coverImageUrl", "图片", "image"], ["qrImageUrl", "二维码", "image"], ["sortOrder", "排序", "number"], ["status", "状态", "select", ["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]]
   ]} columns={["name", "category.name", "serviceCategory.name", "status", "sortOrder"]} transform={merchantTransform} onSaved={base.reloadBase} />;
 }
 
@@ -992,7 +993,7 @@ function Crud({ token, title, path, listPath, unwrap, sourceItems, defaults = {}
     <div className="crud-block">
       {title !== "服务分类" && <h2>{title}</h2>}
       <form className="editor" onSubmit={save}>
-        {fields.map(([key, label, type, options]) => <Field key={key} name={key} label={label} type={type} options={options} value={form[key]} onChange={(value) => setForm((current) => ({ ...current, [key]: value }))} />)}
+        {fields.map(([key, label, type, options]) => <Field key={key} name={key} label={label} type={type} options={options} value={form[key]} onChange={(value) => setForm((current) => ({ ...current, [key]: value }))} token={token} />)}
         {error && <p className="error">{error}</p>}
         <div className="actions"><button className="primary">{editingId ? "保存修改" : "新增"}</button>{editingId && <button type="button" onClick={() => { setEditingId(""); setForm(defaults); }}>取消</button>}</div>
       </form>
@@ -1001,7 +1002,7 @@ function Crud({ token, title, path, listPath, unwrap, sourceItems, defaults = {}
   );
 }
 
-function Field({ name, label, type = "text", value, options, onChange }: { name: string; label: string; type?: string; value: any; options?: any[]; onChange: (value: any) => void }) {
+function Field({ name, label, type = "text", value, options, onChange, token }: { name: string; label: string; type?: string; value: any; options?: any[]; onChange: (value: any) => void; token?: string }) {
   const normalized = value ?? (type === "checkbox" ? false : "");
   if (type === "select") {
     return <label>{label}<select value={normalized} onChange={(e) => onChange(e.target.value)}><option value="">未选择</option>{(options || []).map((option) => typeof option === "string" ? <option key={option} value={option}>{option}</option> : <option key={option.id} value={option.id}>{option.name || option.title}</option>)}</select></label>;
@@ -1011,6 +1012,18 @@ function Field({ name, label, type = "text", value, options, onChange }: { name:
   }
   if (type === "textarea") {
     return <label>{label}<textarea value={normalized} onChange={(e) => onChange(e.target.value)} /></label>;
+  }
+  if (type === "image") {
+    return (
+      <label>
+        {label}
+        <OssUploader
+          token={token || ""}
+          value={normalized}
+          onChange={(url) => onChange(url)}
+        />
+      </label>
+    );
   }
   return <label>{label}<input type={type} name={name} value={normalized} onChange={(e) => onChange(type === "number" ? Number(e.target.value) : e.target.value)} /></label>;
 }
