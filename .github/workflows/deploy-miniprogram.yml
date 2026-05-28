@@ -1,0 +1,78 @@
+name: Deploy WeChat MiniProgram
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/student/**'
+      - 'packages/shared/**'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version number (e.g., 1.0.0)'
+        required: true
+        default: '1.0.0'
+      desc:
+        description: 'Release description'
+        required: false
+
+concurrency:
+  group: miniprogram-deploy
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy-mp:
+    name: Build and Upload MiniProgram
+    runs-on: ubuntu-latest
+    env:
+      APPID: ${{ secrets.WX_APPID }}
+      PRIVATE_KEY: ${{ secrets.WX_PRIVATE_KEY }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Validate secrets
+        run: |
+          test -n "$APPID" || (echo "Missing WX_APPID" && exit 1)
+          test -n "$PRIVATE_KEY" || (echo "Missing WX_PRIVATE_KEY" && exit 1)
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.33.2
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build mini program
+        run: pnpm --filter @nwu-helper/student build:mp-weixin
+        env:
+          VITE_API_BASE: ${{ secrets.VITE_API_BASE }}
+
+      - name: Write private key file
+        run: |
+          mkdir -p deploy
+          echo "$PRIVATE_KEY" | base64 -d > deploy/private.key
+
+      - name: Upload to WeChat
+        uses: niam68/miniprogram-upload@v2.0.2
+        with:
+          appid: ${{ env.APPID }}
+          project-path: apps/student/dist/build/mp-weixin
+          private-key-path: deploy/private.key
+          robot: 1
+          setting:
+            es6: true
+            minify: true
+            autoPrefixWXSS: true
+          version: ${{ github.event.inputs.version || '1.0.0' }}
+          desc: ${{ github.event.inputs.desc || format('Auto deploy from commit {0}', github.sha) }}

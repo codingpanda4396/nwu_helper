@@ -8,7 +8,7 @@ NWU local life growth platform (西大圈) - a monorepo for student-facing merch
 
 ```
 apps/api/       → Fastify + Prisma backend (port 4000)
-apps/web/       → React + Vite frontend (port 5173)
+apps/admin/     → React + Vite admin dashboard (port 5175)
 apps/student/   → UniApp + Vue3 student app (port 5174, H5 & 小程序)
 packages/shared/→ Shared types and constants
 ```
@@ -19,14 +19,17 @@ packages/shared/→ Shared types and constants
 # Install dependencies
 pnpm install
 
-# Start development (runs API + web in parallel)
+# Start development (runs API + admin in parallel)
 pnpm dev
 
-# Start all services (API + web + student)
+# Start all services (API + admin + student)
 pnpm dev:all
 
 # Start student app only
 pnpm dev:student
+
+# Start admin dashboard only
+pnpm dev:admin
 
 # Typecheck all packages
 pnpm typecheck
@@ -50,7 +53,7 @@ pnpm db:seed          # Seed demo data
 ## Architecture Notes
 
 - **API entrypoint**: `apps/api/src/server.ts`
-- **Web entrypoint**: `apps/web/src/main.tsx` (single-file app with student/admin sections)
+- **Admin entrypoint**: `apps/admin/src/main.tsx` (React admin dashboard)
 - **Student app entrypoint**: `apps/student/src/main.ts` (UniApp Vue3)
 - **Shared package**: `packages/shared/src/index.ts` exports types and constants
 
@@ -63,11 +66,10 @@ pnpm db:seed          # Seed demo data
 - `src/publicRoutes.ts` - Public endpoints (no auth required)
 - `src/adminRoutes.ts` - Admin endpoints (JWT auth required)
 
-### Web Structure
+### Admin Structure
 
 - Single-file React app with client-side routing
-- Student routes: `/student` (H5 mobile-first)
-- Admin routes: `/admin` (requires login)
+- Routes: `/overview`, `/community`, `/banners`, `/services`, `/wechat-entry`
 - Uses `VITE_API_BASE` env var for API URL (defaults to empty = same origin)
 
 ### Student App Structure (UniApp)
@@ -108,7 +110,7 @@ Required for local development (copy `.env.example` to `.env`):
 DATABASE_URL=postgresql://nwu:nwu_password@localhost:5432/nwu_helper
 JWT_SECRET=change-me-in-production
 PORT=4000
-WEB_ORIGIN=http://localhost:5173
+WEB_ORIGIN=http://localhost:5175
 ```
 
 Student app environment (in `apps/student/.env`):
@@ -127,5 +129,5 @@ VITE_API_BASE=http://localhost:4000
 - ES modules (`"type": "module"` in all package.json)
 - API responses follow `{ success: true, data }` or `{ success: false, error: { code, message } }` format
 - Prisma migrations must be run before seeding
-- Web assets stored in `apps/web/public/assets/images/`
+- Admin assets stored in `apps/admin/public/assets/images/`
 - Student app assets stored in `apps/student/src/static/images/`

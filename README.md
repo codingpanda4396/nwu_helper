@@ -4,7 +4,8 @@
 
 ## 技术栈
 
-- 前端：React + Vite + TypeScript
+- 学生端：UniApp + Vue3 (H5 & 小程序)
+- 管理后台：React + Vite + TypeScript
 - 后端：Node.js + Fastify + TypeScript
 - 数据库：PostgreSQL + Prisma
 - 部署：Docker Compose + Nginx
@@ -23,8 +24,8 @@ pnpm dev
 
 默认地址：
 
-- 学生端：http://localhost:5173/student
-- 平台后台：http://localhost:5173/admin
+- 管理后台：http://localhost:5175
+- 学生端 H5：http://localhost:5174
 - API 健康检查：http://localhost:4000/api/health
 
 默认账号：
@@ -34,11 +35,15 @@ pnpm dev
 ## 常用命令
 
 ```bash
-pnpm typecheck
-pnpm test
-pnpm build
-pnpm db:migrate
-pnpm db:seed
+pnpm dev          # 启动 API + 管理后台
+pnpm dev:all      # 启动所有服务（API + 管理后台 + 学生端）
+pnpm dev:admin    # 仅启动管理后台
+pnpm dev:student  # 仅启动学生端
+pnpm typecheck    # 类型检查
+pnpm test         # 运行测试
+pnpm build        # 构建所有包
+pnpm db:migrate   # 运行数据库迁移
+pnpm db:seed      # 填充种子数据
 ```
 
 ## MVP 闭环
