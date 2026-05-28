@@ -13,6 +13,14 @@ import BannerList from "./pages/BannerList";
 import BannerForm from "./pages/BannerForm";
 import ServiceCategoryList from "./pages/ServiceCategoryList";
 import WechatEntry from "./pages/WechatEntry";
+import {
+  AnalyticsOverview,
+  UserGrowth,
+  LoginMethods,
+  UserActivity,
+  UserRetention,
+  UserFunnel,
+} from "./analytics/pages";
 
 function AdminApp() {
   const { token, user, login, logout, isAuthenticated } = useAdmin();
@@ -35,6 +43,15 @@ function AdminApp() {
           >
             <Route index element={<Navigate to="/overview" replace />} />
             <Route path="overview" element={<Overview token={token} />} />
+            <Route path="analytics">
+              <Route index element={<Navigate to="overview" replace />} />
+              <Route path="overview" element={<AnalyticsOverview token={token} />} />
+              <Route path="user-growth" element={<UserGrowth token={token} />} />
+              <Route path="login-methods" element={<LoginMethods token={token} />} />
+              <Route path="user-activity" element={<UserActivity token={token} />} />
+              <Route path="user-retention" element={<UserRetention token={token} />} />
+              <Route path="user-funnel" element={<UserFunnel token={token} />} />
+            </Route>
             <Route path="community" element={<CommunityList token={token} />} />
             <Route path="community/:id" element={<CommunityDetail token={token} />} />
             <Route path="banners" element={<BannerList token={token} />} />
