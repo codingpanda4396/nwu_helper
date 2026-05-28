@@ -9,10 +9,11 @@ services:
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-nwu} -d ${POSTGRES_DB:-nwu_helper}"]
+      test: ["CMD-SHELL", "pg_isready -U nwu -d nwu_helper || exit 1"]
       interval: 10s
-      timeout: 5s
-      retries: 5
+      timeout: 10s
+      retries: 10
+      start_period: 30s
 
   api:
     image: nwu-helper-api:latest
@@ -38,6 +39,17 @@ services:
       - api
     ports:
       - "${WEB_BIND:-0.0.0.0:8080}:80"
+
+  student:
+    image: nwu-helper-student:latest
+    build:
+      context: .
+      target: student
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${STUDENT_BIND:-0.0.0.0:8081}:80"
 
 volumes:
   postgres_data:
