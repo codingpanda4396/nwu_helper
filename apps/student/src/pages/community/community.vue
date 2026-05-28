@@ -1,98 +1,84 @@
 <template>
   <view class="page">
-    <!-- 页面头部 -->
-    <view class="page-hero">
-      <view class="hero-content">
-        <view class="hero-tag">
-          <u-icon name="chat-fill" size="14" color="#FF6B35" />
-          <text>西大圈</text>
-        </view>
-        <text class="hero-title">校园讨论区</text>
-        <text class="hero-desc">发布后进入后台审核，通过后公开展示。</text>
-      </view>
-      <u-button type="primary" size="small" @click="showForm = !showForm">
-        <u-icon name="plus" size="14" color="#fff" />
-        <text style="margin-left: 8rpx;">发布</text>
-      </u-button>
-    </view>
-
-    <!-- 发布表单 -->
-    <view v-if="showForm" class="form-section">
-      <view class="post-form">
-        <view class="form-row">
-          <view class="form-item">
-            <text class="form-label">类型</text>
-            <input v-model="form.type" class="form-input" placeholder="请输入类型" />
-          </view>
-          <view class="form-item">
-            <text class="form-label">昵称</text>
-            <input v-model="form.authorNickname" class="form-input" placeholder="请输入昵称" />
-          </view>
-        </view>
-        <view class="form-item">
-          <text class="form-label">标题</text>
-          <input v-model="form.title" class="form-input" placeholder="请输入标题" maxlength="80" />
-        </view>
-        <view class="form-item">
-          <text class="form-label">正文</text>
-          <textarea v-model="form.content" class="form-textarea" placeholder="请输入正文" maxlength="2000" />
-        </view>
-        <view class="form-item">
-          <text class="form-label">联系方式</text>
-          <input v-model="form.contact" class="form-input" placeholder="微信或手机号，仅后台可见" />
-        </view>
-        <view v-if="message" class="success-tip">{{ message }}</view>
-        <view v-if="formError" class="error-tip">{{ formError }}</view>
-        <u-button type="primary" @click="submitPost" :loading="submitting">
-          <u-icon name="send" size="14" color="#fff" />
-          <text style="margin-left: 8rpx;">提交审核</text>
-        </u-button>
-      </view>
-    </view>
-
     <!-- 分类筛选 -->
-    <view class="filter-section">
+    <view class="filter-bar">
       <scroll-view scroll-x class="filter-scroll">
-        <view class="filter-list">
-          <view 
-            v-for="type in communityTypes" 
-            :key="type" 
-            :class="['filter-item', { active: communityType === type }]"
-            @click="communityType = type"
-          >
-            <text>{{ type }}</text>
-          </view>
+        <view class="filter-tags">
+          <text v-for="cat in categories" :key="cat" 
+            :class="['filter-tag', { active: currentCategory === cat }]"
+            @click="selectCategory(cat)">
+            {{ cat }}
+          </text>
         </view>
       </scroll-view>
     </view>
 
-    <!-- 错误提示 -->
-    <view v-if="error" class="error-tip">{{ error }}</view>
-
     <!-- 帖子列表 -->
     <view class="post-list">
       <view v-for="post in posts" :key="post.id" class="post-card" @click="openPost(post.id)">
-        <view class="post-tag">
-          <text>{{ post.type }}</text>
+        <view class="post-header">
+          <view class="post-author">
+            <u-icon name="account-fill" size="24" color="#10B981" />
+            <text>{{ post.authorNickname || '匿名同学' }}</text>
+          </view>
+          <text class="post-time">{{ post.time }}</text>
         </view>
         <text class="post-title">{{ post.title }}</text>
         <text class="post-summary">{{ post.summary }}</text>
-        <view class="post-meta">
-          <view class="meta-item">
-            <u-icon name="calendar" size="12" color="#999" />
-            <text>{{ post.time }}</text>
+        <view class="post-footer">
+          <view class="post-stat">
+            <u-icon name="thumb-up" size="14" color="#9CA3AF" />
+            <text>{{ post.likeCount }}</text>
           </view>
-          <view class="meta-item">
-            <u-icon name="chat" size="12" color="#999" />
-            <text>{{ post.commentCount ?? 0 }}</text>
+          <view class="post-stat">
+            <u-icon name="eye" size="14" color="#9CA3AF" />
+            <text>{{ post.viewCount }}</text>
           </view>
         </view>
       </view>
 
-      <!-- 空状态 -->
-      <view v-if="posts.length === 0 && !error" class="empty-state">
-        <text class="empty-title">还没有内容</text>
-        <text class="empty-desc">可以发布校园墙、拼饭、二手和信息投稿，审核后展示。</text>
+      <view v-if="posts.length === 0" class="empty-state">
+        <text class="empty-title">暂无帖子</text>
+        <text class="empty-desc">成为第一个发帖的人吧</text>
+      </view>
+    </view>
+
+    <!-- 发帖按钮 -->
+    <view class="fab-btn" @click="showPostForm = true">
+      <u-icon name="edit-pen-fill" size="24" color="#ffffff" />
+    </view>
+
+    <!-- 发帖弹窗 -->
+    <view v-if="showPostForm" class="post-modal">
+      <view class="modal-mask" @click="showPostForm = false"></view>
+      <view class="modal-content">
+        <view class="modal-header">
+          <text class="modal-title">发帖</text>
+          <u-icon name="close" size="20" color="#9CA3AF" @click="showPostForm = false" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">帖子类型</text>
+          <view class="type-tags">
+            <text v-for="type in postTypes" :key="type" 
+              :class="['type-tag', { active: newPost.type === type }]"
+              @click="newPost.type = type">
+              {{ type }}
+            </text>
+          </view>
+        </view>
+        <view class="form-group">
+          <text class="form-label">标题</text>
+          <input class="form-input" v-model="newPost.title" placeholder="请输入标题" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">内容</text>
+          <textarea class="form-textarea" v-model="newPost.content" placeholder="说点什么..." maxlength="500" />
+        </view>
+        <view class="form-group">
+          <text class="form-label">昵称（选填）</text>
+          <input class="form-input" v-model="newPost.nickname" placeholder="不填则匿名" />
+        </view>
+        <button class="submit-btn" :disabled="!newPost.title || !newPost.content" @click="submitPost">发布</button>
       </view>
     </view>
 
@@ -101,320 +87,331 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, watch } from 'vue'
-import { publicApi, publicWrite } from '@/api/index'
+import { ref, onMounted } from 'vue'
+import { publicApi } from '@/api/index'
 
 interface Post {
   id: string
   type: string
   title: string
   summary: string
-  content?: string
   authorNickname?: string
-  likeCount?: number
-  commentCount?: number
-  viewCount?: number
-  time?: string
+  likeCount: number
+  viewCount: number
+  time: string
 }
 
-const communityTypes = ref<string[]>(['全部'])
-const communityType = ref('全部')
 const posts = ref<Post[]>([])
-const error = ref('')
-const showForm = ref(false)
-const form = ref({
-  type: '校园墙',
-  title: '',
-  content: '',
-  authorNickname: '',
-  contact: ''
-})
-const message = ref('')
-const formError = ref('')
-const submitting = ref(false)
+const showPostForm = ref(false)
+const currentCategory = ref('全部')
 const uToast = ref<any>(null)
 
-const mockPosts: Post[] = [
-  {
-    id: 'mock-post-1',
-    type: '校园墙',
-    title: '北门夜宵哪家适合四人局？',
-    summary: '想找能坐下聊天、价格别太离谱的店。',
-    content: '想找能坐下聊天、价格别太离谱的店，欢迎推荐。',
-    authorNickname: '同学A',
-    likeCount: 12,
-    commentCount: 3,
-    viewCount: 98,
-    time: '今天'
-  }
-]
+const newPost = ref({
+  type: '校园讨论',
+  title: '',
+  content: '',
+  nickname: ''
+})
+
+const categories = ['全部', '校园讨论', '避坑指南', '美食推荐', '求助']
+const postTypes = ['校园讨论', '避坑指南', '美食推荐', '求助']
 
 onMounted(async () => {
-  try {
-    const types = await publicApi<string[]>('/api/public/community/types')
-    communityTypes.value = types.length ? types : ['全部']
-  } catch (err) {
-    communityTypes.value = ['全部', '校园墙', '拼饭']
-  }
-  
-  await loadPosts()
+  await fetchPosts()
 })
 
-watch(communityType, () => {
-  loadPosts()
-})
-
-async function loadPosts() {
+async function fetchPosts() {
   try {
-    const data = await publicApi<Post[]>(`/api/public/community/posts?type=${encodeURIComponent(communityType.value)}`)
+    const type = currentCategory.value === '全部' ? '' : currentCategory.value
+    const data = await publicApi<Post[]>('/api/public/community/posts' + (type ? `?type=${type}` : ''))
     posts.value = data || []
-    error.value = ''
   } catch (err) {
-    posts.value = mockPosts
-    error.value = '当前使用本地试点数据。'
+    posts.value = []
   }
 }
 
-async function submitPost() {
-  if (!form.value.title || !form.value.content) {
-    formError.value = '请填写标题和正文'
-    return
-  }
-  
-  submitting.value = true
-  formError.value = ''
-  message.value = ''
-  
-  try {
-    await publicWrite('/api/public/community/posts', form.value)
-    message.value = '投稿成功，审核后展示。'
-    form.value = { type: '校园墙', title: '', content: '', authorNickname: '', contact: '' }
-    setTimeout(() => {
-      showForm.value = false
-      loadPosts()
-    }, 900)
-  } catch (err) {
-    formError.value = err instanceof Error ? err.message : '投稿失败'
-  } finally {
-    submitting.value = false
-  }
+function selectCategory(cat: string) {
+  currentCategory.value = cat
+  fetchPosts()
 }
 
 function openPost(id: string) {
   uni.navigateTo({ url: `/pages/post/post?id=${encodeURIComponent(id)}` })
 }
+
+async function submitPost() {
+  if (!newPost.value.title || !newPost.value.content) return
+  
+  try {
+    await publicApi('/api/public/community/posts', {
+      type: newPost.value.type,
+      title: newPost.value.title,
+      content: newPost.value.content,
+      authorNickname: newPost.value.nickname || '匿名同学'
+    })
+    uToast.value.show({ title: '发布成功，等待审核', type: 'success' })
+    showPostForm.value = false
+    newPost.value = { type: '校园讨论', title: '', content: '', nickname: '' }
+    fetchPosts()
+  } catch (err) {
+    uToast.value.show({ title: '发布失败', type: 'error' })
+  }
+}
 </script>
 
 <style lang="scss" scoped>
 .page {
+  min-height: 100vh;
+  background: #F9FAFB;
   padding-bottom: 120rpx;
 }
 
-.page-hero {
-  background: linear-gradient(135deg, #FF6B35 0%, #FF8F65 100%);
-  padding: 40rpx 30rpx;
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-}
-
-.hero-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-.hero-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
-  
-  text {
-    font-size: 24rpx;
-    color: rgba(255, 255, 255, 0.8);
-  }
-}
-
-.hero-title {
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #ffffff;
-  margin-bottom: 12rpx;
-}
-
-.hero-desc {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.form-section {
-  padding: 30rpx;
-}
-
-.post-form {
+.filter-bar {
   background: #ffffff;
-  border-radius: 16rpx;
-  padding: 30rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
-}
-
-.form-row {
-  display: flex;
-  gap: 20rpx;
-}
-
-.form-item {
-  flex: 1;
-  margin-bottom: 20rpx;
-}
-
-.form-label {
-  font-size: 26rpx;
-  color: #333333;
-  margin-bottom: 12rpx;
-  display: block;
-}
-
-.form-input {
-  border: 1rpx solid #e0e0e0;
-  border-radius: 8rpx;
-  padding: 16rpx;
-  font-size: 28rpx;
-}
-
-.form-textarea {
-  border: 1rpx solid #e0e0e0;
-  border-radius: 8rpx;
-  padding: 16rpx;
-  font-size: 28rpx;
-  min-height: 200rpx;
-}
-
-.success-tip {
-  font-size: 24rpx;
-  color: #07C160;
-  margin-bottom: 20rpx;
-}
-
-.error-tip {
-  font-size: 24rpx;
-  color: #ff6b6b;
-  margin-bottom: 20rpx;
-}
-
-.filter-section {
   padding: 20rpx 0;
+  border-bottom: 1rpx solid #F3F4F6;
 }
 
 .filter-scroll {
   white-space: nowrap;
 }
 
-.filter-list {
+.filter-tags {
   display: inline-flex;
-  padding: 0 30rpx;
   gap: 16rpx;
+  padding: 0 24rpx;
 }
 
-.filter-item {
-  display: inline-flex;
+.filter-tag {
   padding: 12rpx 24rpx;
-  background: #ffffff;
-  border-radius: 30rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
-  
+  background: #F3F4F6;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+  color: #6B7280;
+  display: inline-block;
+
   &.active {
-    background: #FF6B35;
-    
-    text {
-      color: #ffffff;
-    }
-  }
-  
-  text {
-    font-size: 26rpx;
-    color: #666666;
+    background: #D1FAE5;
+    color: #10B981;
   }
 }
 
 .post-list {
-  padding: 0 30rpx 30rpx;
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: 16rpx;
 }
 
 .post-card {
   background: #ffffff;
   border-radius: 16rpx;
   padding: 24rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
-.post-tag {
-  margin-bottom: 12rpx;
-  
+.post-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.post-author {
+  display: flex;
+  align-items: center;
+  gap: 8rpx;
+
   text {
-    font-size: 22rpx;
-    color: #FF6B35;
-    background: rgba(255, 107, 53, 0.1);
-    padding: 6rpx 16rpx;
-    border-radius: 20rpx;
+    font-size: 24rpx;
+    color: #6B7280;
   }
 }
 
+.post-time {
+  font-size: 22rpx;
+  color: #9CA3AF;
+}
+
 .post-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333333;
   display: block;
+  font-size: 28rpx;
+  font-weight: bold;
+  color: #1F2937;
   margin-bottom: 12rpx;
 }
 
 .post-summary {
-  font-size: 26rpx;
-  color: #666666;
   display: block;
+  font-size: 24rpx;
+  color: #6B7280;
   margin-bottom: 16rpx;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
-.post-meta {
+.post-footer {
   display: flex;
-  align-items: center;
   gap: 24rpx;
 }
 
-.meta-item {
+.post-stat {
   display: flex;
   align-items: center;
   gap: 6rpx;
-  
+
   text {
     font-size: 22rpx;
-    color: #999999;
+    color: #9CA3AF;
   }
 }
 
 .empty-state {
   text-align: center;
-  padding: 60rpx 40rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  padding: 100rpx 40rpx;
 }
 
 .empty-title {
+  display: block;
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
-  display: block;
+  color: #1F2937;
   margin-bottom: 12rpx;
 }
 
 .empty-desc {
-  font-size: 26rpx;
-  color: #999999;
   display: block;
+  font-size: 24rpx;
+  color: #9CA3AF;
+}
+
+.fab-btn {
+  position: fixed;
+  right: 30rpx;
+  bottom: 200rpx;
+  width: 100rpx;
+  height: 100rpx;
+  background: #10B981;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4rpx 16rpx rgba(16, 185, 129, 0.4);
+}
+
+.post-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100;
+}
+
+.modal-mask {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.modal-content {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: #ffffff;
+  border-radius: 24rpx 24rpx 0 0;
+  padding: 30rpx;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30rpx;
+}
+
+.modal-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1F2937;
+}
+
+.form-group {
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 26rpx;
+  font-weight: 500;
+  color: #1F2937;
+  margin-bottom: 12rpx;
+}
+
+.type-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+}
+
+.type-tag {
+  padding: 10rpx 20rpx;
+  background: #F3F4F6;
+  border-radius: 24rpx;
+  font-size: 22rpx;
+  color: #6B7280;
+
+  &.active {
+    background: #D1FAE5;
+    color: #10B981;
+  }
+}
+
+.form-input {
+  width: 100%;
+  height: 80rpx;
+  background: #F9FAFB;
+  border-radius: 12rpx;
+  padding: 0 20rpx;
+  font-size: 28rpx;
+  color: #1F2937;
+  box-sizing: border-box;
+}
+
+.form-textarea {
+  width: 100%;
+  height: 200rpx;
+  background: #F9FAFB;
+  border-radius: 12rpx;
+  padding: 20rpx;
+  font-size: 28rpx;
+  color: #1F2937;
+  box-sizing: border-box;
+}
+
+.submit-btn {
+  width: 100%;
+  height: 88rpx;
+  background: #10B981;
+  color: #ffffff;
+  font-size: 30rpx;
+  font-weight: 500;
+  border-radius: 44rpx;
+  margin-top: 30rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  &:disabled {
+    opacity: 0.5;
+  }
 }
 </style>

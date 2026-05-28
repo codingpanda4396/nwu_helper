@@ -1,103 +1,94 @@
 <template>
   <view class="page">
-    <!-- 返回按钮 -->
-    <view class="back-bar">
-      <u-button type="default" size="small" @click="goBack">
-        <u-icon name="arrow-left" size="14" />
-        <text style="margin-left: 8rpx;">返回</text>
-      </u-button>
-    </view>
-
-    <!-- 加载状态 -->
-    <view v-if="loading" class="loading-state">
-      <text>商家信息加载中...</text>
-    </view>
-
-    <!-- 错误状态 -->
-    <view v-if="!loading && !merchant" class="error-state">
-      <text>商家暂时不可查看。</text>
-    </view>
-
-    <!-- 商家详情 -->
     <view v-if="merchant" class="merchant-detail">
-      <!-- 封面图 -->
-      <view class="cover-section">
-        <image class="cover-image" :src="coverImage" mode="aspectFill" />
-        <view class="cover-overlay">
-          <view class="merchant-tag">
-            <text>{{ merchant.serviceId || '校园商家' }}</text>
-          </view>
+      <!-- 头部大图 -->
+      <view class="merchant-hero">
+        <image class="hero-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
+        <view class="hero-overlay">
           <text class="merchant-name">{{ merchant.name }}</text>
-          <text class="merchant-summary">{{ merchant.summary || merchant.recommendation || '西大圈推荐商家' }}</text>
+          <view class="merchant-tags" v-if="merchant.tags?.length">
+            <text v-for="tag in merchant.tags" :key="tag" class="tag">{{ tag }}</text>
+          </view>
         </view>
       </view>
 
-      <!-- 距离信息 -->
-      <view v-if="merchant.distance" class="distance-section">
-        <view class="distance-item">
-          <u-icon name="map-fill" size="14" color="#FF6B35" />
-          <text>{{ merchant.distance || merchant.distanceText || '校边商圈' }}</text>
+      <!-- 基本信息 -->
+      <view class="info-section">
+        <view class="info-item" v-if="merchant.summary">
+          <u-icon name="info-circle" size="16" color="#10B981" />
+          <text>{{ merchant.summary }}</text>
+        </view>
+        <view class="info-item" @click="openLocation">
+          <u-icon name="map-fill" size="16" color="#10B981" />
+          <text>{{ merchant.address }}</text>
+          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
+        </view>
+        <view class="info-item" v-if="merchant.phone" @click="callPhone">
+          <u-icon name="phone-fill" size="16" color="#10B981" />
+          <text>{{ merchant.phone }}</text>
+          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
+        </view>
+        <view class="info-item" v-if="merchant.businessHours">
+          <u-icon name="clock-fill" size="16" color="#10B981" />
+          <text>{{ merchant.businessHours }}</text>
         </view>
       </view>
 
-      <!-- 活动列表 -->
-      <view v-if="activities.length > 0" class="section">
-        <text class="section-title">进行中的活动</text>
+      <!-- 图片画廊 -->
+      <view v-if="merchant.images?.length" class="section">
+        <view class="section-header">
+          <text class="section-title">店铺环境</text>
+        </view>
+        <scroll-view scroll-x class="gallery-scroll">
+          <view class="gallery-list">
+            <image v-for="img in merchant.images" :key="img.id" :src="img.imageUrl" mode="aspectFill" class="gallery-image" @click="previewImage(img.imageUrl)" />
+          </view>
+        </scroll-view>
+      </view>
+
+      <!-- 当前活动 -->
+      <view v-if="merchant.activities?.length" class="section">
+        <view class="section-header">
+          <text class="section-title">当前活动</text>
+        </view>
         <view class="activity-list">
-          <view v-for="activity in activities" :key="activity.id" class="activity-item">
-            <text class="activity-title">{{ activity.title }}</text>
-            <text v-if="activity.description" class="activity-desc">{{ activity.description }}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 到店信息 -->
-      <view class="section">
-        <text class="section-title">到店信息</text>
-        <view class="info-grid">
-          <view class="info-item">
-            <u-icon name="map-fill" size="16" color="#FF6B35" />
-            <text>{{ merchant.address || '地址待补充' }}</text>
-          </view>
-          <view class="info-item">
-            <u-icon name="phone-fill" size="16" color="#FF6B35" />
-            <text>{{ merchant.phone || '电话待补充' }}</text>
-          </view>
-          <view class="info-item">
-            <u-icon name="clock-fill" size="16" color="#FF6B35" />
-            <text>{{ merchant.businessHours || '营业时间待补充' }}</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 二维码区域 -->
-      <view class="qr-section">
-        <view class="qr-card">
-          <image class="qr-image" :src="qrImage" mode="aspectFit" />
-          <view class="qr-content">
-            <text class="qr-title">扫码联系商家</text>
-            <text class="qr-desc">添加微信咨询详情、预约服务。</text>
-          </view>
-        </view>
-      </view>
-
-      <!-- 微信入口 -->
-      <view class="wechat-section">
-        <view class="wechat-card">
-          <image class="wechat-image" src="/static/images/wechat-promo.png" mode="aspectFill" />
-          <view class="wechat-content">
-            <view class="wechat-tag">
-              <u-icon name="weixin-fill" size="14" color="#07C160" />
-              <text>微信入口</text>
+          <view v-for="activity in merchant.activities" :key="activity.id" class="activity-card">
+            <image v-if="activity.image" class="activity-image" :src="activity.image" mode="aspectFill" />
+            <view class="activity-content">
+              <text class="activity-title">{{ activity.title }}</text>
+              <text v-if="activity.description" class="activity-desc">{{ activity.description }}</text>
             </view>
-            <text class="wechat-title">加入西大圈微信</text>
-            <text class="wechat-desc">领活动、问优惠、推荐好店、反馈问题，都从这里开始。</text>
-            <u-button type="success" size="small" @click="showWechatToast">
-              <u-icon name="weixin-fill" size="14" color="#fff" />
-              <text style="margin-left: 8rpx;">添加微信</text>
-            </u-button>
           </view>
         </view>
+      </view>
+
+      <!-- 私域引导 -->
+      <view v-if="merchant.qrImage" class="section">
+        <view class="private-domain">
+          <view class="domain-header">
+            <u-icon name="weixin-fill" size="20" color="#07C160" />
+            <text class="domain-title">进群领福利</text>
+          </view>
+          <text class="domain-desc">扫码加入商家微信群，获取专属优惠和最新活动</text>
+          <image class="qr-image" :src="merchant.qrImage" mode="aspectFit" @click="previewImage(merchant.qrImage)" />
+          <text class="qr-tip">长按识别二维码</text>
+        </view>
+      </view>
+    </view>
+
+    <!-- 底部操作栏 -->
+    <view class="footer-bar">
+      <view class="footer-btn" @click="toggleFavorite">
+        <u-icon :name="isFavorite ? 'heart-fill' : 'heart'" size="20" :color="isFavorite ? '#EF4444' : '#6B7280'" />
+        <text>{{ isFavorite ? '已收藏' : '收藏' }}</text>
+      </view>
+      <view class="footer-btn" @click="callPhone" v-if="merchant?.phone">
+        <u-icon name="phone-fill" size="20" color="#10B981" />
+        <text>联系</text>
+      </view>
+      <view class="footer-btn primary" @click="openLocation">
+        <u-icon name="map-fill" size="20" color="#ffffff" />
+        <text>导航到店</text>
       </view>
     </view>
 
@@ -106,184 +97,222 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
-import { onLoad } from '@dcloudio/uni-app'
+import { ref, onMounted } from 'vue'
 import { publicApi } from '@/api/index'
 
-interface Merchant {
+interface MerchantDetail {
   id: string
   name: string
   image?: string
   summary?: string
-  recommendation?: string
-  distance?: string
-  distanceText?: string
-  address?: string
+  address: string
   phone?: string
   businessHours?: string
-  serviceId?: string
   qrImage?: string
-  qrImageUrl?: string
-  activities?: Activity[]
+  tags?: string[]
+  images?: { id: string; imageUrl: string }[]
+  activities?: { id: string; title: string; description?: string; image?: string }[]
 }
 
-interface Activity {
-  id: string
-  title: string
-  description?: string
-}
-
-const merchant = ref<Merchant | null>(null)
-const loading = ref(true)
+const merchant = ref<MerchantDetail | null>(null)
+const isFavorite = ref(false)
 const uToast = ref<any>(null)
 
-const coverImage = computed(() => {
-  if (merchant.value?.image && /^(https?:|data:|\/api\/|\/assets\/)/.test(merchant.value.image)) {
-    return merchant.value.image
-  }
-  return '/static/images/hero-campus-life.png'
-})
-
-const qrImage = computed(() => {
-  const qr = merchant.value?.qrImage || merchant.value?.qrImageUrl
-  if (qr && /^(https?:|data:|\/api\/|\/assets\/)/.test(qr)) {
-    return qr
-  }
-  return '/static/images/qr-placeholder.jpg'
-})
-
-const activities = computed(() => {
-  return Array.isArray(merchant.value?.activities) ? merchant.value!.activities : []
-})
-
-onLoad((options) => {
-  if (options?.id) {
-    loadMerchant(options.id)
+onMounted(async () => {
+  const pages = getCurrentPages()
+  const page = pages[pages.length - 1]
+  const id = (page as any).options?.id
+  
+  if (id) {
+    await fetchMerchant(id)
+    checkFavorite(id)
+    saveHistory(id)
   }
 })
 
-async function loadMerchant(id: string) {
-  loading.value = true
+async function fetchMerchant(id: string) {
   try {
-    merchant.value = await publicApi<Merchant>(`/api/public/merchants/${encodeURIComponent(id)}`)
+    const data = await publicApi<MerchantDetail>('/api/public/merchants/' + id)
+    merchant.value = data
   } catch (err) {
-    merchant.value = null
-  } finally {
-    loading.value = false
+    uToast.value.show({ title: '加载失败', type: 'error' })
   }
 }
 
-function goBack() {
-  uni.navigateBack()
+function checkFavorite(id: string) {
+  const favorites = uni.getStorageSync('favorites')
+  if (favorites) {
+    const list = JSON.parse(favorites)
+    isFavorite.value = list.some((item: any) => item.id === id)
+  }
 }
 
-function showWechatToast() {
-  uToast.value.show({
-    title: '请添加西大圈微信，活动报名、反馈合作和发帖入口都会优先开放。',
-    type: 'info',
-    duration: 2600
+function saveHistory(id: string) {
+  if (!merchant.value) return
+  let history = []
+  const saved = uni.getStorageSync('viewHistory')
+  if (saved) {
+    history = JSON.parse(saved)
+  }
+  history = history.filter((item: any) => item.id !== id)
+  history.unshift({
+    id: merchant.value.id,
+    name: merchant.value.name,
+    image: merchant.value.image,
+    time: new Date().toLocaleDateString()
   })
+  if (history.length > 50) history = history.slice(0, 50)
+  uni.setStorageSync('viewHistory', JSON.stringify(history))
+}
+
+function toggleFavorite() {
+  if (!merchant.value) return
+  let favorites = []
+  const saved = uni.getStorageSync('favorites')
+  if (saved) {
+    favorites = JSON.parse(saved)
+  }
+  
+  if (isFavorite.value) {
+    favorites = favorites.filter((item: any) => item.id !== merchant.value!.id)
+    isFavorite.value = false
+    uToast.value.show({ title: '已取消收藏', type: 'info' })
+  } else {
+    favorites.unshift({
+      id: merchant.value.id,
+      name: merchant.value.name,
+      image: merchant.value.image,
+      summary: merchant.value.summary,
+      address: merchant.value.address
+    })
+    isFavorite.value = true
+    uToast.value.show({ title: '已收藏', type: 'success' })
+  }
+  uni.setStorageSync('favorites', JSON.stringify(favorites))
+}
+
+function callPhone() {
+  if (merchant.value?.phone) {
+    uni.makePhoneCall({ phoneNumber: merchant.value.phone })
+  }
+}
+
+function openLocation() {
+  if (merchant.value) {
+    uni.openLocation({
+      name: merchant.value.name,
+      address: merchant.value.address,
+      latitude: 0,
+      longitude: 0
+    })
+  }
+}
+
+function previewImage(url: string) {
+  uni.previewImage({ urls: [url] })
 }
 </script>
 
 <style lang="scss" scoped>
 .page {
-  padding-bottom: 40rpx;
+  min-height: 100vh;
+  background: #F9FAFB;
+  padding-bottom: 120rpx;
 }
 
-.back-bar {
-  padding: 20rpx 30rpx;
-  background: #ffffff;
-}
-
-.loading-state,
-.error-state {
-  text-align: center;
-  padding: 100rpx 40rpx;
-  
-  text {
-    font-size: 28rpx;
-    color: #999999;
-  }
-}
-
-.merchant-detail {
-  background: #f5f5f5;
-}
-
-.cover-section {
+.merchant-hero {
   position: relative;
-}
-
-.cover-image {
-  width: 100%;
   height: 400rpx;
 }
 
-.cover-overlay {
+.hero-image {
+  width: 100%;
+  height: 100%;
+}
+
+.hero-overlay {
   position: absolute;
   bottom: 0;
   left: 0;
   right: 0;
-  padding: 40rpx 30rpx 30rpx;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
-}
-
-.merchant-tag {
-  display: inline-flex;
-  margin-bottom: 12rpx;
-  
-  text {
-    font-size: 22rpx;
-    color: #ffffff;
-    background: rgba(255, 107, 53, 0.8);
-    padding: 6rpx 16rpx;
-    border-radius: 20rpx;
-  }
+  padding: 30rpx;
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
 }
 
 .merchant-name {
-  font-size: 36rpx;
+  display: block;
+  font-size: 40rpx;
   font-weight: bold;
   color: #ffffff;
-  display: block;
   margin-bottom: 12rpx;
 }
 
-.merchant-summary {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
-  display: block;
+.merchant-tags {
+  display: flex;
+  gap: 12rpx;
 }
 
-.distance-section {
-  padding: 20rpx 30rpx;
+.tag {
+  padding: 6rpx 16rpx;
+  background: rgba(16, 185, 129, 0.8);
+  border-radius: 16rpx;
+  font-size: 22rpx;
+  color: #ffffff;
+}
+
+.info-section {
   background: #ffffff;
+  margin: 24rpx;
+  border-radius: 16rpx;
+  padding: 24rpx;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
-.distance-item {
+.info-item {
   display: flex;
   align-items: center;
-  gap: 8rpx;
-  
+  gap: 12rpx;
+  padding: 16rpx 0;
+  border-bottom: 1rpx solid #F3F4F6;
+
+  &:last-child {
+    border-bottom: none;
+  }
+
   text {
+    flex: 1;
     font-size: 26rpx;
-    color: #333333;
+    color: #1F2937;
   }
 }
 
 .section {
-  padding: 30rpx;
-  background: #ffffff;
-  margin-top: 20rpx;
+  padding: 0 24rpx 24rpx;
+}
+
+.section-header {
+  margin-bottom: 20rpx;
 }
 
 .section-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333333;
-  display: block;
-  margin-bottom: 20rpx;
+  color: #1F2937;
+}
+
+.gallery-scroll {
+  white-space: nowrap;
+}
+
+.gallery-list {
+  display: inline-flex;
+  gap: 16rpx;
+}
+
+.gallery-image {
+  width: 240rpx;
+  height: 180rpx;
+  border-radius: 12rpx;
 }
 
 .activity-list {
@@ -292,125 +321,113 @@ function showWechatToast() {
   gap: 16rpx;
 }
 
-.activity-item {
+.activity-card {
+  background: #ffffff;
+  border-radius: 16rpx;
+  overflow: hidden;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+}
+
+.activity-image {
+  width: 100%;
+  height: 240rpx;
+}
+
+.activity-content {
   padding: 20rpx;
-  background: #f8f8f8;
-  border-radius: 12rpx;
 }
 
 .activity-title {
+  display: block;
   font-size: 28rpx;
   font-weight: bold;
-  color: #333333;
-  display: block;
+  color: #1F2937;
   margin-bottom: 8rpx;
 }
 
 .activity-desc {
-  font-size: 24rpx;
-  color: #666666;
   display: block;
+  font-size: 24rpx;
+  color: #6B7280;
 }
 
-.info-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 16rpx;
-}
-
-.info-item {
-  display: flex;
-  align-items: center;
-  gap: 12rpx;
-  
-  text {
-    font-size: 28rpx;
-    color: #333333;
-  }
-}
-
-.qr-section {
-  padding: 30rpx;
+.private-domain {
   background: #ffffff;
-  margin-top: 20rpx;
+  border-radius: 16rpx;
+  padding: 30rpx;
+  text-align: center;
+  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
 }
 
-.qr-card {
+.domain-header {
   display: flex;
-  flex-direction: row;
   align-items: center;
-  gap: 30rpx;
+  justify-content: center;
+  gap: 12rpx;
+  margin-bottom: 16rpx;
+}
+
+.domain-title {
+  font-size: 32rpx;
+  font-weight: bold;
+  color: #1F2937;
+}
+
+.domain-desc {
+  display: block;
+  font-size: 24rpx;
+  color: #6B7280;
+  margin-bottom: 24rpx;
 }
 
 .qr-image {
-  width: 200rpx;
-  height: 200rpx;
-  flex-shrink: 0;
-}
-
-.qr-content {
-  flex: 1;
-}
-
-.qr-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333333;
-  display: block;
-  margin-bottom: 12rpx;
-}
-
-.qr-desc {
-  font-size: 26rpx;
-  color: #666666;
-  display: block;
-}
-
-.wechat-section {
-  padding: 30rpx;
-  background: #ffffff;
-  margin-top: 20rpx;
-}
-
-.wechat-card {
-  border-radius: 16rpx;
-  overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
-}
-
-.wechat-image {
-  width: 100%;
+  width: 300rpx;
   height: 300rpx;
-}
-
-.wechat-content {
-  padding: 30rpx;
-}
-
-.wechat-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
   margin-bottom: 16rpx;
-  
+}
+
+.qr-tip {
+  display: block;
+  font-size: 22rpx;
+  color: #9CA3AF;
+}
+
+.footer-bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  display: flex;
+  background: #ffffff;
+  padding: 20rpx 24rpx;
+  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.05);
+  gap: 16rpx;
+}
+
+.footer-btn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6rpx;
+  padding: 12rpx 0;
+
   text {
-    font-size: 24rpx;
-    color: #07C160;
+    font-size: 22rpx;
+    color: #6B7280;
   }
-}
 
-.wechat-title {
-  font-size: 32rpx;
-  font-weight: bold;
-  color: #333333;
-  display: block;
-  margin-bottom: 12rpx;
-}
+  &.primary {
+    background: #10B981;
+    border-radius: 44rpx;
+    flex-direction: row;
+    justify-content: center;
+    gap: 8rpx;
 
-.wechat-desc {
-  font-size: 26rpx;
-  color: #666666;
-  display: block;
-  margin-bottom: 24rpx;
+    text {
+      color: #ffffff;
+      font-size: 28rpx;
+    }
+  }
 }
 </style>

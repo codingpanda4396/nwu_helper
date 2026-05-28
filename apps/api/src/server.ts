@@ -8,6 +8,7 @@ import { config } from "./config.js";
 import { prisma } from "./db.js";
 import { publicRoutes } from "./publicRoutes.js";
 import { uploadRoutes } from "./uploadRoutes.js";
+import { userRoutes, publicFeedbackRoute } from "./userRoutes.js";
 
 const app = Fastify({ logger: true });
 
@@ -25,10 +26,12 @@ await app.register(multipart, {
 app.get("/api/health", async () => ({ success: true, data: { status: "ok" } }));
 await app.register(authRoutes);
 await app.register(publicRoutes);
+await app.register(publicFeedbackRoute);
 await app.register(async (privateApp) => {
   privateApp.addHook("preHandler", requireAuth);
   await privateApp.register(adminRoutes);
   await privateApp.register(uploadRoutes);
+  await privateApp.register(userRoutes);
 });
 
 const shutdown = async () => {

@@ -3,7 +3,7 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "西大圈"
+        "navigationBarTitleText": "竹影校园"
       }
     },
     {
@@ -13,27 +13,21 @@
       }
     },
     {
-      "path": "pages/driving/driving",
+      "path": "pages/service/service",
       "style": {
-        "navigationBarTitleText": "驾校"
-      }
-    },
-    {
-      "path": "pages/services/services",
-      "style": {
-        "navigationBarTitleText": "生活服务"
+        "navigationBarTitleText": "服务"
       }
     },
     {
       "path": "pages/community/community",
       "style": {
-        "navigationBarTitleText": "讨论区"
+        "navigationBarTitleText": "社区"
       }
     },
     {
-      "path": "pages/about/about",
+      "path": "pages/mine/mine",
       "style": {
-        "navigationBarTitleText": "关于"
+        "navigationBarTitleText": "我的"
       }
     },
     {
@@ -47,17 +41,41 @@
       "style": {
         "navigationBarTitleText": "帖子详情"
       }
+    },
+    {
+      "path": "pages/search/search",
+      "style": {
+        "navigationBarTitleText": "搜索"
+      }
+    },
+    {
+      "path": "pages/history/history",
+      "style": {
+        "navigationBarTitleText": "浏览历史"
+      }
+    },
+    {
+      "path": "pages/favorite/favorite",
+      "style": {
+        "navigationBarTitleText": "我的收藏"
+      }
+    },
+    {
+      "path": "pages/feedback/feedback",
+      "style": {
+        "navigationBarTitleText": "意见反馈"
+      }
     }
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "西大圈",
-    "navigationBarBackgroundColor": "#FF6B35",
-    "backgroundColor": "#F5F5F5"
+    "navigationBarTitleText": "竹影校园",
+    "navigationBarBackgroundColor": "#10B981",
+    "backgroundColor": "#F9FAFB"
   },
   "tabBar": {
-    "color": "#999999",
-    "selectedColor": "#FF6B35",
+    "color": "#9CA3AF",
+    "selectedColor": "#10B981",
     "borderStyle": "black",
     "backgroundColor": "#ffffff",
     "list": [
@@ -74,26 +92,20 @@
         "selectedIconPath": "static/tabbar/food-active.png"
       },
       {
-        "pagePath": "pages/driving/driving",
-        "text": "驾校",
-        "iconPath": "static/tabbar/driving.png",
-        "selectedIconPath": "static/tabbar/driving-active.png"
-      },
-      {
-        "pagePath": "pages/services/services",
-        "text": "生活服务",
+        "pagePath": "pages/service/service",
+        "text": "服务",
         "iconPath": "static/tabbar/service.png",
         "selectedIconPath": "static/tabbar/service-active.png"
       },
       {
         "pagePath": "pages/community/community",
-        "text": "讨论区",
+        "text": "社区",
         "iconPath": "static/tabbar/community.png",
         "selectedIconPath": "static/tabbar/community-active.png"
       },
       {
-        "pagePath": "pages/about/about",
-        "text": "关于",
+        "pagePath": "pages/mine/mine",
+        "text": "我的",
         "iconPath": "static/tabbar/about.png",
         "selectedIconPath": "static/tabbar/about-active.png"
       }

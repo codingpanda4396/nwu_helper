@@ -230,7 +230,7 @@ async function main() {
   await prisma.wechatEntryConfig.upsert({
     where: { id: "home-wechat-entry" },
     update: {
-      title: "加入西大圈微信",
+      title: "加入竹影校园微信",
       description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
       buttonText: "添加微信",
       imageUrl: "/assets/images/h5-wechat-promo.png",
@@ -238,10 +238,25 @@ async function main() {
     },
     create: {
       id: "home-wechat-entry",
-      title: "加入西大圈微信",
+      title: "加入竹影校园微信",
       description: "领活动、问优惠、推荐好店、反馈问题，都从这里开始。",
       buttonText: "添加微信",
       imageUrl: "/assets/images/h5-wechat-promo.png",
+      isActive: true
+    }
+  });
+
+  await prisma.campusConfig.upsert({
+    where: { id: "default" },
+    update: {
+      name: "西北大学",
+      slug: "nwu",
+      isActive: true
+    },
+    create: {
+      id: "default",
+      name: "西北大学",
+      slug: "nwu",
       isActive: true
     }
   });

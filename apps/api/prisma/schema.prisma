@@ -46,6 +46,25 @@ enum CommunityPostStatus {
   REJECTED
 }
 
+enum ImageType {
+  MENU
+  ENVIRONMENT
+  OTHER
+}
+
+enum FeedbackType {
+  SUGGESTION
+  COMPLAINT
+  COOPERATION
+  OTHER
+}
+
+enum FeedbackStatus {
+  PENDING
+  PROCESSING
+  RESOLVED
+}
+
 model User {
   id           String     @id @default(cuid())
   name         String
@@ -55,6 +74,9 @@ model User {
   role         UserRole   @default(STUDENT)
   passwordHash String?
   status       UserStatus @default(ACTIVE)
+  viewHistories ViewHistory[]
+  favorites     Favorite[]
+  feedbacks     Feedback[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -81,18 +103,37 @@ model Merchant {
   businessHours    String?
   coverImageUrl    String?
   qrImageUrl       String?
+  avgPrice         Float?
+  latitude         Float?
+  longitude        Float?
+  tags             String[]         @default([])
   sortOrder        Int              @default(100)
   status           MerchantStatus   @default(PENDING)
   category         Category         @relation(fields: [categoryId], references: [id])
   serviceCategory  ServiceCategory? @relation(fields: [serviceCategoryId], references: [id])
   serviceCategoryId String?
   activities       Activity[]
+  images           MerchantImage[]
+  viewHistories    ViewHistory[]
+  favorites        Favorite[]
   createdAt        DateTime         @default(now())
   updatedAt        DateTime         @updatedAt
 
   @@index([categoryId])
   @@index([serviceCategoryId])
   @@index([status, sortOrder])
+}
+
+model MerchantImage {
+  id         String    @id @default(cuid())
+  merchantId String
+  imageUrl   String
+  type       ImageType @default(OTHER)
+  sortOrder  Int       @default(100)
+  merchant   Merchant  @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime  @default(now())
+
+  @@index([merchantId, type])
 }
 
 model Banner {
@@ -113,7 +154,7 @@ model Banner {
 
 model WechatEntryConfig {
   id          String   @id @default("home-wechat-entry")
-  title       String   @default("加入西大圈微信")
+  title       String   @default("加入竹影校园微信")
   description String   @default("领活动、问优惠、推荐好店、反馈问题，都从这里开始。")
   buttonText  String   @default("添加微信")
   imageUrl    String?
@@ -144,12 +185,12 @@ model CommunityPost {
   content        String              @default("")
   authorNickname String?
   contact        String?
-  source         String              @default("admin")
+  source         String              @default("student")
   viewCount      Int                 @default(0)
   likeCount      Int                 @default(0)
   commentCount   Int                 @default(0)
   likedSessionIds Json               @default("[]")
-  status         CommunityPostStatus @default(VISIBLE)
+  status         CommunityPostStatus @default(PENDING)
   sortOrder      Int                 @default(100)
   publishedAt    DateTime            @default(now())
   createdAt      DateTime            @default(now())
@@ -174,4 +215,54 @@ model Activity {
 
   @@index([status, startAt, endAt, sortOrder])
   @@index([merchantId])
+}
+
+model ViewHistory {
+  id         String   @id @default(cuid())
+  userId     String
+  merchantId String
+  user       User     @relation(fields: [userId], references: [id])
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, merchantId])
+  @@index([userId])
+}
+
+model Favorite {
+  id         String   @id @default(cuid())
+  userId     String
+  merchantId String
+  user       User     @relation(fields: [userId], references: [id])
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  createdAt  DateTime @default(now())
+
+  @@unique([userId, merchantId])
+  @@index([userId])
+}
+
+model Feedback {
+  id        String         @id @default(cuid())
+  userId    String?
+  content   String
+  contact   String?
+  type      FeedbackType   @default(SUGGESTION)
+  status    FeedbackStatus @default(PENDING)
+  reply     String?
+  user      User?          @relation(fields: [userId], references: [id])
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  @@index([status])
+}
+
+model CampusConfig {
+  id        String   @id @default("default")
+  name      String   @default("西北大学")
+  slug      String   @default("nwu")
+  logo      String?
+  address   String?
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }

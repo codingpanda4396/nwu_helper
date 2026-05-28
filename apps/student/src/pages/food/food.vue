@@ -1,19 +1,34 @@
 <template>
   <view class="page">
-    <!-- 页面头部 -->
-    <view class="page-hero">
-      <view class="hero-content">
-        <view class="hero-tag">
-          <u-icon name="list" size="14" color="#FF6B35" />
-          <text>西大圈</text>
-        </view>
-        <text class="hero-title">今天吃什么</text>
-        <text class="hero-desc">按分类找附近好吃的，距离一眼扫完。</text>
+    <!-- 搜索栏 -->
+    <view class="search-header" @click="goSearch">
+      <view class="search-bar">
+        <u-icon name="search" size="18" color="#9CA3AF" />
+        <text class="search-placeholder">搜美食</text>
       </view>
     </view>
 
-    <!-- 错误提示 -->
-    <view v-if="error" class="error-tip">{{ error }}</view>
+    <!-- 分类筛选 -->
+    <view class="filter-bar">
+      <scroll-view scroll-x class="filter-scroll">
+        <view class="filter-tags">
+          <text v-for="cat in categories" :key="cat.key" 
+            :class="['filter-tag', { active: currentCategory === cat.key }]"
+            @click="selectCategory(cat.key)">
+            {{ cat.name }}
+          </text>
+        </view>
+      </scroll-view>
+    </view>
+
+    <!-- 排序 -->
+    <view class="sort-bar">
+      <view v-for="sort in sortOptions" :key="sort.key" 
+        :class="['sort-item', { active: currentSort === sort.key }]"
+        @click="selectSort(sort.key)">
+        <text>{{ sort.name }}</text>
+      </view>
+    </view>
 
     <!-- 商家列表 -->
     <view class="merchant-list">
@@ -22,21 +37,27 @@
         <view class="merchant-content">
           <view class="merchant-header">
             <text class="merchant-name">{{ merchant.name }}</text>
+            <view v-if="merchant.tags?.length" class="merchant-tags">
+              <text v-for="tag in merchant.tags.slice(0, 2)" :key="tag" class="tag">{{ tag }}</text>
+            </view>
           </view>
-          <text class="merchant-desc">{{ merchant.summary || merchant.recommendation || '西大圈推荐商家' }}</text>
+          <text class="merchant-desc">{{ merchant.summary || '优质美食商家' }}</text>
           <view class="merchant-meta">
             <view class="meta-item">
-              <u-icon name="map-fill" size="12" color="#999" />
-              <text>{{ merchant.distance || merchant.distanceText || '校边' }}</text>
+              <u-icon name="map-fill" size="12" color="#9CA3AF" />
+              <text>{{ merchant.distance || '校边' }}</text>
+            </view>
+            <view v-if="merchant.avgPrice" class="meta-item">
+              <text class="price">¥{{ merchant.avgPrice }}/人</text>
             </view>
           </view>
         </view>
       </view>
 
       <!-- 空状态 -->
-      <view v-if="merchants.length === 0 && !error" class="empty-state">
+      <view v-if="merchants.length === 0 && !loading" class="empty-state">
         <text class="empty-title">正在招募美食商家</text>
-        <text class="empty-desc">你推荐的宝藏店，可以通过西大圈微信告诉我们。</text>
+        <text class="empty-desc">你推荐的宝藏店，可以通过竹影校园微信告诉我们。</text>
       </view>
     </view>
 
@@ -53,36 +74,60 @@ interface Merchant {
   name: string
   image?: string
   summary?: string
-  recommendation?: string
   distance?: string
-  distanceText?: string
-  category?: string
+  avgPrice?: number
+  tags?: string[]
 }
 
 const merchants = ref<Merchant[]>([])
-const error = ref('')
+const loading = ref(false)
+const currentCategory = ref('all')
+const currentSort = ref('default')
 const uToast = ref<any>(null)
 
-const mockMerchants: Merchant[] = [
-  {
-    id: 'mock-bbq',
-    category: 'food',
-    name: '北门阿强烧烤',
-    image: '/static/images/merchant-food-001.jpg',
-    distance: '北门步行6分钟',
-    recommendation: '宿舍夜宵局常选，烤串出餐快。'
-  }
+const categories = [
+  { key: 'all', name: '全部' },
+  { key: 'snack', name: '小吃' },
+  { key: 'meal', name: '正餐' },
+  { key: 'tea', name: '奶茶' },
+  { key: 'night', name: '夜宵' }
+]
+
+const sortOptions = [
+  { key: 'default', name: '默认' },
+  { key: 'distance', name: '距离' },
+  { key: 'hot', name: '热度' }
 ]
 
 onMounted(async () => {
+  await fetchMerchants()
+})
+
+async function fetchMerchants() {
+  loading.value = true
   try {
     const data = await publicApi<Merchant[]>('/api/public/food/merchants')
     merchants.value = data || []
   } catch (err) {
-    merchants.value = mockMerchants
-    error.value = '当前使用本地试点数据。'
+    merchants.value = []
+  } finally {
+    loading.value = false
   }
-})
+}
+
+function selectCategory(key: string) {
+  currentCategory.value = key
+  fetchMerchants()
+}
+
+function selectSort(key: string) {
+  currentSort.value = key
+  fetchMerchants()
+}
+
+function goSearch() {
+  uni.navigateTo({ url: '/pages/search/search' })
+}
 
 function openMerchant(id: string) {
   uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
@@ -92,51 +137,80 @@ function openMerchant(id: string) {
 <style lang="scss" scoped>
 .page {
   padding-bottom: 120rpx;
+  background: #F9FAFB;
 }
 
-.page-hero {
-  background: linear-gradient(135deg, #FF6B35 0%, #FF8F65 100%);
-  padding: 40rpx 30rpx;
+.search-header {
+  background: #10B981;
+  padding: 20rpx 24rpx;
 }
 
-.hero-content {
+.search-bar {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 16rpx;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 40rpx;
+  padding: 16rpx 24rpx;
 }
 
-.hero-tag {
+.search-placeholder {
+  font-size: 26rpx;
+  color: #9CA3AF;
+}
+
+.filter-bar {
+  background: #ffffff;
+  padding: 20rpx 0;
+  border-bottom: 1rpx solid #F3F4F6;
+}
+
+.filter-scroll {
+  white-space: nowrap;
+}
+
+.filter-tags {
   display: inline-flex;
-  align-items: center;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
-  
-  text {
-    font-size: 24rpx;
-    color: rgba(255, 255, 255, 0.8);
+  gap: 16rpx;
+  padding: 0 24rpx;
+}
+
+.filter-tag {
+  padding: 12rpx 24rpx;
+  background: #F3F4F6;
+  border-radius: 32rpx;
+  font-size: 24rpx;
+  color: #6B7280;
+  display: inline-block;
+
+  &.active {
+    background: #D1FAE5;
+    color: #10B981;
   }
 }
 
-.hero-title {
-  font-size: 40rpx;
-  font-weight: bold;
-  color: #ffffff;
-  margin-bottom: 12rpx;
+.sort-bar {
+  display: flex;
+  background: #ffffff;
+  padding: 16rpx 24rpx;
+  border-bottom: 1rpx solid #F3F4F6;
 }
 
-.hero-desc {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
-}
-
-.error-tip {
+.sort-item {
+  flex: 1;
+  text-align: center;
   font-size: 24rpx;
-  color: #ff6b6b;
-  padding: 20rpx 30rpx;
-  background: #fff3f3;
+  color: #6B7280;
+  padding: 8rpx 0;
+
+  &.active {
+    color: #10B981;
+    font-weight: 500;
+  }
 }
 
 .merchant-list {
-  padding: 30rpx;
+  padding: 24rpx;
   display: flex;
   flex-direction: column;
   gap: 20rpx;
@@ -166,18 +240,34 @@ function openMerchant(id: string) {
 }
 
 .merchant-header {
+  display: flex;
+  align-items: center;
+  gap: 12rpx;
   margin-bottom: 12rpx;
 }
 
 .merchant-name {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: #1F2937;
+}
+
+.merchant-tags {
+  display: flex;
+  gap: 8rpx;
+}
+
+.tag {
+  padding: 4rpx 12rpx;
+  background: #D1FAE5;
+  border-radius: 8rpx;
+  font-size: 20rpx;
+  color: #10B981;
 }
 
 .merchant-desc {
   font-size: 24rpx;
-  color: #666666;
+  color: #6B7280;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -188,17 +278,23 @@ function openMerchant(id: string) {
 .merchant-meta {
   display: flex;
   align-items: center;
+  gap: 16rpx;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
   gap: 6rpx;
-  
+
   text {
     font-size: 22rpx;
-    color: #999999;
+    color: #9CA3AF;
   }
+}
+
+.price {
+  color: #EF4444 !important;
+  font-weight: 500;
 }
 
 .empty-state {
@@ -206,20 +302,19 @@ function openMerchant(id: string) {
   padding: 60rpx 40rpx;
   background: #ffffff;
   border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
 }
 
 .empty-title {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: #1F2937;
   display: block;
   margin-bottom: 12rpx;
 }
 
 .empty-desc {
   font-size: 26rpx;
-  color: #999999;
+  color: #9CA3AF;
   display: block;
 }
 </style>

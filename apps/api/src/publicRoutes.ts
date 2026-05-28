@@ -28,8 +28,8 @@ const communityPostCreateSchema = z.object({
   type: z.string().trim().min(1).max(24),
   title: z.string().trim().min(2).max(80),
   content: z.string().trim().min(5).max(2000),
-  authorNickname: z.string().trim().min(1).max(24),
-  contact: z.string().trim().min(5).max(80),
+  authorNickname: z.string().trim().max(24).optional(),
+  contact: z.string().trim().max(80).optional(),
   source: z.string().trim().max(24).optional()
 });
 
@@ -44,11 +44,14 @@ function merchantCard(merchant: any) {
     serviceId: merchant.serviceCategory?.key,
     name: merchant.name,
     image: merchant.coverImageUrl,
-    avgPrice: null,
+    summary: merchant.summary,
+    avgPrice: merchant.avgPrice,
     distance: "",
     distanceText: "",
     address: merchant.address,
     businessHours: merchant.businessHours,
+    phone: merchant.phone,
+    tags: merchant.tags || [],
     qrImage: merchant.qrImageUrl,
     qrImageUrl: merchant.qrImageUrl
   };
@@ -199,6 +202,9 @@ export async function publicRoutes(app: FastifyInstance) {
       include: {
         category: true,
         serviceCategory: true,
+        images: {
+          orderBy: { sortOrder: "asc" }
+        },
         activities: {
           where: { status: "ACTIVE", startAt: { lte: new Date() }, endAt: { gte: new Date() } },
           orderBy: { sortOrder: "asc" }
@@ -209,6 +215,12 @@ export async function publicRoutes(app: FastifyInstance) {
     return ok(reply, {
       ...merchantCard(merchant),
       summary: merchant.summary,
+      phone: merchant.phone,
+      images: merchant.images.map((img: any) => ({
+        id: img.id,
+        imageUrl: img.imageUrl,
+        type: img.type
+      })),
       activities: merchant.activities.map(activityCard)
     });
   });
