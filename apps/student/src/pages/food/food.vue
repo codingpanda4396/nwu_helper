@@ -10,13 +10,14 @@
 
     <!-- 分类筛选 -->
     <view class="filter-bar">
-      <scroll-view scroll-x class="filter-scroll">
+      <scroll-view scroll-x class="filter-scroll" :show-scrollbar="false">
         <view class="filter-tags">
-          <text v-for="cat in categories" :key="cat.key" 
-            :class="['filter-tag', { active: currentCategory === cat.key }]"
+          <view v-for="cat in categories" :key="cat.key" 
+            :class="['filter-tag', { 'filter-tag--active': currentCategory === cat.key }]"
             @click="selectCategory(cat.key)">
-            {{ cat.name }}
-          </text>
+            <u-icon v-if="cat.icon" :name="cat.icon" size="14" :color="currentCategory === cat.key ? '#FFFFFF' : '#6B7280'" />
+            <text>{{ cat.name }}</text>
+          </view>
         </view>
       </scroll-view>
     </view>
@@ -24,15 +25,23 @@
     <!-- 排序 -->
     <view class="sort-bar">
       <view v-for="sort in sortOptions" :key="sort.key" 
-        :class="['sort-item', { active: currentSort === sort.key }]"
+        :class="['sort-item', { 'sort-item--active': currentSort === sort.key }]"
         @click="selectSort(sort.key)">
         <text>{{ sort.name }}</text>
+        <view v-if="currentSort === sort.key" class="sort-indicator" />
       </view>
     </view>
 
+    <!-- 骨架屏 -->
+    <view v-if="loading" class="merchant-list">
+      <Skeleton type="merchant" :count="5" />
+    </view>
+
     <!-- 商家列表 -->
-    <view class="merchant-list">
-      <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card" @click="openMerchant(merchant.id)">
+    <view v-else class="merchant-list">
+      <view v-for="(merchant, index) in merchants" :key="merchant.id" 
+        :class="['merchant-card', 'tap-active', `slide-up stagger-${index + 1}`]" 
+        @click="openMerchant(merchant.id)">
         <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
         <view class="merchant-content">
           <view class="merchant-header">
@@ -42,23 +51,31 @@
             </view>
           </view>
           <text class="merchant-desc">{{ merchant.summary || '优质美食商家' }}</text>
-          <view class="merchant-meta">
-            <view class="meta-item">
-              <u-icon name="map-fill" size="12" color="#9CA3AF" />
-              <text>{{ merchant.distance || '校边' }}</text>
+          <view class="merchant-footer">
+            <view class="merchant-meta">
+              <view class="meta-item">
+                <u-icon name="map-fill" size="12" color="#10B981" />
+                <text>{{ merchant.distance || '校边' }}</text>
+              </view>
             </view>
-            <view v-if="merchant.avgPrice" class="meta-item">
-              <text class="price">¥{{ merchant.avgPrice }}/人</text>
+            <view v-if="merchant.avgPrice" class="merchant-price">
+              <text class="price-symbol">¥</text>
+              <text class="price-value">{{ merchant.avgPrice }}</text>
+              <text class="price-unit">/人</text>
             </view>
           </view>
         </view>
       </view>
 
       <!-- 空状态 -->
-      <view v-if="merchants.length === 0 && !loading" class="empty-state">
-        <text class="empty-title">正在招募美食商家</text>
-        <text class="empty-desc">你推荐的宝藏店，可以通过竹影校园微信告诉我们。</text>
-      </view>
+      <EmptyState 
+        v-if="merchants.length === 0 && !loading" 
+        icon="search"
+        title="正在招募美食商家" 
+        description="你推荐的宝藏店，可以通过竹影校园微信告诉我们"
+        action-text="去推荐"
+        @action="showWechatToast"
+      />
     </view>
 
     <u-toast ref="uToast" />
@@ -68,6 +85,8 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { publicApi } from '@/api/index'
+import Skeleton from '@/components/Skeleton.vue'
+import EmptyState from '@/components/EmptyState.vue'
 
 interface Merchant {
   id: string
@@ -80,23 +99,24 @@ interface Merchant {
 }
 
 const merchants = ref<Merchant[]>([])
-const loading = ref(false)
+const loading = ref(true)
 const currentCategory = ref('all')
 const currentSort = ref('default')
 const uToast = ref<any>(null)
 
 const categories = [
-  { key: 'all', name: '全部' },
-  { key: 'snack', name: '小吃' },
-  { key: 'meal', name: '正餐' },
-  { key: 'tea', name: '奶茶' },
-  { key: 'night', name: '夜宵' }
+  { key: 'all', name: '全部', icon: '' },
+  { key: 'snack', name: '小吃', icon: 'gift-fill' },
+  { key: 'meal', name: '正餐', icon: 'home-fill' },
+  { key: 'tea', name: '奶茶', icon: 'water-fill' },
+  { key: 'night', name: '夜宵', icon: 'moon-fill' }
 ]
 
 const sortOptions = [
-  { key: 'default', name: '默认' },
+  { key: 'default', name: '推荐' },
   { key: 'distance', name: '距离' },
-  { key: 'hot', name: '热度' }
+  { key: 'hot', name: '热度' },
+  { key: 'price', name: '价格' }
 ]
 
 onMounted(async () => {
@@ -132,37 +152,54 @@ function goSearch() {
 function openMerchant(id: string) {
   uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
 }
+
+function showWechatToast() {
+  uToast.value.show({
+    title: '请添加竹影校园微信',
+    type: 'info'
+  })
+}
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   padding-bottom: 120rpx;
-  background: #F9FAFB;
+  background: $bg-page;
+  min-height: 100vh;
 }
 
+/* ========== 搜索栏 ========== */
 .search-header {
-  background: #10B981;
-  padding: 20rpx 24rpx;
+  background: $primary-gradient;
+  padding: $space-4 $space-6;
+  position: sticky;
+  top: 0;
+  z-index: 100;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
-  gap: 16rpx;
-  background: rgba(255, 255, 255, 0.9);
-  border-radius: 40rpx;
-  padding: 16rpx 24rpx;
+  gap: $space-3;
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: $radius-full;
+  padding: $space-3 $space-5;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
+  backdrop-filter: blur(10px);
 }
 
 .search-placeholder {
-  font-size: 26rpx;
-  color: #9CA3AF;
+  font-size: $font-sm;
+  color: $text-placeholder;
 }
 
+/* ========== 分类筛选 ========== */
 .filter-bar {
-  background: #ffffff;
-  padding: 20rpx 0;
-  border-bottom: 1rpx solid #F3F4F6;
+  background: $bg-card;
+  padding: $space-4 0;
+  border-bottom: 1rpx solid $border-light;
 }
 
 .filter-scroll {
@@ -171,150 +208,188 @@ function openMerchant(id: string) {
 
 .filter-tags {
   display: inline-flex;
-  gap: 16rpx;
-  padding: 0 24rpx;
+  gap: $space-3;
+  padding: 0 $space-5;
 }
 
 .filter-tag {
-  padding: 12rpx 24rpx;
-  background: #F3F4F6;
-  border-radius: 32rpx;
-  font-size: 24rpx;
-  color: #6B7280;
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  background: $bg-page;
+  border-radius: $radius-full;
+  font-size: $font-sm;
+  color: $text-secondary;
+  transition: all $transition-base;
 
-  &.active {
-    background: #D1FAE5;
-    color: #10B981;
+  &--active {
+    background: $primary-gradient;
+    color: $text-inverse;
+    box-shadow: $shadow-primary;
+  }
+
+  &:active {
+    transform: scale(0.95);
   }
 }
 
+/* ========== 排序栏 ========== */
 .sort-bar {
   display: flex;
-  background: #ffffff;
-  padding: 16rpx 24rpx;
-  border-bottom: 1rpx solid #F3F4F6;
+  background: $bg-card;
+  padding: $space-3 $space-5;
+  border-bottom: 1rpx solid $border-light;
 }
 
 .sort-item {
   flex: 1;
-  text-align: center;
-  font-size: 24rpx;
-  color: #6B7280;
-  padding: 8rpx 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-2;
+  font-size: $font-sm;
+  color: $text-secondary;
+  padding: $space-2 0;
+  position: relative;
+  transition: all $transition-base;
 
-  &.active {
-    color: #10B981;
-    font-weight: 500;
+  &--active {
+    color: $primary;
+    font-weight: $font-semibold;
   }
 }
 
+.sort-indicator {
+  width: 32rpx;
+  height: 4rpx;
+  background: $primary-gradient;
+  border-radius: $radius-full;
+}
+
+/* ========== 商家列表 ========== */
 .merchant-list {
-  padding: 24rpx;
+  padding: $space-4 $space-5;
   display: flex;
   flex-direction: column;
-  gap: 20rpx;
+  gap: $space-4;
 }
 
 .merchant-card {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  box-shadow: $shadow-md;
   display: flex;
   flex-direction: row;
+  transition: all $transition-base;
+
+  &:active {
+    transform: scale(0.98);
+    box-shadow: $shadow-sm;
+  }
 }
 
 .merchant-image {
-  width: 200rpx;
-  height: 200rpx;
+  width: 220rpx;
+  height: 220rpx;
   flex-shrink: 0;
 }
 
 .merchant-content {
   flex: 1;
-  padding: 20rpx;
+  padding: $space-4 $space-5;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  min-width: 0;
 }
 
 .merchant-header {
   display: flex;
   align-items: center;
-  gap: 12rpx;
-  margin-bottom: 12rpx;
+  gap: $space-3;
+  margin-bottom: $space-2;
 }
 
 .merchant-name {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #1F2937;
+  font-size: $font-base;
+  font-weight: $font-bold;
+  color: $text-primary;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .merchant-tags {
   display: flex;
-  gap: 8rpx;
+  gap: $space-2;
+  flex-shrink: 0;
 }
 
 .tag {
-  padding: 4rpx 12rpx;
-  background: #D1FAE5;
-  border-radius: 8rpx;
-  font-size: 20rpx;
-  color: #10B981;
+  padding: $space-1 $space-2;
+  background: $primary-bg;
+  border-radius: $radius-sm;
+  font-size: $font-xs;
+  color: $primary;
+  font-weight: $font-medium;
 }
 
 .merchant-desc {
-  font-size: 24rpx;
-  color: #6B7280;
+  font-size: $font-xs;
+  color: $text-secondary;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  margin-bottom: 12rpx;
+  margin-bottom: $space-3;
+  line-height: 1.5;
+}
+
+.merchant-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
 }
 
 .merchant-meta {
   display: flex;
   align-items: center;
-  gap: 16rpx;
+  gap: $space-4;
 }
 
 .meta-item {
   display: flex;
   align-items: center;
-  gap: 6rpx;
+  gap: $space-1;
 
   text {
-    font-size: 22rpx;
-    color: #9CA3AF;
+    font-size: $font-xs;
+    color: $text-tertiary;
   }
 }
 
-.price {
-  color: #EF4444 !important;
-  font-weight: 500;
+.merchant-price {
+  display: flex;
+  align-items: baseline;
+  gap: 2rpx;
 }
 
-.empty-state {
-  text-align: center;
-  padding: 60rpx 40rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
+.price-symbol {
+  font-size: $font-xs;
+  color: $error;
+  font-weight: $font-medium;
 }
 
-.empty-title {
-  font-size: 30rpx;
-  font-weight: bold;
-  color: #1F2937;
-  display: block;
-  margin-bottom: 12rpx;
+.price-value {
+  font-size: $font-base;
+  color: $error;
+  font-weight: $font-bold;
 }
 
-.empty-desc {
-  font-size: 26rpx;
-  color: #9CA3AF;
-  display: block;
+.price-unit {
+  font-size: $font-xs;
+  color: $text-tertiary;
 }
 </style>
