@@ -15,27 +15,43 @@ FROM deps AS build
 COPY . .
 RUN pnpm build
 
+FROM deps AS api-build
+COPY . .
+RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/api build
+
+FROM deps AS web-build
+COPY . .
+RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/web build
+
+FROM deps AS admin-build
+COPY . .
+RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/admin build
+
+FROM deps AS student-build
+COPY . .
+RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/student build:h5
+
 FROM base AS api
 ENV NODE_ENV=production
-COPY --from=build /app/package.json /app/pnpm-workspace.yaml ./
-COPY --from=build /app/node_modules ./node_modules
-COPY --from=build /app/packages/shared ./packages/shared
-COPY --from=build /app/apps/api ./apps/api
+COPY --from=api-build /app/package.json /app/pnpm-workspace.yaml ./
+COPY --from=api-build /app/node_modules ./node_modules
+COPY --from=api-build /app/packages/shared ./packages/shared
+COPY --from=api-build /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 4000
 CMD ["pnpm", "start:cluster"]
 
 FROM nginx:1.27-alpine AS web
-COPY --from=build /app/apps/web/dist /usr/share/nginx/html
+COPY --from=web-build /app/apps/web/dist /usr/share/nginx/html
 COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 FROM nginx:1.27-alpine AS admin
-COPY --from=build /app/apps/admin/dist /usr/share/nginx/html
+COPY --from=admin-build /app/apps/admin/dist /usr/share/nginx/html
 COPY infra/nginx/admin.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
 
 FROM nginx:1.27-alpine AS student
-COPY --from=build /app/apps/student/dist/build/h5 /usr/share/nginx/html
+COPY --from=student-build /app/apps/student/dist/build/h5 /usr/share/nginx/html
 COPY infra/nginx/student.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
