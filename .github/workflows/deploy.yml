@@ -134,6 +134,10 @@ jobs:
       - name: Create deploy bundle
         run: |
           mkdir -p deploy
+          docker build --target api -t nwu-helper-api:latest .
+          docker build --target admin -t nwu-helper-admin:latest .
+          docker build --target student -t nwu-helper-student:latest .
+          docker save nwu-helper-api:latest nwu-helper-admin:latest nwu-helper-student:latest | gzip > deploy/images.tar.gz
           git archive --format=tar.gz -o deploy/nwu-helper.tar.gz HEAD
           cp infra/ecs/deploy.sh deploy/deploy.sh
           cp infra/ecs/bootstrap.sh deploy/bootstrap.sh
@@ -195,6 +199,7 @@ jobs:
             RELEASE="${{ github.sha }}" \
             PACKAGE="$UPLOAD_DIR/nwu-helper.tar.gz" \
             ENV_FILE="$UPLOAD_DIR/production.env" \
+            IMAGES_PACKAGE="$UPLOAD_DIR/images.tar.gz" \
             sh "$UPLOAD_DIR/deploy.sh"
 
       - name: Verify deployment health
