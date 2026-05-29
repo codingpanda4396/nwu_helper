@@ -1,13 +1,16 @@
 import { describe, it, expect, beforeAll, afterAll } from "vitest";
 import Fastify from "fastify";
 import { publicRoutes } from "../publicRoutes.js";
-import { prisma } from "../db.js";
+import { activityTrackingRoutes } from "../activityTrackingRoutes.js";
+import { publicFeedbackRoute } from "../userRoutes.js";
 
 let app: ReturnType<typeof Fastify>;
 
 beforeAll(async () => {
   app = Fastify();
   await app.register(publicRoutes);
+  await app.register(activityTrackingRoutes);
+  await app.register(publicFeedbackRoute);
   await app.ready();
 });
 
@@ -123,7 +126,7 @@ describe("POST /api/public/community/posts", () => {
       url: "/api/public/community/posts",
       payload: { type: "", title: "", content: "" },
     });
-    expect(res.statusCode).toBe(200);
+    expect(res.statusCode).toBe(400);
     const body = JSON.parse(res.payload);
     expect(body.success).toBe(false);
     expect(body.error.code).toBe("VALIDATION_ERROR");
