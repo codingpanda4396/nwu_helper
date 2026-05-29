@@ -98,7 +98,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicApi, trackActivity } from '@/api/index'
 
 interface MerchantDetail {
   id: string
@@ -110,6 +110,8 @@ interface MerchantDetail {
   businessHours?: string
   qrImage?: string
   tags?: string[]
+  latitude?: number
+  longitude?: number
   images?: { id: string; imageUrl: string }[]
   activities?: { id: string; title: string; description?: string; image?: string }[]
 }
@@ -127,6 +129,7 @@ onMounted(async () => {
     await fetchMerchant(id)
     checkFavorite(id)
     saveHistory(id)
+    trackActivity('merchant_view', '/merchant', id)
   }
 })
 
@@ -187,6 +190,7 @@ function toggleFavorite() {
     })
     isFavorite.value = true
     uToast.value.show({ title: '已收藏', type: 'success' })
+    trackActivity('favorite', '/merchant', merchant.value.id)
   }
   uni.setStorageSync('favorites', JSON.stringify(favorites))
 }
@@ -198,12 +202,22 @@ function callPhone() {
 }
 
 function openLocation() {
-  if (merchant.value) {
+  if (!merchant.value) return
+  const lat = merchant.value.latitude
+  const lng = merchant.value.longitude
+  if (lat && lng && lat !== 0 && lng !== 0) {
     uni.openLocation({
       name: merchant.value.name,
       address: merchant.value.address,
-      latitude: 0,
-      longitude: 0
+      latitude: lat,
+      longitude: lng
+    })
+  } else {
+    uni.setClipboardData({
+      data: merchant.value.address,
+      success: () => {
+        uToast.value.show({ title: '地址已复制', type: 'success' })
+      }
     })
   }
 }

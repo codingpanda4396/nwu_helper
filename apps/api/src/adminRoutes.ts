@@ -193,13 +193,129 @@ export async function adminRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/admin/dashboard/overview", async (_request, reply) => {
-    const [merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount] = await prisma.$transaction([
+    const [merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, feedbackCount] = await prisma.$transaction([
       prisma.merchant.count(),
       prisma.activity.count(),
       prisma.banner.count(),
       prisma.communityPost.count(),
-      prisma.communityPost.count({ where: { status: "PENDING" } })
+      prisma.communityPost.count({ where: { status: "PENDING" } }),
+      prisma.feedback.count()
     ]);
-    return ok(reply, { merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount });
+    return ok(reply, { merchantCount, activityCount, bannerCount, communityPostCount, pendingCommunityPostCount, feedbackCount });
+  });
+
+  // ── 商家管理 ──
+
+  const merchantSchema = z.object({
+    name: z.string().min(1),
+    summary: z.string().nullable().optional(),
+    categoryId: z.string().min(1),
+    address: z.string().min(1),
+    phone: z.string().nullable().optional(),
+    businessHours: z.string().nullable().optional(),
+    coverImageUrl: z.string().nullable().optional(),
+    qrImageUrl: z.string().nullable().optional(),
+    avgPrice: z.coerce.number().nullable().optional(),
+    latitude: z.coerce.number().nullable().optional(),
+    longitude: z.coerce.number().nullable().optional(),
+    tags: z.array(z.string()).optional(),
+    sortOrder: z.coerce.number().int().default(100),
+    status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]).default("PENDING"),
+    serviceCategoryId: z.string().nullable().optional()
+  });
+
+  app.get("/api/admin/merchants", async (_request, reply) => {
+    const items = await prisma.merchant.findMany({
+      include: { category: true, serviceCategory: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
+    });
+    return ok(reply, items);
+  });
+
+  app.post("/api/admin/merchants", async (request, reply) => {
+    const parsed = merchantSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
+    return ok(reply, await prisma.merchant.create({ data: parsed.data, include: { category: true, serviceCategory: true } }));
+  });
+
+  app.patch("/api/admin/merchants/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = merchantSchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "商家参数错误");
+    return ok(reply, await prisma.merchant.update({ where: { id }, data: parsed.data, include: { category: true, serviceCategory: true } }));
+  });
+
+  app.patch("/api/admin/merchants/:id/status", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const { status } = z.object({ status: z.enum(["PENDING", "APPROVED", "REJECTED", "SUSPENDED"]) }).parse(request.body);
+    return ok(reply, await prisma.merchant.update({ where: { id }, data: { status } }));
+  });
+
+  app.delete("/api/admin/merchants/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    await prisma.merchant.delete({ where: { id } });
+    return ok(reply, { deleted: true });
+  });
+
+  // ── 活动管理 ──
+
+  const activitySchema = z.object({
+    title: z.string().min(1),
+    description: z.string().nullable().optional(),
+    merchantId: z.string().min(1),
+    coverImage: z.string().nullable().optional(),
+    sortOrder: z.coerce.number().int().default(100),
+    status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT"),
+    startAt: z.coerce.date(),
+    endAt: z.coerce.date()
+  });
+
+  app.get("/api/admin/activities", async (_request, reply) => {
+    const items = await prisma.activity.findMany({
+      include: { merchant: true },
+      orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }]
+    });
+    return ok(reply, items);
+  });
+
+  app.post("/api/admin/activities", async (request, reply) => {
+    const parsed = activitySchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
+    return ok(reply, await prisma.activity.create({ data: parsed.data, include: { merchant: true } }));
+  });
+
+  app.patch("/api/admin/activities/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = activitySchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "活动参数错误");
+    return ok(reply, await prisma.activity.update({ where: { id }, data: parsed.data, include: { merchant: true } }));
+  });
+
+  app.delete("/api/admin/activities/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    await prisma.activity.delete({ where: { id } });
+    return ok(reply, { deleted: true });
+  });
+
+  // ── 反馈管理 ──
+
+  app.get("/api/admin/feedbacks", async (request, reply) => {
+    const { status } = z.object({ status: z.enum(["PENDING", "PROCESSING", "RESOLVED"]).optional() }).parse(request.query);
+    const where = status ? { status } : {};
+    const items = await prisma.feedback.findMany({
+      where,
+      orderBy: { createdAt: "desc" }
+    });
+    return ok(reply, items);
+  });
+
+  app.patch("/api/admin/feedbacks/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = z.object({
+      status: z.enum(["PENDING", "PROCESSING", "RESOLVED"]).optional(),
+      reply: z.string().nullable().optional()
+    }).safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "反馈参数错误");
+    return ok(reply, await prisma.feedback.update({ where: { id }, data: parsed.data }));
   });
 }

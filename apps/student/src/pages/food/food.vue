@@ -84,7 +84,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicApi, trackActivity } from '@/api/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -120,13 +120,22 @@ const sortOptions = [
 ]
 
 onMounted(async () => {
+  trackActivity('page_view', '/food')
   await fetchMerchants()
 })
 
 async function fetchMerchants() {
   loading.value = true
   try {
-    const data = await publicApi<Merchant[]>('/api/public/food/merchants')
+    const params: string[] = []
+    if (currentCategory.value && currentCategory.value !== 'all') {
+      params.push(`tag=${currentCategory.value}`)
+    }
+    if (currentSort.value && currentSort.value !== 'default') {
+      params.push(`sort=${currentSort.value}`)
+    }
+    const qs = params.length ? `?${params.join('&')}` : ''
+    const data = await publicApi<Merchant[]>(`/api/public/food/merchants${qs}`)
     merchants.value = data || []
   } catch (err) {
     merchants.value = []

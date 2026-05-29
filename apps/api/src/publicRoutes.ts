@@ -21,6 +21,11 @@ const serviceQuery = z.object({
   serviceKey: z.string().optional()
 });
 
+const foodQuery = z.object({
+  tag: z.string().optional(),
+  sort: z.enum(["default", "distance", "hot", "price"]).optional().default("default")
+});
+
 const communityQuery = z.object({
   type: z.string().optional()
 });
@@ -54,7 +59,9 @@ function merchantCard(merchant: any) {
     phone: merchant.phone,
     tags: merchant.tags || [],
     qrImage: merchant.qrImageUrl,
-    qrImageUrl: merchant.qrImageUrl
+    qrImageUrl: merchant.qrImageUrl,
+    latitude: merchant.latitude ?? 0,
+    longitude: merchant.longitude ?? 0
   };
 }
 
@@ -237,12 +244,21 @@ export async function publicRoutes(app: FastifyInstance) {
   });
 
   app.get("/api/public/food/merchants", async (request, reply) => {
-    const query = listQuery.parse(request.query);
+    const query = foodQuery.parse(request.query);
+    const where: any = {
+      status: "APPROVED",
+      category: { slug: "food" }
+    };
+    if (query.tag && query.tag !== "all") {
+      where.tags = { has: query.tag };
+    }
+    const orderBy: any = query.sort === "price"
+      ? [{ avgPrice: "asc" }, { sortOrder: "asc" }]
+      : query.sort === "hot"
+        ? [{ sortOrder: "asc" }, { createdAt: "desc" }]
+        : [{ sortOrder: "asc" }];
     const items = await prisma.merchant.findMany({
-      where: {
-        status: "APPROVED",
-        category: { slug: "food" }
-      },
+      where,
       include: {
         category: true,
         serviceCategory: true,
@@ -251,7 +267,7 @@ export async function publicRoutes(app: FastifyInstance) {
           orderBy: { sortOrder: "asc" }
         }
       },
-      orderBy: [{ sortOrder: "asc" }]
+      orderBy
     });
     return ok(reply, items.map(merchantCard));
   });

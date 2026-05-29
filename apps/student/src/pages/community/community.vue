@@ -115,7 +115,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicApi, publicWrite, trackActivity } from '@/api/index'
 import EmptyState from '@/components/EmptyState.vue'
 
 interface Post {
@@ -145,6 +145,7 @@ const categories = ['全部', '校园讨论', '避坑指南', '美食推荐', '�
 const postTypes = ['校园讨论', '避坑指南', '美食推荐', '求助']
 
 onMounted(async () => {
+  trackActivity('page_view', '/community')
   await fetchPosts()
 })
 
@@ -171,7 +172,7 @@ async function submitPost() {
   if (!newPost.value.title || !newPost.value.content) return
   
   try {
-    await publicApi('/api/public/community/posts', {
+    await publicWrite('/api/public/community/posts', {
       type: newPost.value.type,
       title: newPost.value.title,
       content: newPost.value.content,

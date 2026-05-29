@@ -26,7 +26,7 @@ function getOssUrl(key: string): string {
 }
 
 async function uploadLocalImage(localPath: string): Promise<string | null> {
-  const fullPath = join(process.cwd(), "apps/web/public", localPath);
+  const fullPath = join(process.cwd(), "apps/student/static", localPath);
   if (!existsSync(fullPath)) {
     console.warn(`File not found: ${fullPath}`);
     return null;

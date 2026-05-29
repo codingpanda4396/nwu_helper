@@ -32,7 +32,7 @@ export async function activityTrackingRoutes(app: FastifyInstance) {
         },
       });
     } catch (error) {
-      // 静默失败，不影响用户体验
+      console.error('[activity-tracking]', error);
     }
 
     return ok(reply, { success: true });

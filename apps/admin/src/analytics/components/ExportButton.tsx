@@ -57,6 +57,7 @@ export const ExportButton: React.FC<ExportButtonProps> = ({
 
       message.success("导出成功");
     } catch (error) {
+      console.error('[export]', error);
       message.error("导出失败");
     }
   };

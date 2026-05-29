@@ -14,7 +14,7 @@ const categories = [
 ];
 
 async function main() {
-  const adminPassword = await bcrypt.hash("123456", 10);
+  const adminPassword = await bcrypt.hash("admin123456", 10);
 
   await prisma.user.upsert({
     where: { phone: "18800000000" },
@@ -64,7 +64,9 @@ async function main() {
       qrImageUrl: "/assets/images/qr-placeholder.jpg",
       serviceCategoryId: null,
       status: "APPROVED" as const,
-      sortOrder: 10
+      sortOrder: 10,
+      latitude: 34.1585,
+      longitude: 108.8675
     },
     {
       id: "seed-merchant-print",
@@ -78,7 +80,9 @@ async function main() {
       qrImageUrl: "/assets/images/qr-placeholder.jpg",
       serviceCategoryId: serviceCategoryRecords.get("printing")!.id,
       status: "APPROVED" as const,
-      sortOrder: 20
+      sortOrder: 20,
+      latitude: 34.1590,
+      longitude: 108.8680
     },
     {
       id: "seed-merchant-driving",
@@ -92,7 +96,9 @@ async function main() {
       qrImageUrl: "/assets/images/qr-placeholder.jpg",
       serviceCategoryId: null,
       status: "APPROVED" as const,
-      sortOrder: 30
+      sortOrder: 30,
+      latitude: 34.1570,
+      longitude: 108.8700
     },
     {
       id: "seed-merchant-care",
@@ -106,7 +112,9 @@ async function main() {
       qrImageUrl: "/assets/images/qr-placeholder.jpg",
       serviceCategoryId: serviceCategoryRecords.get("care")!.id,
       status: "APPROVED" as const,
-      sortOrder: 40
+      sortOrder: 40,
+      latitude: 34.1582,
+      longitude: 108.8672
     },
     {
       id: "seed-merchant-play",
@@ -120,7 +128,9 @@ async function main() {
       qrImageUrl: "/assets/images/qr-placeholder.jpg",
       serviceCategoryId: serviceCategoryRecords.get("play")!.id,
       status: "APPROVED" as const,
-      sortOrder: 50
+      sortOrder: 50,
+      latitude: 34.1600,
+      longitude: 108.8678
     }
   ];
 
@@ -276,7 +286,7 @@ async function main() {
   }
 
   console.log("Seed completed.");
-  console.log("Admin: panda / 123456");
+  console.log("Admin: panda / admin123456");
 }
 
 main()

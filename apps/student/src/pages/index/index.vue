@@ -212,7 +212,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicApi, trackActivity } from '@/api/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -268,6 +268,7 @@ const defaultBanners: Banner[] = [
 ]
 
 onMounted(async () => {
+  trackActivity('page_view', '/index')
   try {
     const data = await publicApi<any>('/api/public/home')
     banners.value = data.banners?.length > 0 ? data.banners : defaultBanners

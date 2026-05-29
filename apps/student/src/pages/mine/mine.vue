@@ -28,12 +28,12 @@
       <!-- 统计卡片 -->
       <view class="stats-card">
         <view class="stat-item tap-active" @click="goTo('/pages/favorite/favorite')">
-          <text class="stat-value">0</text>
+          <text class="stat-value">{{ favoriteCount }}</text>
           <text class="stat-label">收藏</text>
         </view>
         <view class="stat-divider" />
         <view class="stat-item tap-active" @click="goTo('/pages/history/history')">
-          <text class="stat-value">0</text>
+          <text class="stat-value">{{ historyCount }}</text>
           <text class="stat-label">足迹</text>
         </view>
         <view class="stat-divider" />
@@ -115,9 +115,22 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue'
+import { ref, onMounted } from 'vue'
 
 const uToast = ref<any>(null)
+const favoriteCount = ref(0)
+const historyCount = ref(0)
+
+onMounted(() => {
+  try {
+    const fav = uni.getStorageSync('favorites')
+    if (fav) favoriteCount.value = JSON.parse(fav).length || 0
+  } catch {}
+  try {
+    const hist = uni.getStorageSync('viewHistory')
+    if (hist) historyCount.value = JSON.parse(hist).length || 0
+  } catch {}
+})
 
 function goTo(url: string) {
   uni.navigateTo({ url })

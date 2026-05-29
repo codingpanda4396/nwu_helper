@@ -86,7 +86,12 @@ const menuItems: MenuProps["items"] = [
   {
     key: "/admin/activities",
     icon: <GiftOutlined />,
-    label: "活动发布",
+    label: "活动管理",
+  },
+  {
+    key: "/admin/feedbacks",
+    icon: <MessageOutlined />,
+    label: "反馈管理",
   },
   {
     key: "/admin/banners",

@@ -7,6 +7,11 @@ function authUser(request: { user?: unknown }) {
   return request.user as { sub: string; role: "STUDENT" | "ADMIN"; name: string };
 }
 
+function getCountId(count: unknown): number {
+  if (count && typeof count === 'object' && 'id' in count) return (count as { id?: number }).id ?? 0;
+  return 0;
+}
+
 const dateRangeSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
@@ -48,7 +53,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
 
     const trend = usersByDay.map((item) => ({
       date: item.createdAt.toISOString().split("T")[0],
-      newUsers: (item._count as any)?.id || 0,
+      newUsers: getCountId(item._count),
     }));
 
     const growthRate = totalUsers > 0 ? ((newUsers / totalUsers) * 100).toFixed(1) : "0";
@@ -81,11 +86,11 @@ export async function analyticsRoutes(app: FastifyInstance) {
       }),
     ]);
 
-    const totalLogins = methodDistribution.reduce((sum, item) => sum + ((item._count as any)?.id || 0), 0);
+    const totalLogins = methodDistribution.reduce((sum, item) => sum + (getCountId(item._count)), 0);
     const distribution = methodDistribution.map((item) => ({
       method: item.method,
-      count: (item._count as any)?.id || 0,
-      percentage: totalLogins > 0 ? Math.round((((item._count as any)?.id || 0) / totalLogins) * 100) : 0,
+      count: getCountId(item._count),
+      percentage: totalLogins > 0 ? Math.round(((getCountId(item._count)) / totalLogins) * 100) : 0,
     }));
 
     const trendMap = new Map<string, Record<string, number>>();
@@ -95,7 +100,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
         trendMap.set(date, { password: 0, wechat: 0, sms: 0 });
       }
       const entry = trendMap.get(date)!;
-      entry[item.method] = (item._count as any)?.id || 0;
+      entry[item.method] = getCountId(item._count);
     });
 
     const trend = Array.from(trendMap.entries()).map(([date, methods]) => ({
@@ -144,7 +149,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const trendMap = new Map<string, number>();
     activityByDay.forEach((item) => {
       const date = item.createdAt.toISOString().split("T")[0];
-      trendMap.set(date, (trendMap.get(date) || 0) + ((item._count as any)?.id || 0));
+      trendMap.set(date, (trendMap.get(date) || 0) + (getCountId(item._count)));
     });
 
     const trend = Array.from(trendMap.entries()).map(([date, count]) => ({
@@ -174,11 +179,11 @@ export async function analyticsRoutes(app: FastifyInstance) {
       select: { id: true, createdAt: true },
     });
 
-    const cohorts = new Map<string, { newUsers: number; retainedUsers: Set<string> }>();
+    const cohorts = new Map<string, { newUsers: number; retainedDay1: Set<string>; retainedDay7: Set<string>; retainedDay30: Set<string> }>();
     for (const user of newUsers) {
       const cohortDate = user.createdAt.toISOString().split("T")[0];
       if (!cohorts.has(cohortDate)) {
-        cohorts.set(cohortDate, { newUsers: 0, retainedUsers: new Set() });
+        cohorts.set(cohortDate, { newUsers: 0, retainedDay1: new Set(), retainedDay7: new Set(), retainedDay30: new Set() });
       }
       cohorts.get(cohortDate)!.newUsers++;
     }
@@ -196,9 +201,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
         const daysDiff = Math.floor(
           (new Date(activityDate).getTime() - new Date(cohortDate).getTime()) / (1000 * 60 * 60 * 24)
         );
-        if (daysDiff === 1 || daysDiff === 7 || daysDiff === 30) {
-          cohort.retainedUsers.add(activity.userId);
-        }
+        if (daysDiff === 1) cohort.retainedDay1.add(activity.userId);
+        if (daysDiff === 7) cohort.retainedDay7.add(activity.userId);
+        if (daysDiff === 30) cohort.retainedDay30.add(activity.userId);
       }
     }
 
@@ -206,9 +211,9 @@ export async function analyticsRoutes(app: FastifyInstance) {
       cohortDate: date,
       newUsers: data.newUsers,
       retention: {
-        day1: data.newUsers > 0 ? Math.round((data.retainedUsers.size / data.newUsers) * 100) : 0,
-        day7: 0,
-        day30: 0,
+        day1: data.newUsers > 0 ? Math.round((data.retainedDay1.size / data.newUsers) * 100) : 0,
+        day7: data.newUsers > 0 ? Math.round((data.retainedDay7.size / data.newUsers) * 100) : 0,
+        day30: data.newUsers > 0 ? Math.round((data.retainedDay30.size / data.newUsers) * 100) : 0,
       },
     }));
 
@@ -216,8 +221,12 @@ export async function analyticsRoutes(app: FastifyInstance) {
       day1: cohortResults.length > 0
         ? Math.round(cohortResults.reduce((sum, c) => sum + c.retention.day1, 0) / cohortResults.length)
         : 0,
-      day7: 0,
-      day30: 0,
+      day7: cohortResults.length > 0
+        ? Math.round(cohortResults.reduce((sum, c) => sum + c.retention.day7, 0) / cohortResults.length)
+        : 0,
+      day30: cohortResults.length > 0
+        ? Math.round(cohortResults.reduce((sum, c) => sum + c.retention.day30, 0) / cohortResults.length)
+        : 0,
     };
 
     return ok(reply, { cohorts: cohortResults, averageRetention: avgRetention });
@@ -294,7 +303,7 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const startDate = query.startDate || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const endDate = query.endDate || now;
 
-    const [pageStats, viewsByDay] = await prisma.$transaction([
+    const [pageStats, viewsByDay, uvRows] = await prisma.$transaction([
       prisma.userActivity.groupBy({
         by: ["page"],
         where: {
@@ -310,14 +319,28 @@ export async function analyticsRoutes(app: FastifyInstance) {
         _count: { id: true },
         orderBy: { createdAt: "asc" },
       }),
+      prisma.userActivity.findMany({
+        where: {
+          createdAt: { gte: startDate, lte: endDate },
+          page: { not: null },
+          sessionId: { not: null },
+        },
+        select: { page: true, sessionId: true },
+        distinct: ["page", "sessionId"],
+      }),
     ]);
+
+    const uvByPage = new Map<string, number>();
+    for (const row of uvRows) {
+      if (row.page) uvByPage.set(row.page, (uvByPage.get(row.page) || 0) + 1);
+    }
 
     const pages = pageStats
       .filter((item) => item.page)
       .map((item) => ({
         page: item.page,
-        pv: (item._count as any)?.id || 0,
-        uv: Math.round(((item._count as any)?.id || 0) * 0.6),
+        pv: getCountId(item._count),
+        uv: uvByPage.get(item.page!) || 0,
       }))
       .sort((a, b) => b.pv - a.pv)
       .slice(0, 10);
@@ -325,13 +348,13 @@ export async function analyticsRoutes(app: FastifyInstance) {
     const trendMap = new Map<string, number>();
     viewsByDay.forEach((item) => {
       const date = item.createdAt.toISOString().split("T")[0];
-      trendMap.set(date, (trendMap.get(date) || 0) + ((item._count as any)?.id || 0));
+      trendMap.set(date, (trendMap.get(date) || 0) + (getCountId(item._count)));
     });
 
     const trend = Array.from(trendMap.entries()).map(([date, count]) => ({
       date,
       totalPv: count,
-      totalUv: Math.round(count * 0.6),
+      totalUv: count, // UV ≈ PV when session-level dedup is not available per-day
     }));
 
     return ok(reply, { pages, trend });

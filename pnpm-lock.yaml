@@ -216,61 +216,6 @@ importers:
         specifier: ^1.0.24
         version: 1.8.27(typescript@4.9.5)
 
-  apps/web:
-    dependencies:
-      '@ant-design/icons':
-        specifier: ^6.2.3
-        version: 6.2.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      '@nwu-helper/shared':
-        specifier: workspace:*
-        version: link:../../packages/shared
-      '@vitejs/plugin-react':
-        specifier: ^4.3.4
-        version: 4.7.0(vite@6.4.2(@types/node@22.19.19)(jiti@2.7.0)(sass@1.100.0)(terser@5.48.0)(tsx@4.22.0))
-      antd:
-        specifier: ^6.4.3
-        version: 6.4.3(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      dayjs:
-        specifier: ^1.11.21
-        version: 1.11.21
-      echarts:
-        specifier: ^6.1.0
-        version: 6.1.0
-      echarts-for-react:
-        specifier: ^3.0.6
-        version: 3.0.6(echarts@6.1.0)(react@19.2.6)
-      exceljs:
-        specifier: ^4.4.0
-        version: 4.4.0
-      lucide-react:
-        specifier: ^0.468.0
-        version: 0.468.0(react@19.2.6)
-      react:
-        specifier: ^19.0.0
-        version: 19.2.6
-      react-dom:
-        specifier: ^19.0.0
-        version: 19.2.6(react@19.2.6)
-      react-router-dom:
-        specifier: ^7.15.1
-        version: 7.15.1(react-dom@19.2.6(react@19.2.6))(react@19.2.6)
-      swiper:
-        specifier: ^12.1.4
-        version: 12.1.4
-      vite:
-        specifier: ^6.0.3
-        version: 6.4.2(@types/node@22.19.19)(jiti@2.7.0)(sass@1.100.0)(terser@5.48.0)(tsx@4.22.0)
-    devDependencies:
-      '@types/react':
-        specifier: ^19.0.1
-        version: 19.2.14
-      '@types/react-dom':
-        specifier: ^19.0.2
-        version: 19.2.3(@types/react@19.2.14)
-      typescript:
-        specifier: ^5.7.2
-        version: 5.9.3
-
   packages/shared: {}
 
 packages:
@@ -4406,11 +4351,6 @@ packages:
   lru-cache@5.1.1:
     resolution: {integrity: sha512-KpNARQA3Iwv+jTA0utUVVbrh+Jlrr1Fv0e56GGzAFOXN7dk/FviaDW8LHmK52DlcH4WP2n6gI8vN1aesBFgo9w==}
 
-  lucide-react@0.468.0:
-    resolution: {integrity: sha512-6koYRhnM2N0GGZIdXzSeiNwguv1gt/FAjZOiPl76roBi3xKEXa4WmfpxgQwTTL4KipXjefrnf3oV4IsYhi4JFA==}
-    peerDependencies:
-      react: ^16.5.1 || ^17.0.0 || ^18.0.0 || ^19.0.0-rc
-
   magic-string@0.30.11:
     resolution: {integrity: sha512-+Wri9p0QHMy+545hKww7YAu5NyzF8iomPL/RQazugQ9+Ez4Ic3mERMd8ZTX5rfK944j+560ZJi8iAwgak1Ac7A==}
 
@@ -5325,10 +5265,6 @@ packages:
   supports-preserve-symlinks-flag@1.0.0:
     resolution: {integrity: sha512-ot0WnXS9fgdkgIcePe6RHNk1WA8+muPa6cSjeR3V8K27q9BB1rTE3R1p7Hv0z1ZyAc8s6Vvv8DIyWf681MAt0w==}
     engines: {node: '>= 0.4'}
-
-  swiper@12.1.4:
-    resolution: {integrity: sha512-bihiwoKMOQwW8FfdUbo1DgkVH25E+4ZELIq0oopL1KTKBteLuaTMi/wwFjMxtlhTkk45k3XQ89D1Fvv0spSqBA==}
-    engines: {node: '>= 4.7.0'}
 
   symbol-tree@3.2.4:
     resolution: {integrity: sha512-9QNk5KwDF+Bvz+PyObkmSYjI5ksVUYtjW7AU22r2NKcfLJcXp96hkDWU3+XndOsUb+AQ9QhfzfCT2O+CNWT5Tw==}
@@ -11257,10 +11193,6 @@ snapshots:
     dependencies:
       yallist: 3.1.1
 
-  lucide-react@0.468.0(react@19.2.6):
-    dependencies:
-      react: 19.2.6
-
   magic-string@0.30.11:
     dependencies:
       '@jridgewell/sourcemap-codec': 1.5.5
@@ -12151,8 +12083,6 @@ snapshots:
       supports-color: 7.2.0
 
   supports-preserve-symlinks-flag@1.0.0: {}
-
-  swiper@12.1.4: {}
 
   symbol-tree@3.2.4: {}
 

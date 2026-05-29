@@ -6,7 +6,6 @@ FROM base AS deps
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml* ./
 COPY apps/api/package.json apps/api/package.json
 COPY apps/admin/package.json apps/admin/package.json
-COPY apps/web/package.json apps/web/package.json
 COPY apps/student/package.json apps/student/package.json
 COPY packages/shared/package.json packages/shared/package.json
 RUN pnpm install --frozen-lockfile=false
@@ -18,10 +17,6 @@ RUN pnpm build
 FROM deps AS api-build
 COPY . .
 RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/api build
-
-FROM deps AS web-build
-COPY . .
-RUN pnpm --filter @nwu-helper/shared build && pnpm --filter @nwu-helper/web build
 
 FROM deps AS admin-build
 COPY . .
@@ -40,11 +35,6 @@ COPY --from=api-build /app/apps/api ./apps/api
 WORKDIR /app/apps/api
 EXPOSE 4000
 CMD ["pnpm", "start:cluster"]
-
-FROM nginx:1.27-alpine AS web
-COPY --from=web-build /app/apps/web/dist /usr/share/nginx/html
-COPY infra/nginx/default.conf /etc/nginx/conf.d/default.conf
-EXPOSE 80
 
 FROM nginx:1.27-alpine AS admin
 COPY --from=admin-build /app/apps/admin/dist /usr/share/nginx/html

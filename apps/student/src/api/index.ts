@@ -30,6 +30,18 @@ export async function publicApi<T>(path: string): Promise<T> {
   })
 }
 
+/**
+ * 用户行为埋点（fire-and-forget，不阻塞页面）
+ */
+export function trackActivity(action: string, page?: string, targetId?: string) {
+  publicWrite('/api/public/activity', {
+    action,
+    page,
+    targetId,
+    platform: 'h5'
+  }).catch(() => {})
+}
+
 export async function publicWrite<T>(path: string, data: Record<string, any>): Promise<T> {
   return new Promise((resolve, reject) => {
     uni.request({

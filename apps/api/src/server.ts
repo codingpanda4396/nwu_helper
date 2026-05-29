@@ -30,6 +30,10 @@ await app.register(multipart, {
     fileSize: 5 * 1024 * 1024 // 5MB
   }
 });
+await app.register(rateLimit, {
+  max: 100,
+  timeWindow: '1 minute'
+});
 
 app.get("/api/health", async () => ({ success: true, data: { status: "ok" } }));
 await app.register(authRoutes);
