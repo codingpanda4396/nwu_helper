@@ -80,7 +80,7 @@ services:
     depends_on:
       - api
     ports:
-      - "${GATEWAY_BIND:-0.0.0.0:8082}:80"
+      - "${GATEWAY_BIND:-0.0.0.0:4396}:80"
     deploy:
       resources:
         limits:
