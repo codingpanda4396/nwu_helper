@@ -42,25 +42,25 @@
     <view v-if="!loading" class="quick-grid slide-up stagger-1">
       <view class="grid-item tap-active" @click="goTo('/pages/food/food')">
         <view class="grid-icon grid-icon--food">
-          <u-icon name="gift-fill" size="28" color="#FFFFFF" />
+          <image class="grid-icon__img" src="/static/icons/food.svg" mode="aspectFit" />
         </view>
         <text class="grid-text">美食</text>
       </view>
       <view class="grid-item tap-active" @click="goToService('driving')">
         <view class="grid-icon grid-icon--driving">
-          <u-icon name="car-fill" size="28" color="#FFFFFF" />
+          <image class="grid-icon__img" src="/static/icons/car.svg" mode="aspectFit" />
         </view>
         <text class="grid-text">驾校</text>
       </view>
       <view class="grid-item tap-active" @click="showServiceMenu">
         <view class="grid-icon grid-icon--service">
-          <u-icon name="grid-fill" size="28" color="#FFFFFF" />
+          <image class="grid-icon__img" src="/static/icons/service.svg" mode="aspectFit" />
         </view>
         <text class="grid-text">生活服务</text>
       </view>
       <view class="grid-item tap-active" @click="goTo('/pages/community/community')">
         <view class="grid-icon grid-icon--community">
-          <u-icon name="chat-fill" size="28" color="#FFFFFF" />
+          <image class="grid-icon__img" src="/static/icons/chat.svg" mode="aspectFit" />
         </view>
         <text class="grid-text">校园墙</text>
       </view>
@@ -76,7 +76,7 @@
       </view>
       <view class="service-grid">
         <view class="service-item tap-active" v-for="item in serviceList" :key="item.key" @click="goToService(item.key)">
-          <u-icon :name="item.icon" size="24" color="#10B981" />
+          <image class="service-item__icon" :src="item.icon" mode="aspectFit" />
           <text>{{ item.name }}</text>
         </view>
       </view>
@@ -175,19 +175,19 @@
         <view class="zone-links">
           <view class="zone-link tap-active" @click="showWechatToast">
             <view class="zone-link__icon zone-link__icon--wechat">
-              <u-icon name="weixin-fill" size="24" color="#FFFFFF" />
+              <image class="zone-link__icon-img" src="/static/icons/wechat.svg" mode="aspectFit" />
             </view>
             <text>微信</text>
           </view>
           <view class="zone-link tap-active">
             <view class="zone-link__icon zone-link__icon--douyin">
-              <u-icon name="抖音" size="24" color="#FFFFFF" />
+              <image class="zone-link__icon-img" src="/static/icons/douyin.svg" mode="aspectFit" />
             </view>
             <text>抖音</text>
           </view>
           <view class="zone-link tap-active">
             <view class="zone-link__icon zone-link__icon--xiaohongshu">
-              <u-icon name="小红书" size="24" color="#FFFFFF" />
+              <image class="zone-link__icon-img" src="/static/icons/xiaohongshu.svg" mode="aspectFit" />
             </view>
             <text>小红书</text>
           </view>
@@ -257,12 +257,12 @@ const uToast = ref<any>(null)
 const tabPages = ['/pages/index/index', '/pages/food/food', '/pages/service/service', '/pages/community/community', '/pages/mine/mine']
 
 const serviceList = [
-  { key: 'print', name: '打印', icon: 'print-fill' },
-  { key: 'wash', name: '洗护', icon: 'water-fill' },
-  { key: 'entertainment', name: '娱乐', icon: 'play-right-fill' },
-  { key: 'female', name: '女生精选', icon: 'heart-fill' },
-  { key: 'rent', name: '租房', icon: 'home-fill' },
-  { key: 'parttime', name: '兼职', icon: 'bag-fill' }
+  { key: 'print', name: '打印', icon: '/static/icons/print-green.svg' },
+  { key: 'wash', name: '洗护', icon: '/static/icons/wash-green.svg' },
+  { key: 'entertainment', name: '娱乐', icon: '/static/icons/entertainment-green.svg' },
+  { key: 'female', name: '女生精选', icon: '/static/icons/heart-green.svg' },
+  { key: 'rent', name: '租房', icon: '/static/icons/home-green.svg' },
+  { key: 'parttime', name: '兼职', icon: '/static/icons/bag-green.svg' }
 ]
 
 const defaultBanners: Banner[] = [
@@ -492,6 +492,11 @@ function showWechatToast() {
   box-shadow: $shadow-sm;
   transition: all $transition-base;
 
+  &__img {
+    width: 48rpx;
+    height: 48rpx;
+  }
+
   &--food {
     background: linear-gradient(135deg, #10B981 0%, #059669 100%);
     box-shadow: 0 4rpx 12rpx rgba(16, 185, 129, 0.3);
@@ -567,6 +572,11 @@ function showWechatToast() {
   background: $bg-page;
   border-radius: $radius-md;
   transition: all $transition-base;
+
+  &__icon {
+    width: 48rpx;
+    height: 48rpx;
+  }
 
   &:active {
     background: $primary-bg;
@@ -827,6 +837,11 @@ function showWechatToast() {
     align-items: center;
     justify-content: center;
     box-shadow: $shadow-sm;
+
+    &-img {
+      width: 48rpx;
+      height: 48rpx;
+    }
 
     &--wechat {
       background: linear-gradient(135deg, #07C160 0%, #06AD56 100%);
