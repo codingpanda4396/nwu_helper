@@ -1,11 +1,6 @@
 name: Deploy WeChat MiniProgram
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'apps/student/**'
-      - 'packages/shared/**'
   workflow_dispatch:
     inputs:
       version:
