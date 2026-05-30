@@ -41,7 +41,7 @@ export default function BannerForm({ token }: { token: string }) {
         });
         message.success("轮播图创建成功");
       }
-      navigate("/admin/banners");
+      navigate("/banners");
     } catch (err) {
       if (err instanceof Error) {
         message.error(err.message);
@@ -150,7 +150,7 @@ export default function BannerForm({ token }: { token: string }) {
             </Button>
             <Button
               style={{ marginLeft: 8 }}
-              onClick={() => navigate("/admin/banners")}
+              onClick={() => navigate("/banners")}
             >
               取消
             </Button>

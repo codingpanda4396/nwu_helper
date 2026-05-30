@@ -93,7 +93,7 @@ export default function BannerList({ token }: { token: string }) {
         <Button
           type="link"
           icon={<EditOutlined />}
-          onClick={() => navigate(`/admin/banners/${record.id}/edit`)}
+          onClick={() => navigate(`/banners/${record.id}/edit`)}
         >
           编辑
         </Button>
@@ -109,7 +109,7 @@ export default function BannerList({ token }: { token: string }) {
           <Button
             type="primary"
             icon={<PlusOutlined />}
-            onClick={() => navigate("/admin/banners/create")}
+            onClick={() => navigate("/banners/create")}
           >
             添加轮播图
           </Button>

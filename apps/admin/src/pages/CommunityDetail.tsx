@@ -79,7 +79,7 @@ export default function CommunityDetail({ token }: { token: string }) {
     <div>
       <Button
         icon={<ArrowLeftOutlined />}
-        onClick={() => navigate("/admin/community")}
+        onClick={() => navigate("/community")}
         style={{ marginBottom: 16 }}
       >
         返回列表

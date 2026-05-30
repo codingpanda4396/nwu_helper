@@ -46,7 +46,7 @@
         </view>
         <text class="grid-text">美食</text>
       </view>
-      <view class="grid-item tap-active" @click="goTo('/pages/service/service?key=driving')">
+      <view class="grid-item tap-active" @click="goToService('driving')">
         <view class="grid-icon grid-icon--driving">
           <u-icon name="car-fill" size="28" color="#FFFFFF" />
         </view>
@@ -213,6 +213,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
+import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 
@@ -245,12 +246,15 @@ interface Merchant {
   defaultChannelId?: string
 }
 
+const store = useAppStore()
 const banners = ref<Banner[]>([])
 const activities = ref<Activity[]>([])
 const merchants = ref<Merchant[]>([])
 const showServices = ref(false)
 const loading = ref(true)
 const uToast = ref<any>(null)
+
+const tabPages = ['/pages/index/index', '/pages/food/food', '/pages/service/service', '/pages/community/community', '/pages/mine/mine']
 
 const serviceList = [
   { key: 'print', name: '打印', icon: 'print-fill' },
@@ -310,12 +314,18 @@ function goSearch() {
 }
 
 function goTo(url: string) {
-  uni.switchTab({ url })
+  const path = url.split('?')[0]
+  if (tabPages.includes(path)) {
+    uni.switchTab({ url: path })
+  } else {
+    uni.navigateTo({ url })
+  }
 }
 
 function goToService(key: string) {
   showServices.value = false
-  uni.navigateTo({ url: `/pages/service/service?key=${key}` })
+  store.selectedServiceKey = key
+  uni.switchTab({ url: '/pages/service/service' })
 }
 
 function showServiceMenu() {

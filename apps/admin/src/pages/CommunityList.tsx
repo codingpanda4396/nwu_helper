@@ -110,7 +110,7 @@ export default function CommunityList({ token }: { token: string }) {
           <Button
             type="link"
             icon={<EyeOutlined />}
-            onClick={() => navigate(`/admin/community/${record.id}`)}
+            onClick={() => navigate(`/community/${record.id}`)}
           >
             详情
           </Button>

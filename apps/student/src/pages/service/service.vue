@@ -53,6 +53,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
+import { useAppStore } from '@/store/index'
 
 interface Merchant {
   id: string
@@ -63,8 +64,10 @@ interface Merchant {
   defaultChannelId?: string
 }
 
+const store = useAppStore()
 const merchants = ref<Merchant[]>([])
 const uToast = ref<any>(null)
+const activeKey = ref('')
 
 const serviceCategories = [
   { key: 'print', name: '打印', icon: 'print-fill', bgColor: '#E8F5E9' },
@@ -79,6 +82,10 @@ const serviceCategories = [
 
 onMounted(async () => {
   trackActivity('page_view', '/service')
+  if (store.selectedServiceKey) {
+    activeKey.value = store.selectedServiceKey
+    store.selectedServiceKey = ''
+  }
   try {
     const data = await publicApi<Merchant[]>('/api/public/services/merchants')
     merchants.value = data || []
@@ -96,7 +103,7 @@ onMounted(async () => {
 
 function goToService(key: string) {
   if (key === 'more') return
-  uni.navigateTo({ url: `/pages/service/service?key=${key}` })
+  activeKey.value = key
 }
 
 function openMerchant(merchant: Merchant) {

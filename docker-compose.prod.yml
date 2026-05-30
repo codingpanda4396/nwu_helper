@@ -50,7 +50,7 @@ services:
     depends_on:
       - api
     ports:
-      - "${ADMIN_BIND:-0.0.0.0:18080}:80"
+      - "${ADMIN_BIND:-127.0.0.1:18080}:80"
     deploy:
       resources:
         limits:
@@ -65,7 +65,7 @@ services:
     depends_on:
       - api
     ports:
-      - "${STUDENT_BIND:-0.0.0.0:8081}:80"
+      - "${STUDENT_BIND:-127.0.0.1:8081}:80"
     deploy:
       resources:
         limits:

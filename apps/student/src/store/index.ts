@@ -4,6 +4,7 @@ import { ref } from 'vue'
 export const useAppStore = defineStore('app', () => {
   const sessionId = ref('')
   const toast = ref('')
+  const selectedServiceKey = ref('')
 
   function getSessionId() {
     if (!sessionId.value) {
@@ -22,6 +23,7 @@ export const useAppStore = defineStore('app', () => {
   return {
     sessionId,
     toast,
+    selectedServiceKey,
     getSessionId,
     showToast
   }

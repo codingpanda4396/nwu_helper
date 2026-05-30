@@ -31,87 +31,87 @@ interface AdminLayoutProps {
 
 const menuItems: MenuProps["items"] = [
   {
-    key: "/admin/overview",
+    key: "/overview",
     icon: <DashboardOutlined />,
     label: "概览统计",
   },
   { type: "divider" },
   {
-    key: "/admin/analytics",
+    key: "/analytics",
     icon: <LineChartOutlined />,
     label: "数据分析",
     children: [
       {
-        key: "/admin/analytics/overview",
+        key: "/analytics/overview",
         icon: <BarChartOutlined />,
         label: "数据概览",
       },
       {
-        key: "/admin/analytics/user-growth",
+        key: "/analytics/user-growth",
         icon: <RiseOutlined />,
         label: "用户增长",
       },
       {
-        key: "/admin/analytics/login-methods",
+        key: "/analytics/login-methods",
         icon: <PieChartOutlined />,
         label: "登录方式",
       },
       {
-        key: "/admin/analytics/user-activity",
+        key: "/analytics/user-activity",
         icon: <TeamOutlined />,
         label: "用户活跃度",
       },
       {
-        key: "/admin/analytics/user-retention",
+        key: "/analytics/user-retention",
         icon: <FunnelPlotOutlined />,
         label: "用户留存",
       },
       {
-        key: "/admin/analytics/user-funnel",
+        key: "/analytics/user-funnel",
         icon: <FunnelPlotOutlined />,
         label: "转化漏斗",
       },
     ],
   },
   {
-    key: "/admin/attribution",
+    key: "/attribution",
     icon: <FundProjectionScreenOutlined />,
     label: "归因分析",
   },
   { type: "divider" },
   {
-    key: "/admin/community",
+    key: "/community",
     icon: <MessageOutlined />,
     label: "论坛审核",
   },
   {
-    key: "/admin/merchants",
+    key: "/merchants",
     icon: <ShopOutlined />,
     label: "商家管理",
   },
   {
-    key: "/admin/activities",
+    key: "/activities",
     icon: <GiftOutlined />,
     label: "活动管理",
   },
   {
-    key: "/admin/feedbacks",
+    key: "/feedbacks",
     icon: <MessageOutlined />,
     label: "反馈管理",
   },
   {
-    key: "/admin/banners",
+    key: "/banners",
     icon: <PictureOutlined />,
     label: "轮播图管理",
   },
   { type: "divider" },
   {
-    key: "/admin/services",
+    key: "/services",
     icon: <ToolOutlined />,
     label: "服务管理",
   },
   {
-    key: "/admin/wechat-entry",
+    key: "/wechat-entry",
     icon: <QrcodeOutlined />,
     label: "西大圈入口",
   },
@@ -121,9 +121,9 @@ export default function AdminLayout({ user, onLogout }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const selectedKey = location.pathname.startsWith("/admin/")
+  const selectedKey = location.pathname.startsWith("/")
     ? location.pathname
-    : "/admin/overview";
+    : "/overview";
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
