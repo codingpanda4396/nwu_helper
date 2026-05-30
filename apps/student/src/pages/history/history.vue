@@ -64,9 +64,11 @@ function clearHistory() {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   min-height: 100vh;
-  background: #F9FAFB;
+  background: $bg-page;
 }
 
 .empty-state {
@@ -79,14 +81,14 @@ function clearHistory() {
 }
 
 .empty-title {
-  font-size: 30rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .empty-desc {
-  font-size: 24rpx;
-  color: #9CA3AF;
+  font-size: $font-sm;
+  color: $text-tertiary;
 }
 
 .history-list {
@@ -102,7 +104,7 @@ function clearHistory() {
 
 .action-text {
   font-size: 24rpx;
-  color: #9CA3AF;
+  color: $text-tertiary;
 }
 
 .action-clear {
@@ -111,13 +113,14 @@ function clearHistory() {
 }
 
 .history-card {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   overflow: hidden;
   display: flex;
   flex-direction: row;
   margin-bottom: 16rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .history-image {
@@ -137,11 +140,11 @@ function clearHistory() {
 .history-name {
   font-size: 28rpx;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .history-time {
   font-size: 22rpx;
-  color: #9CA3AF;
+  color: $text-tertiary;
 }
 </style>

@@ -37,7 +37,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicWrite } from '@/api/index'
 
 const content = ref('')
 const contact = ref('')
@@ -55,7 +55,7 @@ async function submitFeedback() {
   if (!content.value.trim()) return
   
   try {
-    await publicApi('/api/public/feedback', {
+    await publicWrite('/api/public/feedback', {
       type: selectedType.value,
       content: content.value,
       contact: contact.value || undefined
@@ -69,9 +69,11 @@ async function submitFeedback() {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   min-height: 100vh;
-  background: #F9FAFB;
+  background: $bg-page;
 }
 
 .feedback-form {
@@ -80,20 +82,25 @@ async function submitFeedback() {
 
 .form-header {
   margin-bottom: 40rpx;
+  background: $bg-card;
+  border: 1rpx solid $border-light;
+  border-radius: $radius-lg;
+  padding: 30rpx;
+  box-shadow: $shadow-sm;
 }
 
 .form-title {
   display: block;
   font-size: 36rpx;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
   margin-bottom: 12rpx;
 }
 
 .form-desc {
   display: block;
   font-size: 24rpx;
-  color: #6B7280;
+  color: $text-secondary;
 }
 
 .form-group {
@@ -104,7 +111,7 @@ async function submitFeedback() {
   display: block;
   font-size: 28rpx;
   font-weight: 500;
-  color: #1F2937;
+  color: $text-primary;
   margin-bottom: 16rpx;
 }
 
@@ -116,27 +123,28 @@ async function submitFeedback() {
 
 .type-tag {
   padding: 12rpx 24rpx;
-  background: #ffffff;
-  border-radius: 32rpx;
-  font-size: 24rpx;
-  color: #6B7280;
-  border: 2rpx solid #E5E7EB;
+  background: $bg-card;
+  border-radius: $radius-full;
+  font-size: $font-sm;
+  color: $text-secondary;
+  border: 2rpx solid $border;
 
   &.active {
-    background: #D1FAE5;
-    color: #10B981;
-    border-color: #10B981;
+    background: $primary-bg;
+    color: $primary;
+    border-color: rgba(22, 168, 115, 0.28);
   }
 }
 
 .form-textarea {
   width: 100%;
   height: 240rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   padding: 20rpx;
   font-size: 28rpx;
-  color: #1F2937;
+  color: $text-primary;
+  border: 1rpx solid $border-light;
   box-sizing: border-box;
 }
 
@@ -144,25 +152,26 @@ async function submitFeedback() {
   display: block;
   text-align: right;
   font-size: 22rpx;
-  color: #9CA3AF;
+  color: $text-tertiary;
   margin-top: 8rpx;
 }
 
 .form-input {
   width: 100%;
   height: 80rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   padding: 0 20rpx;
   font-size: 28rpx;
-  color: #1F2937;
+  color: $text-primary;
+  border: 1rpx solid $border-light;
   box-sizing: border-box;
 }
 
 .submit-btn {
   width: 100%;
   height: 88rpx;
-  background: #10B981;
+  background: $primary;
   color: #ffffff;
   font-size: 30rpx;
   font-weight: 500;

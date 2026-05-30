@@ -1,25 +1,18 @@
 <template>
   <view class="empty-state" :class="[`empty-state--${size}`]">
-    <!-- 插画区域 -->
     <view class="empty-state__illustration">
       <view class="empty-state__icon" :style="{ background: iconBg }">
         <u-icon :name="icon" :size="iconSize" :color="iconColor" />
       </view>
-      <!-- 装饰元素 -->
-      <view class="empty-state__decor empty-state__decor--1" />
-      <view class="empty-state__decor empty-state__decor--2" />
-      <view class="empty-state__decor empty-state__decor--3" />
     </view>
 
-    <!-- 文字区域 -->
     <view class="empty-state__content">
       <text class="empty-state__title">{{ title }}</text>
       <text v-if="description" class="empty-state__desc">{{ description }}</text>
     </view>
 
-    <!-- 操作按钮 -->
     <view v-if="actionText" class="empty-state__action" @tap="$emit('action')">
-      <u-icon v-if="actionIcon" :name="actionIcon" size="16" color="#FFFFFF" />
+      <u-icon v-if="actionIcon" :name="actionIcon" size="16" color="#16A873" />
       <text>{{ actionText }}</text>
     </view>
   </view>
@@ -41,7 +34,7 @@ interface Props {
 withDefaults(defineProps<Props>(), {
   icon: 'info-circle',
   iconColor: '#10B981',
-  iconBg: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)',
+  iconBg: 'linear-gradient(135deg, #F2FBF6 0%, #DFF8EC 100%)',
   iconSize: 48,
   size: 'default'
 })
@@ -65,8 +58,8 @@ defineEmits<{
     padding: $space-8 $space-6;
 
     .empty-state__icon {
-      width: 120rpx;
-      height: 120rpx;
+      width: 112rpx;
+      height: 112rpx;
     }
 
     .empty-state__title {
@@ -82,8 +75,8 @@ defineEmits<{
     padding: $space-16 $space-8;
 
     .empty-state__icon {
-      width: 200rpx;
-      height: 200rpx;
+      width: 184rpx;
+      height: 184rpx;
     }
 
     .empty-state__title {
@@ -93,55 +86,19 @@ defineEmits<{
 
   &__illustration {
     position: relative;
-    margin-bottom: $space-8;
+    margin-bottom: $space-6;
   }
 
   &__icon {
-    width: 160rpx;
-    height: 160rpx;
+    width: 144rpx;
+    height: 144rpx;
     border-radius: $radius-full;
     display: flex;
     align-items: center;
     justify-content: center;
     position: relative;
     z-index: 2;
-    box-shadow: $shadow-lg;
-  }
-
-  &__decor {
-    position: absolute;
-    border-radius: $radius-full;
-    z-index: 1;
-
-    &--1 {
-      width: 32rpx;
-      height: 32rpx;
-      background: $primary-light;
-      opacity: 0.3;
-      top: -10rpx;
-      right: -10rpx;
-      animation: float 3s ease-in-out infinite;
-    }
-
-    &--2 {
-      width: 24rpx;
-      height: 24rpx;
-      background: $warning;
-      opacity: 0.3;
-      bottom: 0;
-      left: -10rpx;
-      animation: float 3s ease-in-out infinite 0.5s;
-    }
-
-    &--3 {
-      width: 20rpx;
-      height: 20rpx;
-      background: $info;
-      opacity: 0.3;
-      top: 20rpx;
-      left: -20rpx;
-      animation: float 3s ease-in-out infinite 1s;
-    }
+    border: 1rpx solid $border-light;
   }
 
   &__content {
@@ -169,13 +126,13 @@ defineEmits<{
     display: flex;
     align-items: center;
     gap: $space-2;
-    background: $primary-gradient;
-    color: $text-inverse;
+    background: $primary-bg;
+    color: $primary;
     padding: $space-3 $space-8;
     border-radius: $radius-full;
     font-size: $font-base;
     font-weight: $font-medium;
-    box-shadow: $shadow-primary;
+    border: 1rpx solid rgba(22, 168, 115, 0.18);
     transition: all $transition-base;
 
     &:active {
@@ -185,12 +142,4 @@ defineEmits<{
   }
 }
 
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10rpx);
-  }
-}
 </style>

@@ -112,7 +112,7 @@ jobs:
       WEB_BIND: ${{ secrets.WEB_BIND || '0.0.0.0:8080' }}
       ADMIN_BIND: ${{ secrets.ADMIN_BIND || secrets.WEB_BIND || '0.0.0.0:18080' }}
       STUDENT_BIND: ${{ secrets.STUDENT_BIND || '0.0.0.0:8081' }}
-      GATEWAY_BIND: ${{ secrets.GATEWAY_BIND || '0.0.0.0:80' }}
+      GATEWAY_BIND: ${{ secrets.GATEWAY_BIND || '0.0.0.0:8082' }}
       OSS_REGION: ${{ secrets.OSS_REGION }}
       OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
       OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}

@@ -14,11 +14,11 @@ onHide(() => {
 })
 </script>
 
-<style>
+<style lang="scss">
 @import 'uview-plus/index.scss';
 
 page {
-  background-color: #F9FAFB;
+  background-color: #FAF8F4;
   font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -26,21 +26,22 @@ page {
 
 /* ========== 全局工具类 ========== */
 .container {
-  padding: 20rpx;
+  padding: 24rpx;
 }
 
 .card {
   background: #ffffff;
   border-radius: 24rpx;
   padding: 24rpx;
-  margin-bottom: 20rpx;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
+  margin-bottom: 24rpx;
+  border: 1rpx solid #F1EADF;
+  box-shadow: 0 8rpx 24rpx rgba(46, 36, 22, 0.06);
 }
 
 .section-title {
   font-size: 32rpx;
   font-weight: 600;
-  color: #1F2937;
+  color: #22252A;
   margin-bottom: 20rpx;
 }
 
@@ -113,7 +114,7 @@ page {
 
 /* ========== 渐变文字 ========== */
 .gradient-text {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  background: linear-gradient(135deg, #35C98D 0%, #0B8F63 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;

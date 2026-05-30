@@ -15,7 +15,7 @@
           <view v-for="cat in categories" :key="cat.key" 
             :class="['filter-tag', { 'filter-tag--active': currentCategory === cat.key }]"
             @click="selectCategory(cat.key)">
-            <u-icon v-if="cat.icon" :name="cat.icon" size="14" :color="currentCategory === cat.key ? '#FFFFFF' : '#6B7280'" />
+            <u-icon v-if="cat.icon" :name="cat.icon" size="14" :color="currentCategory === cat.key ? '#16A873' : '#6B7280'" />
             <text>{{ cat.name }}</text>
           </view>
         </view>
@@ -181,22 +181,22 @@ function showWechatToast() {
 
 /* ========== 搜索栏 ========== */
 .search-header {
-  background: $primary-gradient;
-  padding: $space-4 $space-6;
+  background: $bg-card-soft;
+  padding: $space-4 $space-5;
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1rpx solid $border-light;
 }
 
 .search-bar {
   display: flex;
   align-items: center;
   gap: $space-3;
-  background: rgba(255, 255, 255, 0.95);
+  background: $bg-page;
   border-radius: $radius-full;
   padding: $space-3 $space-5;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
+  border: 1rpx solid $border;
 }
 
 .search-placeholder {
@@ -206,7 +206,7 @@ function showWechatToast() {
 
 /* ========== 分类筛选 ========== */
 .filter-bar {
-  background: $bg-card;
+  background: $bg-card-soft;
   padding: $space-4 0;
   border-bottom: 1rpx solid $border-light;
 }
@@ -233,9 +233,9 @@ function showWechatToast() {
   transition: all $transition-base;
 
   &--active {
-    background: $primary-gradient;
-    color: $text-inverse;
-    box-shadow: $shadow-primary;
+    background: $primary-bg;
+    color: $primary;
+    border-color: rgba(22, 168, 115, 0.24);
   }
 
   &:active {
@@ -246,7 +246,7 @@ function showWechatToast() {
 /* ========== 排序栏 ========== */
 .sort-bar {
   display: flex;
-  background: $bg-card;
+  background: $bg-card-soft;
   padding: $space-3 $space-5;
   border-bottom: 1rpx solid $border-light;
 }
@@ -279,8 +279,8 @@ function showWechatToast() {
 /* ========== 商家列表 ========== */
 .merchant-list {
   padding: $space-4 $space-5;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: $space-4;
 }
 
@@ -288,9 +288,10 @@ function showWechatToast() {
   background: $bg-card;
   border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   display: flex;
-  flex-direction: row;
+  flex-direction: column;
   transition: all $transition-base;
 
   &:active {
@@ -300,14 +301,13 @@ function showWechatToast() {
 }
 
 .merchant-image {
-  width: 220rpx;
-  height: 220rpx;
-  flex-shrink: 0;
+  width: 100%;
+  height: 230rpx;
 }
 
 .merchant-content {
   flex: 1;
-  padding: $space-4 $space-5;
+  padding: $space-4;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -316,7 +316,8 @@ function showWechatToast() {
 
 .merchant-header {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-start;
   gap: $space-3;
   margin-bottom: $space-2;
 }
@@ -328,18 +329,20 @@ function showWechatToast() {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  max-width: 100%;
 }
 
 .merchant-tags {
   display: flex;
   gap: $space-2;
+  flex-wrap: wrap;
   flex-shrink: 0;
 }
 
 .tag {
   padding: $space-1 $space-2;
   background: $primary-bg;
-  border-radius: $radius-sm;
+  border-radius: $radius-full;
   font-size: $font-xs;
   color: $primary;
   font-weight: $font-medium;
@@ -360,6 +363,7 @@ function showWechatToast() {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: $space-2;
 }
 
 .merchant-meta {

@@ -2,7 +2,7 @@
   <view class="page">
     <!-- 关于头部 -->
     <view class="about-hero">
-      <image class="about-image" src="/static/images/wechat-promo.png" mode="aspectFill" />
+      <image class="about-image" src="/static/images/h5-wechat-promo.png" mode="aspectFill" />
       <view class="about-content">
         <view class="about-tag">
           <u-icon name="heart-fill" size="14" color="#FF6B35" />
@@ -65,12 +65,20 @@ function showWechatToast() {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   padding-bottom: 120rpx;
+  min-height: 100vh;
+  background: $bg-page;
 }
 
 .about-hero {
   position: relative;
+  margin: $space-4;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  box-shadow: $shadow-md;
 }
 
 .about-image {
@@ -84,7 +92,7 @@ function showWechatToast() {
   left: 0;
   right: 0;
   padding: 40rpx 30rpx 30rpx;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.6));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.62));
 }
 
 .about-tag {
@@ -119,14 +127,15 @@ function showWechatToast() {
 
 .info-card {
   background: #ffffff;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   padding: 30rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .info-item {
   padding: 20rpx 0;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid $border-light;
   
   &:last-child {
     border-bottom: none;
@@ -136,14 +145,14 @@ function showWechatToast() {
 .info-title {
   font-size: 30rpx;
   font-weight: bold;
-  color: #333333;
+  color: $text-primary;
   display: block;
   margin-bottom: 12rpx;
 }
 
 .info-desc {
   font-size: 26rpx;
-  color: #666666;
+  color: $text-secondary;
   display: block;
 }
 
@@ -153,13 +162,14 @@ function showWechatToast() {
 
 .qr-card {
   background: #ffffff;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   padding: 30rpx;
   display: flex;
   flex-direction: row;
   align-items: center;
   gap: 30rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .qr-image {
@@ -175,14 +185,14 @@ function showWechatToast() {
 .qr-title {
   font-size: 32rpx;
   font-weight: bold;
-  color: #333333;
+  color: $text-primary;
   display: block;
   margin-bottom: 12rpx;
 }
 
 .qr-desc {
   font-size: 26rpx;
-  color: #666666;
+  color: $text-secondary;
   display: block;
   margin-bottom: 24rpx;
 }

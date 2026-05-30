@@ -51,9 +51,11 @@ function openMerchant(id: string) {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   min-height: 100vh;
-  background: #F9FAFB;
+  background: $bg-page;
 }
 
 .empty-state {
@@ -66,14 +68,14 @@ function openMerchant(id: string) {
 }
 
 .empty-title {
-  font-size: 30rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .empty-desc {
-  font-size: 24rpx;
-  color: #9CA3AF;
+  font-size: $font-sm;
+  color: $text-tertiary;
 }
 
 .favorite-list {
@@ -84,12 +86,13 @@ function openMerchant(id: string) {
 }
 
 .favorite-card {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   overflow: hidden;
   display: flex;
   flex-direction: row;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .favorite-image {
@@ -107,14 +110,14 @@ function openMerchant(id: string) {
 }
 
 .favorite-name {
-  font-size: 28rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .favorite-desc {
-  font-size: 24rpx;
-  color: #6B7280;
+  font-size: $font-xs;
+  color: $text-secondary;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -129,7 +132,7 @@ function openMerchant(id: string) {
 
   text {
     font-size: 22rpx;
-    color: #9CA3AF;
+    color: $text-tertiary;
   }
 }
 </style>

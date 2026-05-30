@@ -96,13 +96,18 @@ function openMerchant(id: string) {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   padding-bottom: 120rpx;
+  min-height: 100vh;
+  background: $bg-page;
 }
 
 .page-hero {
-  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
-  padding: 40rpx 30rpx;
+  background: $bg-card-soft;
+  padding: 36rpx 30rpx 56rpx;
+  border-bottom: 1rpx solid $border-light;
 }
 
 .hero-content {
@@ -117,21 +122,22 @@ function openMerchant(id: string) {
   margin-bottom: 16rpx;
 
   text {
-    font-size: 24rpx;
-    color: rgba(255, 255, 255, 0.8);
+    font-size: $font-sm;
+    color: $primary;
+    font-weight: $font-medium;
   }
 }
 
 .hero-title {
   font-size: 40rpx;
   font-weight: bold;
-  color: #ffffff;
+  color: $text-primary;
   margin-bottom: 12rpx;
 }
 
 .hero-desc {
-  font-size: 26rpx;
-  color: rgba(255, 255, 255, 0.8);
+  font-size: $font-sm;
+  color: $text-secondary;
 }
 
 .service-grid {
@@ -139,10 +145,11 @@ function openMerchant(id: string) {
   grid-template-columns: repeat(4, 1fr);
   gap: 24rpx;
   padding: 30rpx;
-  background: #ffffff;
-  margin: -20rpx 24rpx 24rpx;
-  border-radius: 16rpx;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  background: $bg-card;
+  margin: -28rpx 24rpx 24rpx;
+  border-radius: $radius-lg;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .grid-item {
@@ -155,15 +162,15 @@ function openMerchant(id: string) {
 .grid-icon {
   width: 80rpx;
   height: 80rpx;
-  border-radius: 20rpx;
+  border-radius: $radius-full;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 
 .grid-text {
-  font-size: 24rpx;
-  color: #1F2937;
+  font-size: $font-xs;
+  color: $text-primary;
 }
 
 .section {
@@ -175,9 +182,9 @@ function openMerchant(id: string) {
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .merchant-list {
@@ -187,10 +194,11 @@ function openMerchant(id: string) {
 }
 
 .merchant-card {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: 0 2rpx 12rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   display: flex;
   flex-direction: row;
 }
@@ -210,15 +218,15 @@ function openMerchant(id: string) {
 }
 
 .merchant-name {
-  font-size: 30rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
   margin-bottom: 12rpx;
 }
 
 .merchant-desc {
-  font-size: 24rpx;
-  color: #6B7280;
+  font-size: $font-xs;
+  color: $text-secondary;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -238,28 +246,29 @@ function openMerchant(id: string) {
 
   text {
     font-size: 22rpx;
-    color: #9CA3AF;
+    color: $text-tertiary;
   }
 }
 
 .empty-state {
   text-align: center;
   padding: 60rpx 40rpx;
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
+  border: 1rpx solid $border-light;
 }
 
 .empty-title {
-  font-size: 30rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
   display: block;
   margin-bottom: 12rpx;
 }
 
 .empty-desc {
-  font-size: 26rpx;
-  color: #9CA3AF;
+  font-size: $font-sm;
+  color: $text-tertiary;
   display: block;
 }
 </style>

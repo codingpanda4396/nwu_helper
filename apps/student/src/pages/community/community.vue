@@ -199,7 +199,7 @@ async function submitPost() {
 
 /* ========== 分类筛选 ========== */
 .filter-bar {
-  background: $bg-card;
+  background: $bg-card-soft;
   padding: $space-4 0;
   border-bottom: 1rpx solid $border-light;
   position: sticky;
@@ -228,9 +228,9 @@ async function submitPost() {
   transition: all $transition-base;
 
   &--active {
-    background: $primary-gradient;
-    color: $text-inverse;
-    box-shadow: $shadow-primary;
+    background: $primary-bg;
+    color: $primary;
+    border-color: rgba(22, 168, 115, 0.24);
   }
 
   &:active {
@@ -241,16 +241,17 @@ async function submitPost() {
 /* ========== 帖子列表 ========== */
 .post-list {
   padding: $space-4 $space-5;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
   gap: $space-4;
 }
 
 .post-card {
   background: $bg-card;
   border-radius: $radius-lg;
-  padding: $space-5;
-  box-shadow: $shadow-md;
+  padding: $space-4;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   transition: all $transition-base;
 
   &:active {
@@ -259,10 +260,14 @@ async function submitPost() {
   }
 }
 
+.post-list > .empty-state {
+  grid-column: 1 / -1;
+}
+
 .post-header {
   display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
+  flex-direction: column;
+  gap: $space-3;
   margin-bottom: $space-4;
 }
 
@@ -301,12 +306,13 @@ async function submitPost() {
 
 .post-type-tag {
   padding: $space-1 $space-3;
-  background: $primary-bg;
+  background: $warning-bg;
   border-radius: $radius-full;
+  align-self: flex-start;
 
   text {
     font-size: $font-xs;
-    color: $primary;
+    color: $warning;
     font-weight: $font-medium;
   }
 }
@@ -317,6 +323,7 @@ async function submitPost() {
   font-weight: $font-bold;
   color: $text-primary;
   margin-bottom: $space-2;
+  line-height: 1.35;
 }
 
 .post-summary {
@@ -333,7 +340,8 @@ async function submitPost() {
 
 .post-footer {
   display: flex;
-  gap: $space-6;
+  gap: $space-4;
+  flex-wrap: wrap;
   padding-top: $space-4;
   border-top: 1rpx solid $border-light;
 }
@@ -393,7 +401,7 @@ async function submitPost() {
   bottom: 0;
   left: 0;
   right: 0;
-  background: $bg-card;
+  background: $bg-card-soft;
   border-radius: $radius-xl $radius-xl 0 0;
   padding: $space-6;
   max-height: 80vh;
@@ -452,8 +460,8 @@ async function submitPost() {
   transition: all $transition-base;
 
   &--active {
-    background: $primary-gradient;
-    color: $text-inverse;
+    background: $primary-bg;
+    color: $primary;
   }
 }
 
@@ -496,7 +504,7 @@ async function submitPost() {
 .submit-btn {
   width: 100%;
   height: 96rpx;
-  background: $primary-gradient;
+  background: $primary;
   color: $text-inverse;
   font-size: $font-base;
   font-weight: $font-semibold;

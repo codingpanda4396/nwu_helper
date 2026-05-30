@@ -127,13 +127,18 @@ function goBack() {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
-  padding-bottom: 40rpx;
+  min-height: 100vh;
+  background: $bg-page;
+  padding-bottom: 60rpx;
 }
 
 .back-bar {
   padding: 20rpx 30rpx;
-  background: #ffffff;
+  background: $bg-card-soft;
+  border-bottom: 1rpx solid $border-light;
 }
 
 .loading-state,
@@ -142,23 +147,27 @@ function goBack() {
   padding: 100rpx 40rpx;
   
   text {
-    font-size: 28rpx;
-    color: #999999;
+    font-size: $font-base;
+    color: $text-tertiary;
   }
 }
 
 .post-detail {
+  margin: 24rpx;
   padding: 30rpx;
-  background: #ffffff;
+  background: $bg-card;
+  border-radius: $radius-lg;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .post-tag {
   margin-bottom: 20rpx;
   
   text {
-    font-size: 24rpx;
-    color: #FF6B35;
-    background: rgba(255, 107, 53, 0.1);
+    font-size: $font-sm;
+    color: $primary;
+    background: $primary-bg;
     padding: 8rpx 20rpx;
     border-radius: 20rpx;
   }
@@ -167,7 +176,7 @@ function goBack() {
 .post-title {
   font-size: 40rpx;
   font-weight: bold;
-  color: #333333;
+  color: $text-primary;
   display: block;
   margin-bottom: 20rpx;
 }
@@ -178,7 +187,8 @@ function goBack() {
   gap: 24rpx;
   margin-bottom: 30rpx;
   padding-bottom: 30rpx;
-  border-bottom: 1rpx solid #f0f0f0;
+  border-bottom: 1rpx solid $border-light;
+  flex-wrap: wrap;
 }
 
 .meta-item {
@@ -187,8 +197,8 @@ function goBack() {
   gap: 8rpx;
   
   text {
-    font-size: 24rpx;
-    color: #999999;
+    font-size: $font-xs;
+    color: $text-tertiary;
   }
 }
 
@@ -197,7 +207,7 @@ function goBack() {
   
   text {
     font-size: 30rpx;
-    color: #333333;
+    color: $text-primary;
     line-height: 1.8;
   }
 }

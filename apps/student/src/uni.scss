@@ -1,42 +1,47 @@
 /**
- * 竹影校园 - 设计规范Token
- * 统一的视觉语言，确保所有页面风格一致
+ * 西大圈学生端 - 绿色内容流设计 Token
+ * 暖白底、轻卡片、绿色品牌、图文内容优先
  */
 
 /* ========== 品牌色系统 ========== */
-$primary: #10B981;
-$primary-light: #34D399;
-$primary-dark: #059669;
-$primary-bg: #ECFDF5;
-$primary-gradient: linear-gradient(135deg, #10B981 0%, #059669 100%);
-$primary-gradient-light: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+$primary: #16A873;
+$primary-light: #53C89B;
+$primary-dark: #087A53;
+$primary-bg: #EAF8F1;
+$primary-soft: #F2FBF6;
+$primary-gradient: linear-gradient(135deg, #35C98D 0%, #0B8F63 100%);
+$primary-gradient-light: linear-gradient(135deg, #DFF8EC 0%, #BFF0D9 100%);
 
 /* ========== 功能色 ========== */
-$success: #10B981;
-$success-bg: #ECFDF5;
-$warning: #F59E0B;
-$warning-bg: #FFFBEB;
-$error: #EF4444;
-$error-bg: #FEF2F2;
-$info: #3B82F6;
-$info-bg: #EFF6FF;
+$success: #16A873;
+$success-bg: #EAF8F1;
+$warning: #F4A340;
+$warning-bg: #FFF6E8;
+$error: #EF5B67;
+$error-bg: #FFF0F2;
+$info: #4F8EDB;
+$info-bg: #EEF6FF;
+$accent-warm: #FF8A65;
+$accent-pink: #F47B9D;
+$accent-blue: #5B8DEF;
 
 /* ========== 中性色 ========== */
-$text-primary: #1F2937;
-$text-secondary: #6B7280;
-$text-tertiary: #9CA3AF;
-$text-placeholder: #D1D5DB;
+$text-primary: #22252A;
+$text-secondary: #656B73;
+$text-tertiary: #9AA1AA;
+$text-placeholder: #BFC5CC;
 $text-inverse: #FFFFFF;
 
-$bg-page: #F9FAFB;
+$bg-page: #FAF8F4;
 $bg-card: #FFFFFF;
-$bg-hover: #F3F4F6;
-$bg-active: #E5E7EB;
+$bg-card-soft: #FFFCF8;
+$bg-hover: #F5F2EC;
+$bg-active: #ECE7DE;
 $bg-mask: rgba(0, 0, 0, 0.4);
 
-$border: #E5E7EB;
-$border-light: #F3F4F6;
-$divider: #F3F4F6;
+$border: #EDE8DF;
+$border-light: #F5F0E8;
+$divider: #F2EDE5;
 
 /* ========== 间距系统 (4px基准) ========== */
 $space-1: 4rpx;
@@ -51,18 +56,18 @@ $space-12: 48rpx;
 $space-16: 64rpx;
 
 /* ========== 圆角系统 ========== */
-$radius-sm: 8rpx;
-$radius-md: 16rpx;
+$radius-sm: 10rpx;
+$radius-md: 18rpx;
 $radius-lg: 24rpx;
-$radius-xl: 32rpx;
+$radius-xl: 36rpx;
 $radius-full: 9999rpx;
 
 /* ========== 阴影系统 ========== */
-$shadow-sm: 0 2rpx 8rpx rgba(0, 0, 0, 0.04);
-$shadow-md: 0 4rpx 16rpx rgba(0, 0, 0, 0.06);
-$shadow-lg: 0 8rpx 32rpx rgba(0, 0, 0, 0.08);
-$shadow-xl: 0 16rpx 48rpx rgba(0, 0, 0, 0.12);
-$shadow-primary: 0 4rpx 16rpx rgba(16, 185, 129, 0.2);
+$shadow-sm: 0 4rpx 14rpx rgba(46, 36, 22, 0.04);
+$shadow-md: 0 8rpx 24rpx rgba(46, 36, 22, 0.06);
+$shadow-lg: 0 14rpx 38rpx rgba(46, 36, 22, 0.08);
+$shadow-xl: 0 20rpx 56rpx rgba(46, 36, 22, 0.12);
+$shadow-primary: 0 8rpx 24rpx rgba(22, 168, 115, 0.22);
 
 /* ========== 字体系统 ========== */
 $font-xs: 22rpx;
@@ -120,7 +125,7 @@ $uni-color-title: $text-primary;
 $uni-font-size-title: 20px;
 $uni-color-subtitle: $text-secondary;
 $uni-font-size-subtitle: 18px;
-$uni-color-paragraph: #374151;
+$uni-color-paragraph: #3F454C;
 $uni-font-size-paragraph: 15px;
 
 /* uview-plus 主题变量 */

@@ -75,9 +75,9 @@ withDefaults(defineProps<Props>(), {
 .shimmer {
   background: linear-gradient(
     90deg,
-    #f0f0f0 25%,
-    #e0e0e0 50%,
-    #f0f0f0 75%
+    #F5F0E8 25%,
+    #ECE4D8 50%,
+    #F5F0E8 75%
   );
   background-size: 200% 100%;
   animation: shimmer 1.5s infinite;
@@ -99,6 +99,7 @@ withDefaults(defineProps<Props>(), {
   border-radius: $radius-lg;
   overflow: hidden;
   margin-bottom: $space-4;
+  border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 
   .skeleton-image {
@@ -135,6 +136,7 @@ withDefaults(defineProps<Props>(), {
   background: $bg-card;
   border-radius: $radius-md;
   margin-bottom: $space-3;
+  border: 1rpx solid $border-light;
 
   .skeleton-avatar {
     width: 96rpx;
@@ -178,6 +180,7 @@ withDefaults(defineProps<Props>(), {
   background: $bg-card;
   border-radius: $radius-lg;
   margin: 0 $space-4 $space-4;
+  border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 
   .skeleton-grid-item {
@@ -207,6 +210,7 @@ withDefaults(defineProps<Props>(), {
   background: $bg-card;
   border-radius: $radius-lg;
   margin-bottom: $space-4;
+  border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 
   .skeleton-merchant-img {

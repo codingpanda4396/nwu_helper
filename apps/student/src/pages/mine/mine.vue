@@ -170,7 +170,7 @@ function showAbout() {
     left: 0;
     right: 0;
     height: 380rpx;
-    background: $primary-gradient;
+    background: linear-gradient(180deg, #3BC991 0%, #16A873 100%);
     border-radius: 0 0 48rpx 48rpx;
   }
 
@@ -263,7 +263,8 @@ function showAbout() {
   margin: $space-5 $space-6 0;
   border-radius: $radius-lg;
   padding: $space-5 $space-4;
-  box-shadow: $shadow-lg;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-md;
 }
 
 .stat-item {
@@ -297,6 +298,7 @@ function showAbout() {
   background: $bg-card;
   border-radius: $radius-lg;
   overflow: hidden;
+  border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 
   &__title {

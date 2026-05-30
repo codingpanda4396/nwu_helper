@@ -228,15 +228,21 @@ function previewImage(url: string) {
 </script>
 
 <style lang="scss" scoped>
+@import '../../uni.scss';
+
 .page {
   min-height: 100vh;
-  background: #F9FAFB;
-  padding-bottom: 120rpx;
+  background: $bg-page;
+  padding-bottom: 150rpx;
 }
 
 .merchant-hero {
   position: relative;
-  height: 400rpx;
+  height: 460rpx;
+  margin: $space-4;
+  border-radius: $radius-xl;
+  overflow: hidden;
+  box-shadow: $shadow-md;
 }
 
 .hero-image {
@@ -250,7 +256,7 @@ function previewImage(url: string) {
   left: 0;
   right: 0;
   padding: 30rpx;
-  background: linear-gradient(transparent, rgba(0, 0, 0, 0.7));
+  background: linear-gradient(transparent, rgba(0, 0, 0, 0.64));
 }
 
 .merchant-name {
@@ -267,19 +273,20 @@ function previewImage(url: string) {
 }
 
 .tag {
-  padding: 6rpx 16rpx;
-  background: rgba(16, 185, 129, 0.8);
-  border-radius: 16rpx;
+  padding: 6rpx 18rpx;
+  background: rgba(22, 168, 115, 0.9);
+  border-radius: $radius-full;
   font-size: 22rpx;
   color: #ffffff;
 }
 
 .info-section {
-  background: #ffffff;
+  background: $bg-card;
   margin: 24rpx;
-  border-radius: 16rpx;
+  border-radius: $radius-lg;
   padding: 24rpx;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .info-item {
@@ -287,7 +294,7 @@ function previewImage(url: string) {
   align-items: center;
   gap: 12rpx;
   padding: 16rpx 0;
-  border-bottom: 1rpx solid #F3F4F6;
+  border-bottom: 1rpx solid $border-light;
 
   &:last-child {
     border-bottom: none;
@@ -295,8 +302,8 @@ function previewImage(url: string) {
 
   text {
     flex: 1;
-    font-size: 26rpx;
-    color: #1F2937;
+    font-size: $font-sm;
+    color: $text-primary;
   }
 }
 
@@ -309,9 +316,9 @@ function previewImage(url: string) {
 }
 
 .section-title {
-  font-size: 32rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .gallery-scroll {
@@ -326,7 +333,7 @@ function previewImage(url: string) {
 .gallery-image {
   width: 240rpx;
   height: 180rpx;
-  border-radius: 12rpx;
+  border-radius: $radius-md;
 }
 
 .activity-list {
@@ -336,10 +343,11 @@ function previewImage(url: string) {
 }
 
 .activity-card {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .activity-image {
@@ -353,24 +361,25 @@ function previewImage(url: string) {
 
 .activity-title {
   display: block;
-  font-size: 28rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
   margin-bottom: 8rpx;
 }
 
 .activity-desc {
   display: block;
-  font-size: 24rpx;
-  color: #6B7280;
+  font-size: $font-sm;
+  color: $text-secondary;
 }
 
 .private-domain {
-  background: #ffffff;
-  border-radius: 16rpx;
+  background: $bg-card;
+  border-radius: $radius-lg;
   padding: 30rpx;
   text-align: center;
-  box-shadow: 0 2rpx 8rpx rgba(0, 0, 0, 0.05);
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .domain-header {
@@ -382,15 +391,15 @@ function previewImage(url: string) {
 }
 
 .domain-title {
-  font-size: 32rpx;
+  font-size: $font-base;
   font-weight: bold;
-  color: #1F2937;
+  color: $text-primary;
 }
 
 .domain-desc {
   display: block;
-  font-size: 24rpx;
-  color: #6B7280;
+  font-size: $font-sm;
+  color: $text-secondary;
   margin-bottom: 24rpx;
 }
 
@@ -403,7 +412,7 @@ function previewImage(url: string) {
 .qr-tip {
   display: block;
   font-size: 22rpx;
-  color: #9CA3AF;
+  color: $text-tertiary;
 }
 
 .footer-bar {
@@ -412,9 +421,9 @@ function previewImage(url: string) {
   left: 0;
   right: 0;
   display: flex;
-  background: #ffffff;
+  background: rgba(255, 252, 248, 0.98);
   padding: 20rpx 24rpx;
-  box-shadow: 0 -2rpx 8rpx rgba(0, 0, 0, 0.05);
+  box-shadow: 0 -8rpx 24rpx rgba(46, 36, 22, 0.08);
   gap: 16rpx;
 }
 
@@ -428,11 +437,11 @@ function previewImage(url: string) {
 
   text {
     font-size: 22rpx;
-    color: #6B7280;
+    color: $text-secondary;
   }
 
   &.primary {
-    background: #10B981;
+    background: $primary;
     border-radius: 44rpx;
     flex-direction: row;
     justify-content: center;

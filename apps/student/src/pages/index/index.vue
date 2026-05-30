@@ -26,7 +26,7 @@
         :interval="4000" 
         :circular="true"
         :indicator-color="'rgba(255,255,255,0.4)'"
-        :indicator-active-color="'#10B981'"
+        :indicator-active-color="'#16A873'"
       >
         <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBanner(banner)">
           <image class="banner-image" :src="banner.image" mode="aspectFill" />
@@ -263,7 +263,7 @@ const defaultBanners: Banner[] = [
     id: 'default',
     title: '西大圈',
     subtitle: '校园本地生活增长平台',
-    image: '/static/images/hero-campus-life.png'
+    image: '/static/images/h5-hero-campus-life.png'
   }
 ]
 
@@ -339,11 +339,12 @@ function showWechatToast() {
 
 /* ========== 搜索栏 ========== */
 .search-header {
-  background: $primary-gradient;
-  padding: 24rpx 24rpx 32rpx;
+  background: $bg-card-soft;
+  padding: 20rpx 24rpx 26rpx;
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1rpx solid $border-light;
 
   &__inner {
     display: flex;
@@ -357,11 +358,10 @@ function showWechatToast() {
   display: flex;
   align-items: center;
   gap: $space-3;
-  background: rgba(255, 255, 255, 0.95);
+  background: $bg-page;
   border-radius: $radius-full;
   padding: $space-3 $space-4;
-  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.08);
-  backdrop-filter: blur(10px);
+  border: 1rpx solid $border;
 }
 
 .search-placeholder {
@@ -372,16 +372,15 @@ function showWechatToast() {
 .search-header__brand {
   .brand-text {
     font-size: $font-sm;
-    color: $text-inverse;
+    color: $primary;
     font-weight: $font-medium;
-    opacity: 0.9;
   }
 }
 
 /* ========== 轮播图 ========== */
 .banner-wrapper {
   padding: 0 $space-4;
-  margin-top: -$space-4;
+  margin-top: $space-4;
   position: relative;
   z-index: 1;
 }
@@ -390,7 +389,7 @@ function showWechatToast() {
   height: 320rpx;
   border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: $shadow-lg;
+  box-shadow: $shadow-md;
 }
 
 .banner-image {
@@ -430,7 +429,8 @@ function showWechatToast() {
   background: $bg-card;
   margin: $space-4 $space-4 $space-4;
   border-radius: $radius-lg;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .grid-item {
@@ -443,7 +443,7 @@ function showWechatToast() {
 .grid-icon {
   width: 96rpx;
   height: 96rpx;
-  border-radius: $radius-lg;
+  border-radius: $radius-full;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -483,7 +483,8 @@ function showWechatToast() {
   margin: 0 $space-4 $space-4;
   border-radius: $radius-lg;
   padding: $space-5;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 
   &__header {
     display: flex;
@@ -538,7 +539,7 @@ function showWechatToast() {
 
 /* ========== 区块通用 ========== */
 .section {
-  padding: 0 $space-4 $space-4;
+  padding: $space-2 $space-4 $space-4;
 }
 
 .section-header {
@@ -565,7 +566,7 @@ function showWechatToast() {
 }
 
 .section-title {
-  font-size: $font-md;
+  font-size: $font-base;
   font-weight: $font-bold;
   color: $text-primary;
   display: block;
@@ -589,7 +590,8 @@ function showWechatToast() {
   background: $bg-card;
   border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   transition: all $transition-base;
 
   &:active {
@@ -600,7 +602,7 @@ function showWechatToast() {
 
 .activity-image {
   width: 100%;
-  height: 280rpx;
+  height: 300rpx;
 }
 
 .activity-content {
@@ -611,14 +613,14 @@ function showWechatToast() {
   display: inline-flex;
   align-items: center;
   gap: $space-2;
-  background: $primary-gradient;
+  background: $primary-bg;
   padding: $space-1 $space-3;
   border-radius: $radius-full;
   margin-bottom: $space-3;
 
   text {
     font-size: $font-xs;
-    color: $text-inverse;
+    color: $primary;
     font-weight: $font-medium;
   }
 }
@@ -662,7 +664,8 @@ function showWechatToast() {
   background: $bg-card;
   border-radius: $radius-lg;
   overflow: hidden;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   transition: all $transition-base;
 
   &:active {
@@ -673,7 +676,7 @@ function showWechatToast() {
 
 .merchant-image {
   width: 100%;
-  height: 200rpx;
+  height: 220rpx;
 }
 
 .merchant-content {
@@ -719,7 +722,8 @@ function showWechatToast() {
   background: $bg-card;
   border-radius: $radius-lg;
   padding: $space-6;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 }
 
 .zone-header {
@@ -730,14 +734,14 @@ function showWechatToast() {
   display: inline-flex;
   align-items: center;
   gap: $space-2;
-  background: $primary-gradient;
+  background: $primary-bg;
   padding: $space-1 $space-3;
   border-radius: $radius-full;
   margin-bottom: $space-3;
 
   text {
     font-size: $font-xs;
-    color: $text-inverse;
+    color: $primary;
     font-weight: $font-medium;
   }
 }
@@ -804,7 +808,8 @@ function showWechatToast() {
   background: $bg-card;
   border-radius: $radius-lg;
   padding: $space-5;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
 
   &__icon {
     width: 64rpx;

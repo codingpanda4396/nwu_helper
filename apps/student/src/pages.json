@@ -70,14 +70,14 @@
   "globalStyle": {
     "navigationBarTextStyle": "white",
     "navigationBarTitleText": "西大圈",
-    "navigationBarBackgroundColor": "#10B981",
-    "backgroundColor": "#F9FAFB"
+    "navigationBarBackgroundColor": "#16A873",
+    "backgroundColor": "#FAF8F4"
   },
   "tabBar": {
-    "color": "#9CA3AF",
-    "selectedColor": "#10B981",
+    "color": "#9AA1AA",
+    "selectedColor": "#16A873",
     "borderStyle": "black",
-    "backgroundColor": "#ffffff",
+    "backgroundColor": "#FFFCF8",
     "list": [
       {
         "pagePath": "pages/index/index",

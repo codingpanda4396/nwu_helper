@@ -157,7 +157,7 @@ function openMerchant(id: string) {
 
 /* ========== 搜索栏 ========== */
 .search-header {
-  background: $bg-card;
+  background: $bg-card-soft;
   padding: $space-4 $space-5;
   display: flex;
   align-items: center;
@@ -252,6 +252,7 @@ function openMerchant(id: string) {
   border-radius: $radius-full;
   font-size: $font-sm;
   color: $text-secondary;
+  border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
   transition: all $transition-base;
 
@@ -313,7 +314,8 @@ function openMerchant(id: string) {
   align-items: center;
   gap: $space-4;
   padding: $space-4;
-  box-shadow: $shadow-md;
+  border: 1rpx solid $border-light;
+  box-shadow: $shadow-sm;
   transition: all $transition-base;
 
   &:active {
