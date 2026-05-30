@@ -6,8 +6,8 @@
           <u-icon name="list" size="14" color="#10B981" />
           <text>西大圈</text>
         </view>
-        <text class="hero-title">生活服务</text>
-        <text class="hero-desc">校园周边便捷服务，一键直达</text>
+        <text class="hero-title">驾校服务</text>
+        <text class="hero-desc">校园周边驾校，一键直达</text>
       </view>
     </view>
 
@@ -22,14 +22,14 @@
 
     <view class="section">
       <view class="section-header">
-        <text class="section-title">热门服务</text>
+        <text class="section-title">热门驾校</text>
       </view>
       <view class="merchant-list">
         <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card" @click="openMerchant(merchant)">
           <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
           <view class="merchant-content">
             <text class="merchant-name">{{ merchant.name }}</text>
-            <text class="merchant-desc">{{ merchant.summary || '优质服务商家' }}</text>
+            <text class="merchant-desc">{{ merchant.summary || '优质驾校' }}</text>
             <view class="merchant-meta">
               <view class="meta-item">
                 <u-icon name="map-fill" size="12" color="#9CA3AF" />
@@ -40,8 +40,8 @@
         </view>
 
         <view v-if="merchants.length === 0" class="empty-state">
-          <text class="empty-title">正在招募服务商家</text>
-          <text class="empty-desc">更多服务即将上线</text>
+          <text class="empty-title">正在招募驾校商家</text>
+          <text class="empty-desc">更多驾校即将上线</text>
         </view>
       </view>
     </view>
@@ -70,30 +70,31 @@ const uToast = ref<any>(null)
 const activeKey = ref('')
 
 const serviceCategories = [
-  { key: 'print', name: '打印', icon: 'print-fill', bgColor: '#E8F5E9' },
-  { key: 'wash', name: '洗护', icon: 'water-fill', bgColor: '#E3F2FD' },
-  { key: 'entertainment', name: '娱乐', icon: 'play-right-fill', bgColor: '#FFF3E0' },
-  { key: 'female', name: '女生精选', icon: 'heart-fill', bgColor: '#FCE4EC' },
-  { key: 'rent', name: '租房', icon: 'home-fill', bgColor: '#F3E5F5' },
-  { key: 'parttime', name: '兼职', icon: 'bag-fill', bgColor: '#E0F2F1' },
-  { key: 'driving', name: '驾校', icon: 'car-fill', bgColor: '#E8EAF6' },
+  { key: 'c1', name: '科一', icon: 'book-fill', bgColor: '#E8F5E9' },
+  { key: 'c2', name: '科二', icon: 'car-fill', bgColor: '#E3F2FD' },
+  { key: 'c3', name: '科三', icon: 'car-fill', bgColor: '#FFF3E0' },
+  { key: 'c4', name: '科四', icon: 'book-fill', bgColor: '#FCE4EC' },
+  { key: 'discount', name: '优惠', icon: 'gift-fill', bgColor: '#F3E5F5' },
+  { key: 'enroll', name: '报名', icon: 'edit-pen-fill', bgColor: '#E0F2F1' },
+  { key: 'review', name: '评价', icon: 'star-fill', bgColor: '#E8EAF6' },
   { key: 'more', name: '更多', icon: 'grid-fill', bgColor: '#FAFAFA' }
 ]
 
 onMounted(async () => {
-  trackActivity('page_view', '/service')
+  trackActivity('page_view', '/driving')
   if (store.selectedServiceKey) {
     activeKey.value = store.selectedServiceKey
     store.selectedServiceKey = ''
   }
   try {
-    const data = await publicApi<Merchant[]>('/api/public/services/merchants')
+    const qs = activeKey.value ? `?serviceKey=${encodeURIComponent(activeKey.value)}` : ''
+    const data = await publicApi<Merchant[]>(`/api/public/services/merchants${qs}`)
     merchants.value = data || []
     merchants.value.slice(0, 20).forEach((merchant) => {
-      trackActivity('merchant_impression', '/service', merchant.id, {
+      trackActivity('merchant_impression', '/driving', merchant.id, {
         merchantId: merchant.id,
         channelId: merchant.defaultChannelId,
-        source: 'service_list'
+        source: 'driving_list'
       })
     })
   } catch (err) {
@@ -107,10 +108,10 @@ function goToService(key: string) {
 }
 
 function openMerchant(merchant: Merchant) {
-  trackActivity('merchant_click', '/service', merchant.id, {
+  trackActivity('merchant_click', '/driving', merchant.id, {
     merchantId: merchant.id,
     channelId: merchant.defaultChannelId,
-    source: 'service_list'
+    source: 'driving_list'
   })
   const params = [`id=${encodeURIComponent(merchant.id)}`, 'source=service_list']
   if (merchant.defaultChannelId) params.push(`channelId=${encodeURIComponent(merchant.defaultChannelId)}`)

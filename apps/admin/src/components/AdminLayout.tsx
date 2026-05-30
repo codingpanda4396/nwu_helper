@@ -108,7 +108,7 @@ const menuItems: MenuProps["items"] = [
   {
     key: "/services",
     icon: <ToolOutlined />,
-    label: "服务管理",
+    label: "驾校管理",
   },
   {
     key: "/wechat-entry",

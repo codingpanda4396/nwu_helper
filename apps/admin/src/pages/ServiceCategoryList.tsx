@@ -134,7 +134,7 @@ export default function ServiceCategoryList({ token }: { token: string }) {
             name="name"
             label="分类名称"
             required
-            tooltip="服务分类的名称"
+            tooltip="驾校分类的名称"
             example="打印装订"
           >
             <Input placeholder="请输入分类名称" />
