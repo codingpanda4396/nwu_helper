@@ -52,7 +52,7 @@
           <text class="section-title">当前活动</text>
         </view>
         <view class="activity-list">
-          <view v-for="activity in merchant.activities" :key="activity.id" class="activity-card">
+          <view v-for="activity in merchant.activities" :key="activity.id" class="activity-card" @click="trackActivityClick(activity)">
             <image v-if="activity.image" class="activity-image" :src="activity.image" mode="aspectFill" />
             <view class="activity-content">
               <text class="activity-title">{{ activity.title }}</text>
@@ -67,10 +67,10 @@
         <view class="private-domain">
           <view class="domain-header">
             <u-icon name="weixin-fill" size="20" color="#07C160" />
-            <text class="domain-title">进群领福利</text>
+            <text class="domain-title">{{ merchant.wechatLabel || '添加商家微信' }}</text>
           </view>
-          <text class="domain-desc">扫码加入商家微信群，获取专属优惠和最新活动</text>
-          <image class="qr-image" :src="merchant.qrImage" mode="aspectFit" @click="previewImage(merchant.qrImage)" />
+          <text class="domain-desc">{{ merchant.privateDomainNote || '扫码进入商家私域，获取最新活动和到店信息' }}</text>
+          <image class="qr-image" :src="merchant.qrImage" mode="aspectFit" @click="previewQr" />
           <text class="qr-tip">长按识别二维码</text>
         </view>
       </view>
@@ -109,27 +109,42 @@ interface MerchantDetail {
   phone?: string
   businessHours?: string
   qrImage?: string
+  wechatLabel?: string
+  privateDomainNote?: string
+  defaultChannelId?: string
   tags?: string[]
   latitude?: number
   longitude?: number
   images?: { id: string; imageUrl: string }[]
-  activities?: { id: string; title: string; description?: string; image?: string }[]
+  activities?: { id: string; title: string; description?: string; image?: string; channelId?: string; source?: string }[]
 }
 
 const merchant = ref<MerchantDetail | null>(null)
 const isFavorite = ref(false)
 const uToast = ref<any>(null)
+const attribution = ref<{ source?: string; channelId?: string; activityId?: string }>({})
 
 onMounted(async () => {
   const pages = getCurrentPages()
   const page = pages[pages.length - 1]
-  const id = (page as any).options?.id
+  const options = (page as any).options || {}
+  const id = options.id
+  attribution.value = {
+    source: options.source,
+    channelId: options.channelId,
+    activityId: options.activityId
+  }
   
   if (id) {
     await fetchMerchant(id)
     checkFavorite(id)
     saveHistory(id)
-    trackActivity('merchant_view', '/merchant', id)
+    trackActivity('merchant_view', '/merchant', id, {
+      merchantId: id,
+      activityId: attribution.value.activityId,
+      channelId: attribution.value.channelId || merchant.value?.defaultChannelId,
+      source: attribution.value.source
+    })
   }
 })
 
@@ -197,12 +212,24 @@ function toggleFavorite() {
 
 function callPhone() {
   if (merchant.value?.phone) {
+    trackActivity('phone_click', '/merchant', merchant.value.id, {
+      merchantId: merchant.value.id,
+      activityId: attribution.value.activityId,
+      channelId: attribution.value.channelId || merchant.value.defaultChannelId,
+      source: attribution.value.source
+    })
     uni.makePhoneCall({ phoneNumber: merchant.value.phone })
   }
 }
 
 function openLocation() {
   if (!merchant.value) return
+  trackActivity('navigation_click', '/merchant', merchant.value.id, {
+    merchantId: merchant.value.id,
+    activityId: attribution.value.activityId,
+    channelId: attribution.value.channelId || merchant.value.defaultChannelId,
+    source: attribution.value.source
+  })
   const lat = merchant.value.latitude
   const lng = merchant.value.longitude
   if (lat && lng && lat !== 0 && lng !== 0) {
@@ -224,6 +251,27 @@ function openLocation() {
 
 function previewImage(url: string) {
   uni.previewImage({ urls: [url] })
+}
+
+function previewQr() {
+  if (!merchant.value?.qrImage) return
+  trackActivity('wechat_qr_view', '/merchant', merchant.value.id, {
+    merchantId: merchant.value.id,
+    activityId: attribution.value.activityId,
+    channelId: attribution.value.channelId || merchant.value.defaultChannelId,
+    source: attribution.value.source
+  })
+  previewImage(merchant.value.qrImage)
+}
+
+function trackActivityClick(activity: { id: string; channelId?: string; source?: string }) {
+  if (!merchant.value) return
+  trackActivity('activity_click', '/merchant', activity.id, {
+    merchantId: merchant.value.id,
+    activityId: activity.id,
+    channelId: activity.channelId || attribution.value.channelId || merchant.value.defaultChannelId,
+    source: activity.source || attribution.value.source || 'merchant_detail'
+  })
 }
 </script>
 

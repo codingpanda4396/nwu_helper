@@ -97,7 +97,7 @@
       <view v-if="activities.length > 0" class="activity-list">
         <view v-for="(activity, index) in activities" :key="activity.id" 
           :class="['activity-card', 'tap-active', `stagger-${index + 1}`]" 
-          @click="openMerchant(activity.merchantId)">
+          @click="openMerchant(activity.merchantId, { activityId: activity.id, channelId: activity.channelId, source: activity.source || 'home_activity', action: 'activity_click' })">
           <image v-if="activity.image" class="activity-image" :src="activity.image" mode="aspectFill" />
           <view class="activity-content">
             <view class="activity-tag">
@@ -138,7 +138,7 @@
       <view v-else-if="merchants.length > 0" class="merchant-grid">
         <view v-for="(merchant, index) in merchants" :key="merchant.id" 
           :class="['merchant-card', 'tap-active', `stagger-${index + 1}`]" 
-          @click="openMerchant(merchant.id)">
+          @click="openMerchant(merchant.id, { channelId: merchant.defaultChannelId, source: 'home_hot', action: 'merchant_click' })">
           <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
           <view class="merchant-content">
             <text class="merchant-name">{{ merchant.name }}</text>
@@ -232,6 +232,8 @@ interface Activity {
   description?: string
   image?: string
   merchantId?: string
+  channelId?: string
+  source?: string
 }
 
 interface Merchant {
@@ -240,6 +242,7 @@ interface Merchant {
   image?: string
   summary?: string
   distance?: string
+  defaultChannelId?: string
 }
 
 const banners = ref<Banner[]>([])
@@ -273,6 +276,14 @@ onMounted(async () => {
     const data = await publicApi<any>('/api/public/home')
     banners.value = data.banners?.length > 0 ? data.banners : defaultBanners
     activities.value = data.activities || []
+    activities.value.slice(0, 6).forEach((activity) => {
+      trackActivity('activity_impression', '/index', activity.id, {
+        merchantId: activity.merchantId,
+        activityId: activity.id,
+        channelId: activity.channelId,
+        source: activity.source || 'home_activity'
+      })
+    })
   } catch (err) {
     banners.value = defaultBanners
   }
@@ -280,6 +291,13 @@ onMounted(async () => {
   try {
     const data = await publicApi<Merchant[]>('/api/public/food/merchants')
     merchants.value = (data || []).slice(0, 4)
+    merchants.value.forEach((merchant) => {
+      trackActivity('merchant_impression', '/index', merchant.id, {
+        merchantId: merchant.id,
+        channelId: merchant.defaultChannelId,
+        source: 'home_hot'
+      })
+    })
   } catch (err) {
     merchants.value = []
   } finally {
@@ -305,19 +323,33 @@ function showServiceMenu() {
 }
 
 function handleBanner(banner: Banner) {
+  trackActivity('banner_click', '/index', banner.id, {
+    source: 'home_banner',
+    scene: banner.targetType
+  })
   if (banner.targetType === 'activity' && banner.targetId) {
     const activity = activities.value.find(a => a.id === banner.targetId)
     if (activity?.merchantId) {
-      openMerchant(activity.merchantId)
+      openMerchant(activity.merchantId, { activityId: activity.id, channelId: activity.channelId, source: activity.source || 'home_banner', action: 'activity_click' })
     }
   } else if (banner.targetType === 'tab' && banner.targetId) {
     uni.switchTab({ url: `/pages/${banner.targetId}/${banner.targetId}` })
   }
 }
 
-function openMerchant(id?: string) {
+function openMerchant(id?: string, options: { activityId?: string; channelId?: string; source?: string; action?: string } = {}) {
   if (!id) return
-  uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
+  trackActivity(options.action || 'merchant_click', '/index', id, {
+    merchantId: id,
+    activityId: options.activityId,
+    channelId: options.channelId,
+    source: options.source || 'home'
+  })
+  const params = [`id=${encodeURIComponent(id)}`]
+  if (options.activityId) params.push(`activityId=${encodeURIComponent(options.activityId)}`)
+  if (options.channelId) params.push(`channelId=${encodeURIComponent(options.channelId)}`)
+  if (options.source) params.push(`source=${encodeURIComponent(options.source)}`)
+  uni.navigateTo({ url: `/pages/merchant/merchant?${params.join('&')}` })
 }
 
 function showWechatToast() {

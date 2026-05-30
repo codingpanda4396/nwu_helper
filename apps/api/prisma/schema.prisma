@@ -109,6 +109,9 @@ model Merchant {
   businessHours    String?
   coverImageUrl    String?
   qrImageUrl       String?
+  wechatLabel      String?
+  privateDomainNote String?
+  defaultChannelId String?
   avgPrice         Float?
   latitude         Float?
   longitude        Float?
@@ -127,6 +130,7 @@ model Merchant {
 
   @@index([categoryId])
   @@index([serviceCategoryId])
+  @@index([defaultChannelId])
   @@index([status, sortOrder])
 }
 
@@ -210,6 +214,8 @@ model Activity {
   title       String
   description String?
   merchantId  String
+  channelId   String?
+  source      String?
   coverImage  String?
   sortOrder   Int            @default(100)
   status      ActivityStatus @default(DRAFT)
@@ -221,6 +227,21 @@ model Activity {
 
   @@index([status, startAt, endAt, sortOrder])
   @@index([merchantId])
+  @@index([channelId])
+}
+
+model AttributionChannel {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  source      String?
+  campaign    String?
+  description String?
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([isActive, key])
 }
 
 model ViewHistory {
@@ -282,6 +303,11 @@ model UserActivity {
   action    String
   page      String?
   targetId  String?
+  merchantId String?
+  activityId String?
+  channelId String?
+  source    String?
+  scene     String?
   platform  String
   ip        String?
   createdAt DateTime @default(now())
@@ -293,6 +319,10 @@ model UserActivity {
   @@index([action, createdAt])
   @@index([createdAt])
   @@index([page, createdAt])
+  @@index([merchantId, createdAt])
+  @@index([activityId, createdAt])
+  @@index([channelId, createdAt])
+  @@index([source, createdAt])
 }
 
 model UserLoginLog {

@@ -54,6 +54,64 @@ const communityPostSchema = z.object({
   publishedAt: z.coerce.date().optional()
 });
 
+const attributionActions = [
+  "merchant_impression",
+  "activity_impression",
+  "merchant_click",
+  "merchant_view",
+  "phone_click",
+  "navigation_click",
+  "wechat_qr_view",
+  "activity_click",
+  "community_merchant_click"
+];
+
+const attributionQuerySchema = z.object({
+  startDate: z.coerce.date().optional(),
+  endDate: z.coerce.date().optional(),
+  merchantId: z.string().optional(),
+  activityId: z.string().optional(),
+  channelId: z.string().optional(),
+  source: z.string().optional()
+});
+
+const attributionChannelSchema = z.object({
+  key: z.string().trim().min(1).max(80).regex(/^[a-z0-9_-]+$/),
+  name: z.string().trim().min(1).max(80),
+  source: z.string().trim().max(120).nullable().optional(),
+  campaign: z.string().trim().max(120).nullable().optional(),
+  description: z.string().trim().max(500).nullable().optional(),
+  isActive: z.boolean().default(true)
+});
+
+function attributionDateRange(query: z.infer<typeof attributionQuerySchema>) {
+  const now = new Date();
+  return {
+    startDate: query.startDate || new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000),
+    endDate: query.endDate || now
+  };
+}
+
+function visitorKey(row: { sessionId: string | null; userId: string | null; ip: string | null; id: string }) {
+  return row.sessionId || row.userId || row.ip || row.id;
+}
+
+function makeAttributionWhere(query: z.infer<typeof attributionQuerySchema>) {
+  const { startDate, endDate } = attributionDateRange(query);
+  return {
+    createdAt: { gte: startDate, lte: endDate },
+    merchantId: query.merchantId,
+    activityId: query.activityId,
+    channelId: query.channelId,
+    source: query.source
+  };
+}
+
+function csvEscape(value: unknown) {
+  const text = value == null ? "" : String(value);
+  return /[",\n]/.test(text) ? `"${text.replace(/"/g, '""')}"` : text;
+}
+
 function authUser(request: { user?: unknown }) {
   return request.user as { sub: string; role: "STUDENT" | "ADMIN"; name: string };
 }
@@ -215,6 +273,9 @@ export async function adminRoutes(app: FastifyInstance) {
     businessHours: z.string().nullable().optional(),
     coverImageUrl: z.string().nullable().optional(),
     qrImageUrl: z.string().nullable().optional(),
+    wechatLabel: z.string().nullable().optional(),
+    privateDomainNote: z.string().nullable().optional(),
+    defaultChannelId: z.string().nullable().optional(),
     avgPrice: z.coerce.number().nullable().optional(),
     latitude: z.coerce.number().nullable().optional(),
     longitude: z.coerce.number().nullable().optional(),
@@ -263,6 +324,8 @@ export async function adminRoutes(app: FastifyInstance) {
     title: z.string().min(1),
     description: z.string().nullable().optional(),
     merchantId: z.string().min(1),
+    channelId: z.string().nullable().optional(),
+    source: z.string().nullable().optional(),
     coverImage: z.string().nullable().optional(),
     sortOrder: z.coerce.number().int().default(100),
     status: z.enum(["DRAFT", "ACTIVE", "PAUSED", "ENDED"]).default("DRAFT"),
@@ -317,5 +380,165 @@ export async function adminRoutes(app: FastifyInstance) {
     }).safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "反馈参数错误");
     return ok(reply, await prisma.feedback.update({ where: { id }, data: parsed.data }));
+  });
+
+  // ── 归因分析 ──
+
+  app.get("/api/admin/attribution/channel-options", async (_request, reply) => {
+    const items = await prisma.attributionChannel.findMany({
+      orderBy: [{ isActive: "desc" }, { key: "asc" }]
+    });
+    return ok(reply, items);
+  });
+
+  app.post("/api/admin/attribution/channel-options", async (request, reply) => {
+    const parsed = attributionChannelSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "渠道参数错误");
+    return ok(reply, await prisma.attributionChannel.create({ data: parsed.data }));
+  });
+
+  app.patch("/api/admin/attribution/channel-options/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = attributionChannelSchema.partial().safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "渠道参数错误");
+    return ok(reply, await prisma.attributionChannel.update({ where: { id }, data: parsed.data }));
+  });
+
+  app.get("/api/admin/attribution/overview", async (request, reply) => {
+    const query = attributionQuerySchema.parse(request.query);
+    const where = makeAttributionWhere(query);
+    const rows = await prisma.userActivity.findMany({
+      where: { ...where, action: { in: attributionActions } },
+      select: { id: true, action: true, sessionId: true, userId: true, ip: true }
+    });
+
+    const byAction = new Map<string, { pv: number; visitors: Set<string> }>();
+    for (const row of rows) {
+      const entry = byAction.get(row.action) || { pv: 0, visitors: new Set<string>() };
+      entry.pv += 1;
+      entry.visitors.add(visitorKey(row));
+      byAction.set(row.action, entry);
+    }
+
+    const funnel = attributionActions.map((action) => ({
+      action,
+      pv: byAction.get(action)?.pv || 0,
+      uv: byAction.get(action)?.visitors.size || 0
+    }));
+
+    return ok(reply, {
+      range: attributionDateRange(query),
+      totalPv: rows.length,
+      totalUv: new Set(rows.map(visitorKey)).size,
+      funnel
+    });
+  });
+
+  app.get("/api/admin/attribution/merchants", async (request, reply) => {
+    const query = attributionQuerySchema.parse(request.query);
+    const rows = await prisma.userActivity.findMany({
+      where: { ...makeAttributionWhere(query), action: { in: attributionActions }, merchantId: { not: null } },
+      select: { id: true, action: true, merchantId: true, sessionId: true, userId: true, ip: true }
+    });
+    const merchantIds = [...new Set(rows.map((row) => row.merchantId).filter((id): id is string => !!id))];
+    const merchants = await prisma.merchant.findMany({
+      where: { id: { in: merchantIds } },
+      select: { id: true, name: true }
+    });
+    const merchantNameById = new Map(merchants.map((item) => [item.id, item.name]));
+    const grouped = new Map<string, { merchantId: string; merchantName: string; totalPv: number; visitors: Set<string>; actions: Record<string, number> }>();
+    for (const row of rows) {
+      if (!row.merchantId) continue;
+      const entry = grouped.get(row.merchantId) || {
+        merchantId: row.merchantId,
+        merchantName: merchantNameById.get(row.merchantId) || "未知商家",
+        totalPv: 0,
+        visitors: new Set<string>(),
+        actions: {}
+      };
+      entry.totalPv += 1;
+      entry.visitors.add(visitorKey(row));
+      entry.actions[row.action] = (entry.actions[row.action] || 0) + 1;
+      grouped.set(row.merchantId, entry);
+    }
+    return ok(reply, Array.from(grouped.values()).map((item) => ({
+      merchantId: item.merchantId,
+      merchantName: item.merchantName,
+      totalPv: item.totalPv,
+      totalUv: item.visitors.size,
+      ...item.actions
+    })).sort((a, b) => b.totalPv - a.totalPv));
+  });
+
+  app.get("/api/admin/attribution/channels", async (request, reply) => {
+    const query = attributionQuerySchema.parse(request.query);
+    const rows = await prisma.userActivity.findMany({
+      where: { ...makeAttributionWhere(query), action: { in: attributionActions } },
+      select: { id: true, action: true, channelId: true, source: true, sessionId: true, userId: true, ip: true }
+    });
+    const channelIds = [...new Set(rows.map((row) => row.channelId).filter((id): id is string => !!id))];
+    const channels = await prisma.attributionChannel.findMany({
+      where: { OR: [{ id: { in: channelIds } }, { key: { in: channelIds } }] },
+      select: { id: true, key: true, name: true }
+    });
+    const channelNameById = new Map<string, string>();
+    channels.forEach((item) => {
+      channelNameById.set(item.id, item.name);
+      channelNameById.set(item.key, item.name);
+    });
+    const grouped = new Map<string, { channelId: string; channelName: string; source: string; totalPv: number; visitors: Set<string>; actions: Record<string, number> }>();
+    for (const row of rows) {
+      const key = row.channelId || row.source || "direct";
+      const entry = grouped.get(key) || {
+        channelId: row.channelId || "",
+        channelName: channelNameById.get(key) || row.source || "自然访问",
+        source: row.source || "",
+        totalPv: 0,
+        visitors: new Set<string>(),
+        actions: {}
+      };
+      entry.totalPv += 1;
+      entry.visitors.add(visitorKey(row));
+      entry.actions[row.action] = (entry.actions[row.action] || 0) + 1;
+      grouped.set(key, entry);
+    }
+    return ok(reply, Array.from(grouped.values()).map((item) => ({
+      channelId: item.channelId,
+      channelName: item.channelName,
+      source: item.source,
+      totalPv: item.totalPv,
+      totalUv: item.visitors.size,
+      ...item.actions
+    })).sort((a, b) => b.totalPv - a.totalPv));
+  });
+
+  app.get("/api/admin/attribution/export", async (request, reply) => {
+    const query = attributionQuerySchema.parse(request.query);
+    const rows = await prisma.userActivity.findMany({
+      where: { ...makeAttributionWhere(query), action: { in: attributionActions } },
+      select: {
+        createdAt: true,
+        action: true,
+        page: true,
+        targetId: true,
+        merchantId: true,
+        activityId: true,
+        channelId: true,
+        source: true,
+        scene: true,
+        sessionId: true,
+        platform: true
+      },
+      orderBy: { createdAt: "desc" },
+      take: 5000
+    });
+    const header = ["date", "action", "page", "targetId", "merchantId", "activityId", "channelId", "source", "scene", "sessionId", "platform"];
+    const lines = [
+      header.join(","),
+      ...rows.map((row) => header.map((key) => csvEscape(key === "date" ? row.createdAt.toISOString() : (row as any)[key])).join(","))
+    ];
+    reply.header("content-type", "text/csv; charset=utf-8");
+    reply.header("content-disposition", 'attachment; filename="attribution-export.csv"');
+    return lines.join("\n");
   });
 }

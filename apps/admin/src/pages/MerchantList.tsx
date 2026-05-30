@@ -22,6 +22,7 @@ export default function MerchantList({ token }: { token: string }) {
   const { data: merchants, loading, reload } = useAdminData<Dict[]>(token, "/api/admin/merchants");
   const { data: categories } = useAdminData<Dict[]>(token, "/api/admin/categories");
   const { data: serviceCategories } = useAdminData<Dict[]>(token, "/api/admin/service-categories");
+  const { data: channels } = useAdminData<Dict[]>(token, "/api/admin/attribution/channel-options");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Dict | null>(null);
   const [form] = Form.useForm();
@@ -208,6 +209,20 @@ export default function MerchantList({ token }: { token: string }) {
           </Form.Item>
           <Form.Item name="qrImageUrl" label="二维码图片 URL">
             <Input />
+          </Form.Item>
+          <Form.Item name="wechatLabel" label="微信入口标题">
+            <Input placeholder="如 添加商家微信 / 加入福利群" />
+          </Form.Item>
+          <Form.Item name="privateDomainNote" label="私域入口说明">
+            <Input.TextArea rows={2} placeholder="由平台运营维护，对学生展示" />
+          </Form.Item>
+          <Form.Item name="defaultChannelId" label="默认归因渠道">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={(channels || []).map((c: Dict) => ({ value: c.key, label: `${c.name} (${c.key})` }))}
+            />
           </Form.Item>
           <Form.Item name="avgPrice" label="人均价格">
             <InputNumber min={0} style={{ width: "100%" }} />

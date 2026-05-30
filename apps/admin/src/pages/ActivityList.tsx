@@ -22,6 +22,7 @@ const statusLabels: Record<string, string> = {
 export default function ActivityList({ token }: { token: string }) {
   const { data: activities, loading, reload } = useAdminData<Dict[]>(token, "/api/admin/activities");
   const { data: merchants } = useAdminData<Dict[]>(token, "/api/admin/merchants");
+  const { data: channels } = useAdminData<Dict[]>(token, "/api/admin/attribution/channel-options");
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<Dict | null>(null);
   const [form] = Form.useForm();
@@ -184,6 +185,17 @@ export default function ActivityList({ token }: { token: string }) {
           </Form.Item>
           <Form.Item name="coverImage" label="封面图 URL">
             <Input />
+          </Form.Item>
+          <Form.Item name="channelId" label="归因渠道">
+            <Select
+              allowClear
+              showSearch
+              optionFilterProp="label"
+              options={(channels || []).map((c: Dict) => ({ value: c.key, label: `${c.name} (${c.key})` }))}
+            />
+          </Form.Item>
+          <Form.Item name="source" label="来源标识">
+            <Input placeholder="如 home_activity / xiaohongshu_note_01" />
           </Form.Item>
           <Space>
             <Form.Item name="startAt" label="开始时间" rules={[{ required: true }]}>

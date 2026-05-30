@@ -16,6 +16,7 @@ import {
   FunnelPlotOutlined,
   TeamOutlined,
   RiseOutlined,
+  FundProjectionScreenOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -71,6 +72,11 @@ const menuItems: MenuProps["items"] = [
         label: "转化漏斗",
       },
     ],
+  },
+  {
+    key: "/admin/attribution",
+    icon: <FundProjectionScreenOutlined />,
+    label: "归因分析",
   },
   { type: "divider" },
   {

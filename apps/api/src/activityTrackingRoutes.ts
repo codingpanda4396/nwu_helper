@@ -4,10 +4,16 @@ import { prisma } from "./db.js";
 import { ok } from "./response.js";
 
 const activitySchema = z.object({
-  action: z.string(),
-  page: z.string().optional(),
-  targetId: z.string().optional(),
-  platform: z.enum(["h5", "miniprogram"]),
+  action: z.string().trim().min(1).max(80),
+  page: z.string().trim().max(120).optional(),
+  targetId: z.string().trim().max(120).optional(),
+  merchantId: z.string().trim().max(120).optional(),
+  activityId: z.string().trim().max(120).optional(),
+  channelId: z.string().trim().max(120).optional(),
+  source: z.string().trim().max(120).optional(),
+  scene: z.string().trim().max(120).optional(),
+  sessionId: z.string().trim().max(160).optional(),
+  platform: z.enum(["h5", "miniprogram"]).default("h5"),
 });
 
 export async function activityTrackingRoutes(app: FastifyInstance) {
@@ -19,6 +25,9 @@ export async function activityTrackingRoutes(app: FastifyInstance) {
 
     const { action, page, targetId, platform } = parsed.data;
     const ip = request.ip;
+    const sessionId = parsed.data.sessionId || request.headers["x-session-id"]?.toString() || null;
+    const merchantId = parsed.data.merchantId || (action.startsWith("merchant_") || action === "phone_click" || action === "navigation_click" || action === "wechat_qr_view" ? targetId : undefined);
+    const activityId = parsed.data.activityId || (action.startsWith("activity_") ? targetId : undefined);
 
     try {
       await prisma.userActivity.create({
@@ -26,9 +35,14 @@ export async function activityTrackingRoutes(app: FastifyInstance) {
           action,
           page: page || null,
           targetId: targetId || null,
+          merchantId: merchantId || null,
+          activityId: activityId || null,
+          channelId: parsed.data.channelId || null,
+          source: parsed.data.source || null,
+          scene: parsed.data.scene || null,
           platform,
           ip,
-          sessionId: request.headers["x-session-id"] as string || null,
+          sessionId,
         },
       });
     } catch (error) {

@@ -25,7 +25,7 @@
         <text class="section-title">热门服务</text>
       </view>
       <view class="merchant-list">
-        <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card" @click="openMerchant(merchant.id)">
+        <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card" @click="openMerchant(merchant)">
           <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
           <view class="merchant-content">
             <text class="merchant-name">{{ merchant.name }}</text>
@@ -52,7 +52,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi } from '@/api/index'
+import { publicApi, trackActivity } from '@/api/index'
 
 interface Merchant {
   id: string
@@ -60,6 +60,7 @@ interface Merchant {
   image?: string
   summary?: string
   distance?: string
+  defaultChannelId?: string
 }
 
 const merchants = ref<Merchant[]>([])
@@ -77,9 +78,17 @@ const serviceCategories = [
 ]
 
 onMounted(async () => {
+  trackActivity('page_view', '/service')
   try {
     const data = await publicApi<Merchant[]>('/api/public/services/merchants')
     merchants.value = data || []
+    merchants.value.slice(0, 20).forEach((merchant) => {
+      trackActivity('merchant_impression', '/service', merchant.id, {
+        merchantId: merchant.id,
+        channelId: merchant.defaultChannelId,
+        source: 'service_list'
+      })
+    })
   } catch (err) {
     merchants.value = []
   }
@@ -90,8 +99,15 @@ function goToService(key: string) {
   uni.navigateTo({ url: `/pages/service/service?key=${key}` })
 }
 
-function openMerchant(id: string) {
-  uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
+function openMerchant(merchant: Merchant) {
+  trackActivity('merchant_click', '/service', merchant.id, {
+    merchantId: merchant.id,
+    channelId: merchant.defaultChannelId,
+    source: 'service_list'
+  })
+  const params = [`id=${encodeURIComponent(merchant.id)}`, 'source=service_list']
+  if (merchant.defaultChannelId) params.push(`channelId=${encodeURIComponent(merchant.defaultChannelId)}`)
+  uni.navigateTo({ url: `/pages/merchant/merchant?${params.join('&')}` })
 }
 </script>
 

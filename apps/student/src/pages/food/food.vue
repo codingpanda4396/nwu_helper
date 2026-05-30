@@ -41,7 +41,7 @@
     <view v-else class="merchant-list">
       <view v-for="(merchant, index) in merchants" :key="merchant.id" 
         :class="['merchant-card', 'tap-active', `slide-up stagger-${index + 1}`]" 
-        @click="openMerchant(merchant.id)">
+        @click="openMerchant(merchant)">
         <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
         <view class="merchant-content">
           <view class="merchant-header">
@@ -96,6 +96,7 @@ interface Merchant {
   distance?: string
   avgPrice?: number
   tags?: string[]
+  defaultChannelId?: string
 }
 
 const merchants = ref<Merchant[]>([])
@@ -137,6 +138,14 @@ async function fetchMerchants() {
     const qs = params.length ? `?${params.join('&')}` : ''
     const data = await publicApi<Merchant[]>(`/api/public/food/merchants${qs}`)
     merchants.value = data || []
+    merchants.value.slice(0, 20).forEach((merchant) => {
+      trackActivity('merchant_impression', '/food', merchant.id, {
+        merchantId: merchant.id,
+        channelId: merchant.defaultChannelId,
+        source: 'food_list',
+        scene: currentCategory.value
+      })
+    })
   } catch (err) {
     merchants.value = []
   } finally {
@@ -158,8 +167,16 @@ function goSearch() {
   uni.navigateTo({ url: '/pages/search/search' })
 }
 
-function openMerchant(id: string) {
-  uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
+function openMerchant(merchant: Merchant) {
+  trackActivity('merchant_click', '/food', merchant.id, {
+    merchantId: merchant.id,
+    channelId: merchant.defaultChannelId,
+    source: 'food_list',
+    scene: currentCategory.value
+  })
+  const params = [`id=${encodeURIComponent(merchant.id)}`, 'source=food_list']
+  if (merchant.defaultChannelId) params.push(`channelId=${encodeURIComponent(merchant.defaultChannelId)}`)
+  uni.navigateTo({ url: `/pages/merchant/merchant?${params.join('&')}` })
 }
 
 function showWechatToast() {

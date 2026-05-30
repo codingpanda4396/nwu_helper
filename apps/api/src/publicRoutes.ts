@@ -60,6 +60,9 @@ function merchantCard(merchant: any) {
     tags: merchant.tags || [],
     qrImage: merchant.qrImageUrl,
     qrImageUrl: merchant.qrImageUrl,
+    wechatLabel: merchant.wechatLabel,
+    privateDomainNote: merchant.privateDomainNote,
+    defaultChannelId: merchant.defaultChannelId,
     latitude: merchant.latitude ?? 0,
     longitude: merchant.longitude ?? 0
   };
@@ -72,6 +75,8 @@ function activityCard(activity: any) {
     title: activity.title,
     description: activity.description,
     image: activity.coverImage ?? activity.merchant?.coverImageUrl,
+    channelId: activity.channelId,
+    source: activity.source,
     merchant: activity.merchant ? merchantCard(activity.merchant) : null
   };
 }

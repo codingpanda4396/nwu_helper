@@ -16,6 +16,7 @@ import WechatEntry from "./pages/WechatEntry";
 import MerchantList from "./pages/MerchantList";
 import ActivityList from "./pages/ActivityList";
 import FeedbackList from "./pages/FeedbackList";
+import AttributionAnalysis from "./pages/AttributionAnalysis";
 import {
   AnalyticsOverview,
   UserGrowth,
@@ -281,6 +282,7 @@ function AdminApp() {
             <Route path="community/:id" element={<CommunityDetail token={token} />} />
             <Route path="merchants" element={<MerchantList token={token} />} />
             <Route path="activities" element={<ActivityList token={token} />} />
+            <Route path="attribution" element={<AttributionAnalysis token={token} />} />
             <Route path="banners" element={<BannerList token={token} />} />
             <Route path="banners/create" element={<BannerForm token={token} />} />
             <Route path="banners/:id/edit" element={<BannerForm token={token} />} />

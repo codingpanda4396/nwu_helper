@@ -1,6 +1,6 @@
 # ECS 一键 CI/CD
 
-这套部署面向阿里云 ECS：GitHub Actions 在 PR 时执行 CI，在 `main` 分支或手动触发时完成测试、构建、打包，然后通过 SSH/SCP 上传到 ECS，用 `docker compose` 启动 `postgres`、`api`、`web`，最后检查 API 健康状态。
+这套部署面向阿里云 ECS：GitHub Actions 在 PR 和普通分支执行 CI，在 `main` 分支或手动触发时完成测试、构建、打包，然后通过 SSH/SCP 上传到 ECS，用 `docker compose` 启动 `postgres`、`api`、`admin`、`student`、`gateway`，最后检查 API 和首页接口健康状态。
 
 服务器不需要预先 clone 仓库，也不需要配置 git deploy key。
 
@@ -9,7 +9,7 @@
 最小要求：
 
 - ECS 开放 SSH 端口。
-- 安全组开放 Web 端口，默认 `8080`；如果用宿主机 Nginx/SLB 做 HTTPS，只需要内部反代到 `127.0.0.1:8080`。
+- 安全组开放 Web 端口，默认网关端口 `4396`；如果用宿主机 Nginx/SLB 做 HTTPS，只需要内部反代到 `127.0.0.1:4396`。
 - SSH 用户可以执行 Docker；如果没有 Docker，流水线会尝试自动安装，需要该用户有 `sudo` 权限。
 
 如果你想手动初始化 Docker：
@@ -44,7 +44,10 @@ sudo systemctl enable --now docker
 - `POSTGRES_USER`：默认 `nwu`。
 - `POSTGRES_DB`：默认 `nwu_helper`。
 - `API_BIND`：API 宿主机绑定，默认 `127.0.0.1:4000`。
-- `WEB_BIND`：Web 宿主机绑定，默认 `0.0.0.0:8080`。
+- `ADMIN_BIND`：管理后台宿主机绑定，默认 `0.0.0.0:18080`。
+- `STUDENT_BIND`：学生端宿主机绑定，默认 `0.0.0.0:8081`。
+- `GATEWAY_BIND`：统一网关宿主机绑定，默认 `0.0.0.0:4396`。
+- `WEB_BIND`：历史兼容变量；如果未配置 `ADMIN_BIND`，workflow 会把它作为管理后台端口使用。新部署建议改用 `ADMIN_BIND`、`STUDENT_BIND`、`GATEWAY_BIND`。
 
 高级用法：
 
@@ -63,31 +66,40 @@ PORT=4000
 WEB_ORIGIN=https://your-domain.com
 PUBLIC_WEB_URL=https://your-domain.com
 API_BIND=127.0.0.1:4000
-WEB_BIND=0.0.0.0:8080
+ADMIN_BIND=0.0.0.0:18080
+STUDENT_BIND=0.0.0.0:8081
+GATEWAY_BIND=0.0.0.0:4396
 ```
 
 ## 3. 一键部署
 
 有三种触发方式：
 
-1. PR 到 `main`：只跑安装、类型检查、测试和构建，不部署。
-2. push 到 `main`：自动部署到 ECS。
-3. GitHub Actions 页面选择 `CI/CD to Aliyun ECS`，点击 `Run workflow` 手动部署。
+1. PR 到 `main`：运行 `CI`，只做安装、迁移校验、seed 校验、类型检查、测试、构建和 Docker 镜像构建校验，不部署。
+2. push 到普通分支：运行 `CI`，不部署。
+3. push 到 `main`：运行 `CI/CD to Aliyun ECS`，先 CI，成功后自动部署到 ECS。
+4. GitHub Actions 页面选择 `CI/CD to Aliyun ECS`，点击 `Run workflow` 手动部署。
 
 流水线会执行：
 
 1. `pnpm install --frozen-lockfile`
-2. `pnpm typecheck`
-3. `pnpm test`
-4. `pnpm build`
-5. 用 `git archive` 打包当前 commit
-6. SCP 上传到 ECS
-7. ECS 上解压到 `${ECS_APP_DIR}/releases/${GITHUB_SHA}`
-8. 复制生产 `.env`
-9. `docker compose -f docker-compose.prod.yml up -d --build --remove-orphans`
-10. 在 API 容器内请求 `http://127.0.0.1:4000/api/health` 验证部署健康。
+2. `pnpm db:generate`
+3. `pnpm db:migrate`
+4. `pnpm db:seed`
+5. `pnpm typecheck`
+6. `pnpm test`
+7. `pnpm build`
+8. 构建生产 Docker 镜像
+9. 用 `git archive` 打包当前 commit，并导出 Docker 镜像包
+10. SCP 上传到 ECS
+11. ECS 上解压到 `${ECS_APP_DIR}/releases/${GITHUB_SHA}`
+12. 复制生产 `.env`
+13. 加载 Docker 镜像包
+14. 启动 Postgres，执行 `pnpm db:migrate`
+15. `docker compose -f docker-compose.prod.yml --env-file .env up -d --no-build --remove-orphans`
+16. 在 API 容器内请求 `http://127.0.0.1:4000/api/health` 和 `/api/public/home` 验证部署健康。
 
-API 容器启动时会执行 `pnpm db:migrate && pnpm start`，所以 migration 会随部署自动应用。
+生产迁移由 `infra/ecs/deploy.sh` 在启动业务容器前执行；如果手动触发时选择 seed，部署完成后会额外执行 `pnpm db:seed`。
 
 ## 4. 首次 seed
 
@@ -104,7 +116,7 @@ docker compose -f docker-compose.prod.yml --env-file .env exec api pnpm db:seed
 cd /opt/nwu_helper/current
 docker compose -f docker-compose.prod.yml --env-file .env ps
 docker compose -f docker-compose.prod.yml --env-file .env logs -f api
-docker compose -f docker-compose.prod.yml --env-file .env logs -f web
+docker compose -f docker-compose.prod.yml --env-file .env logs -f gateway
 ```
 
 ## 6. 回滚
@@ -132,7 +144,7 @@ server {
   server_name your-domain.com;
 
   location / {
-    proxy_pass http://127.0.0.1:8080;
+    proxy_pass http://127.0.0.1:4396;
     proxy_set_header Host $host;
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;

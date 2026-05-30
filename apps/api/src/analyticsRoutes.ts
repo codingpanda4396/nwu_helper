@@ -12,6 +12,10 @@ function getCountId(count: unknown): number {
   return 0;
 }
 
+function visitorKey(row: { sessionId: string | null; userId: string | null; ip: string | null; id: string }) {
+  return row.sessionId || row.userId || row.ip || row.id;
+}
+
 const dateRangeSchema = z.object({
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
@@ -273,11 +277,10 @@ export async function analyticsRoutes(app: FastifyInstance) {
           where.page = step.page;
         }
         const users = await prisma.userActivity.findMany({
-          where: { ...where, userId: { not: null } },
-          distinct: ["userId"],
-          select: { userId: true },
+          where,
+          select: { id: true, sessionId: true, userId: true, ip: true },
         });
-        return { name: step.name, count: users.length };
+        return { name: step.name, count: new Set(users.map(visitorKey)).size };
       })
     );
 
