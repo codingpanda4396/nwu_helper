@@ -260,7 +260,7 @@ function AdminApp() {
 
   return (
     <ConfigProvider locale={zhCN} theme={brandTheme}>
-      <BrowserRouter>
+      <BrowserRouter basename="/admin">
         <Routes>
           <Route
             path="/"

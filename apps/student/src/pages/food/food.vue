@@ -72,7 +72,7 @@
         v-if="merchants.length === 0 && !loading" 
         icon="search"
         title="正在招募美食商家" 
-        description="你推荐的宝藏店，可以通过竹影校园微信告诉我们"
+        description="你推荐的宝藏店，可以通过西大圈微信告诉我们"
         action-text="去推荐"
         @action="showWechatToast"
       />
@@ -164,7 +164,7 @@ function openMerchant(id: string) {
 
 function showWechatToast() {
   uToast.value.show({
-    title: '请添加竹影校园微信',
+    title: '请添加西大圈微信',
     type: 'info'
   })
 }

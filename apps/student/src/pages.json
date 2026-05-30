@@ -3,7 +3,7 @@
     {
       "path": "pages/index/index",
       "style": {
-        "navigationBarTitleText": "竹影校园"
+        "navigationBarTitleText": "西大圈"
       }
     },
     {
@@ -69,7 +69,7 @@
   ],
   "globalStyle": {
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "竹影校园",
+    "navigationBarTitleText": "西大圈",
     "navigationBarBackgroundColor": "#10B981",
     "backgroundColor": "#F9FAFB"
   },

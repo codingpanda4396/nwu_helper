@@ -45,3 +45,9 @@ FROM nginx:1.27-alpine AS student
 COPY --from=student-build /app/apps/student/dist/build/h5 /usr/share/nginx/html
 COPY infra/nginx/student.conf /etc/nginx/conf.d/default.conf
 EXPOSE 80
+
+FROM nginx:1.27-alpine AS gateway
+COPY --from=student-build /app/apps/student/dist/build/h5 /usr/share/nginx/html
+COPY --from=admin-build /app/apps/admin/dist /usr/share/nginx/html/admin
+COPY infra/nginx/gateway.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80

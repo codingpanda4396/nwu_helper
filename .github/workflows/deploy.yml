@@ -87,6 +87,7 @@ jobs:
           docker build --target api -t nwu-helper-api:${{ github.sha }} .
           docker build --target admin -t nwu-helper-admin:${{ github.sha }} .
           docker build --target student -t nwu-helper-student:${{ github.sha }} .
+          docker build --target gateway -t nwu-helper-gateway:${{ github.sha }} .
 
   deploy:
     name: Deploy to ECS
@@ -111,6 +112,7 @@ jobs:
       WEB_BIND: ${{ secrets.WEB_BIND || '0.0.0.0:8080' }}
       ADMIN_BIND: ${{ secrets.ADMIN_BIND || secrets.WEB_BIND || '0.0.0.0:18080' }}
       STUDENT_BIND: ${{ secrets.STUDENT_BIND || '0.0.0.0:8081' }}
+      GATEWAY_BIND: ${{ secrets.GATEWAY_BIND || '0.0.0.0:80' }}
       OSS_REGION: ${{ secrets.OSS_REGION }}
       OSS_ACCESS_KEY_ID: ${{ secrets.OSS_ACCESS_KEY_ID }}
       OSS_ACCESS_KEY_SECRET: ${{ secrets.OSS_ACCESS_KEY_SECRET }}
@@ -136,7 +138,8 @@ jobs:
           docker build --target api -t nwu-helper-api:latest .
           docker build --target admin -t nwu-helper-admin:latest .
           docker build --target student -t nwu-helper-student:latest .
-          docker save nwu-helper-api:latest nwu-helper-admin:latest nwu-helper-student:latest | gzip > deploy/images.tar.gz
+          docker build --target gateway -t nwu-helper-gateway:latest .
+          docker save nwu-helper-api:latest nwu-helper-admin:latest nwu-helper-student:latest nwu-helper-gateway:latest | gzip > deploy/images.tar.gz
           git archive --format=tar.gz -o deploy/nwu-helper.tar.gz HEAD
           cp infra/ecs/deploy.sh deploy/deploy.sh
           cp infra/ecs/bootstrap.sh deploy/bootstrap.sh
@@ -160,6 +163,7 @@ jobs:
               printf 'WEB_BIND=%s\n' "$WEB_BIND"
               printf 'ADMIN_BIND=%s\n' "$ADMIN_BIND"
               printf 'STUDENT_BIND=%s\n' "$STUDENT_BIND"
+              printf 'GATEWAY_BIND=%s\n' "$GATEWAY_BIND"
               printf 'OSS_REGION=%s\n' "$OSS_REGION"
               printf 'OSS_ACCESS_KEY_ID=%s\n' "$OSS_ACCESS_KEY_ID"
               printf 'OSS_ACCESS_KEY_SECRET=%s\n' "$OSS_ACCESS_KEY_SECRET"

@@ -8,7 +8,7 @@
           <text class="search-placeholder">搜美食、驾校、活动</text>
         </view>
         <view class="search-header__brand">
-          <text class="brand-text">竹影校园</text>
+          <text class="brand-text">西大圈</text>
         </view>
       </view>
     </view>
@@ -31,7 +31,7 @@
         <swiper-item v-for="banner in banners" :key="banner.id" @click="handleBanner(banner)">
           <image class="banner-image" :src="banner.image" mode="aspectFill" />
           <view class="banner-overlay">
-            <text class="banner-title">{{ banner.title || '竹影校园' }}</text>
+            <text class="banner-title">{{ banner.title || '西大圈' }}</text>
             <text class="banner-subtitle">{{ banner.subtitle || '校园本地生活增长平台' }}</text>
           </view>
         </swiper-item>
@@ -117,7 +117,7 @@
         v-else 
         icon="gift" 
         title="今天暂无上架活动" 
-        description="先加入竹影校园微信，第一时间接收新福利"
+        description="先加入西大圈微信，第一时间接收新福利"
         size="small"
       />
     </view>
@@ -261,7 +261,7 @@ const serviceList = [
 const defaultBanners: Banner[] = [
   {
     id: 'default',
-    title: '竹影校园',
+    title: '西大圈',
     subtitle: '校园本地生活增长平台',
     image: '/static/images/hero-campus-life.png'
   }
@@ -322,7 +322,7 @@ function openMerchant(id?: string) {
 
 function showWechatToast() {
   uToast.value.show({
-    title: '请添加竹影校园微信',
+    title: '请添加西大圈微信',
     type: 'info'
   })
 }

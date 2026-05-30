@@ -4,7 +4,7 @@
       <view class="hero-content">
         <view class="hero-tag">
           <u-icon name="list" size="14" color="#10B981" />
-          <text>竹影校园</text>
+          <text>西大圈</text>
         </view>
         <text class="hero-title">生活服务</text>
         <text class="hero-desc">校园周边便捷服务，一键直达</text>

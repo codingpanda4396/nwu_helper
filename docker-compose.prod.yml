@@ -71,5 +71,20 @@ services:
         limits:
           memory: 128M
 
+  gateway:
+    image: nwu-helper-gateway:latest
+    build:
+      context: .
+      target: gateway
+    restart: unless-stopped
+    depends_on:
+      - api
+    ports:
+      - "${GATEWAY_BIND:-0.0.0.0:80}:80"
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+
 volumes:
   postgres_data:

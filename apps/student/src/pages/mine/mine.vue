@@ -106,8 +106,8 @@
       <view class="footer-logo">
         <u-icon name="star-fill" size="24" color="#10B981" />
       </view>
-      <text class="footer-text">竹影校园 v1.0.0</text>
-      <text class="footer-desc">校园本地生活增长平台</text>
+      <text class="footer-text">西大圈 v1.0.0</text>
+      <text class="footer-desc">由竹影校园提供服务</text>
     </view>
 
     <u-toast ref="uToast" />
@@ -138,14 +138,14 @@ function goTo(url: string) {
 
 function contactPlatform() {
   uToast.value.show({
-    title: '请添加竹影校园微信',
+    title: '请添加西大圈微信',
     type: 'info'
   })
 }
 
 function showAbout() {
   uToast.value.show({
-    title: '竹影校园 - 校园本地生活增长平台',
+    title: '西大圈 - 校园本地生活增长平台',
     type: 'info'
   })
 }
