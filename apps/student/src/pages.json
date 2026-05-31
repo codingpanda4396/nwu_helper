@@ -84,6 +84,7 @@
     "selectedColor": "#16A873",
     "borderStyle": "black",
     "backgroundColor": "#FFFCF8",
+    "custom": true,
     "list": [
       {
         "pagePath": "pages/index/index",
@@ -98,10 +99,10 @@
         "selectedIconPath": "static/tabbar/food-active.png"
       },
       {
-        "pagePath": "pages/service/service",
-        "text": "生活服务",
-        "iconPath": "static/tabbar/service.png",
-        "selectedIconPath": "static/tabbar/service-active.png"
+        "pagePath": "pages/driving/driving",
+        "text": "驾校",
+        "iconPath": "static/tabbar/driving.png",
+        "selectedIconPath": "static/tabbar/driving-active.png"
       },
       {
         "pagePath": "pages/community/community",
@@ -110,10 +111,10 @@
         "selectedIconPath": "static/tabbar/community-active.png"
       },
       {
-        "pagePath": "pages/mine/mine",
-        "text": "我的",
-        "iconPath": "static/tabbar/mine.png",
-        "selectedIconPath": "static/tabbar/mine-active.png"
+        "pagePath": "pages/service/service",
+        "text": "生活服务",
+        "iconPath": "static/tabbar/service.png",
+        "selectedIconPath": "static/tabbar/service-active.png"
       }
     ]
   }

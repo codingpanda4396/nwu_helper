@@ -119,4 +119,13 @@ page {
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
+
+/* ========== 隐藏原生tabbar（已替换为自定义CustomTabbar） ========== */
+uni-tabbar {
+  display: none !important;
+}
+
+.uni-tabbar-bottom {
+  display: none !important;
+}
 </style>

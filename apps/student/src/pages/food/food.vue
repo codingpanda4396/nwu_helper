@@ -79,6 +79,7 @@
     </view>
 
     <u-toast ref="uToast" />
+    <CustomTabbar />
   </view>
 </template>
 
@@ -87,6 +88,7 @@ import { ref, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import CustomTabbar from '@/components/CustomTabbar.vue'
 
 interface Merchant {
   id: string
@@ -107,8 +109,8 @@ const uToast = ref<any>(null)
 
 const categories = [
   { key: 'all', name: '全部', icon: '' },
-  { key: 'snack', name: '小吃', icon: 'gift-fill' },
-  { key: 'meal', name: '正餐', icon: 'home-fill' },
+  { key: 'snack', name: '小吃', icon: 'star-fill' },
+  { key: 'meal', name: '正餐', icon: 'list' },
   { key: 'tea', name: '奶茶', icon: 'water-fill' },
   { key: 'night', name: '夜宵', icon: 'moon-fill' }
 ]

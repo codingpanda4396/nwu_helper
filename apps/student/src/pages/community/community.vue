@@ -1,5 +1,13 @@
 <template>
   <view class="page">
+    <!-- 搜索栏 -->
+    <view class="search-header" @click="goSearch">
+      <view class="search-bar">
+        <u-icon name="search" size="18" color="#9CA3AF" />
+        <text class="search-placeholder">搜帖子</text>
+      </view>
+    </view>
+
     <!-- 分类筛选 -->
     <view class="filter-bar">
       <scroll-view scroll-x class="filter-scroll" :show-scrollbar="false">
@@ -110,6 +118,7 @@
     </view>
 
     <u-toast ref="uToast" />
+    <CustomTabbar />
   </view>
 </template>
 
@@ -117,6 +126,7 @@
 import { ref, onMounted } from 'vue'
 import { publicApi, publicWrite, trackActivity } from '@/api/index'
 import EmptyState from '@/components/EmptyState.vue'
+import CustomTabbar from '@/components/CustomTabbar.vue'
 
 interface Post {
   id: string
@@ -164,6 +174,10 @@ function selectCategory(cat: string) {
   fetchPosts()
 }
 
+function goSearch() {
+  uni.navigateTo({ url: '/pages/search/search' })
+}
+
 function openPost(id: string) {
   uni.navigateTo({ url: `/pages/post/post?id=${encodeURIComponent(id)}` })
 }
@@ -197,14 +211,36 @@ async function submitPost() {
   padding-bottom: 120rpx;
 }
 
+/* ========== 搜索栏 ========== */
+.search-header {
+  background: $bg-card-soft;
+  padding: $space-4 $space-5;
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  border-bottom: 1rpx solid $border-light;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: $space-3;
+  background: $bg-page;
+  border-radius: $radius-full;
+  padding: $space-3 $space-5;
+  border: 1rpx solid $border;
+}
+
+.search-placeholder {
+  font-size: $font-sm;
+  color: $text-placeholder;
+}
+
 /* ========== 分类筛选 ========== */
 .filter-bar {
   background: $bg-card-soft;
   padding: $space-4 0;
   border-bottom: 1rpx solid $border-light;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
 
 .filter-scroll {

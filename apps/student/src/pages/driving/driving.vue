@@ -60,6 +60,7 @@
     </template>
 
     <u-toast ref="uToast" />
+    <CustomTabbar />
   </view>
 </template>
 
@@ -68,6 +69,7 @@ import { ref, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import CustomTabbar from '@/components/CustomTabbar.vue'
 
 interface DrivingConfig {
   active: boolean
@@ -142,9 +144,9 @@ onMounted(async () => {
 }
 
 .info-card {
-  background: #ffffff;
+  background: $bg-card;
   border-radius: $radius-lg;
-  padding: 30rpx;
+  padding: $space-5;
   border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 }
@@ -152,26 +154,26 @@ onMounted(async () => {
 .info-tag {
   display: inline-flex;
   align-items: center;
-  gap: 8rpx;
-  margin-bottom: 16rpx;
+  gap: $space-2;
+  margin-bottom: $space-4;
 
   text {
-    font-size: 24rpx;
+    font-size: $font-sm;
     color: $primary;
     font-weight: $font-medium;
   }
 }
 
 .info-title {
-  font-size: 40rpx;
-  font-weight: bold;
+  font-size: $font-xl;
+  font-weight: $font-bold;
   color: $text-primary;
   display: block;
-  margin-bottom: 12rpx;
+  margin-bottom: $space-3;
 }
 
 .info-desc {
-  font-size: 26rpx;
+  font-size: $font-sm;
   color: $text-secondary;
   display: block;
   line-height: 1.6;
@@ -183,13 +185,13 @@ onMounted(async () => {
 }
 
 .qr-card {
-  background: #ffffff;
+  background: $bg-card;
   border-radius: $radius-lg;
-  padding: 30rpx;
+  padding: $space-5;
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: 30rpx;
+  gap: $space-5;
   border: 1rpx solid $border-light;
   box-shadow: $shadow-sm;
 }
@@ -206,15 +208,15 @@ onMounted(async () => {
 }
 
 .qr-title {
-  font-size: 32rpx;
-  font-weight: bold;
+  font-size: $font-lg;
+  font-weight: $font-bold;
   color: $text-primary;
   display: block;
-  margin-bottom: 12rpx;
+  margin-bottom: $space-3;
 }
 
 .qr-desc {
-  font-size: 26rpx;
+  font-size: $font-sm;
   color: $text-secondary;
   display: block;
   line-height: 1.6;

@@ -16,7 +16,7 @@
     <view v-if="!loading && categories.length > 0" class="service-grid">
       <view class="grid-item tap-active" v-for="item in categories" :key="item.key" @click="goToService(item.key)">
         <view class="grid-icon">
-          <text class="grid-icon__text">{{ item.icon || '📌' }}</text>
+          <image class="grid-icon__img" :src="getServiceIcon(item.key)" mode="aspectFit" />
         </view>
         <text class="grid-text">{{ item.name }}</text>
       </view>
@@ -61,6 +61,7 @@
     </view>
 
     <u-toast ref="uToast" />
+    <CustomTabbar />
   </view>
 </template>
 
@@ -70,6 +71,7 @@ import { publicApi, trackActivity } from '@/api/index'
 import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import CustomTabbar from '@/components/CustomTabbar.vue'
 
 interface ServiceCategory {
   id: string
@@ -93,6 +95,19 @@ const merchants = ref<Merchant[]>([])
 const activeKey = ref('')
 const loading = ref(true)
 const uToast = ref<any>(null)
+
+const serviceIconMap: Record<string, string> = {
+  print: '/static/icons/print.svg',
+  wash: '/static/icons/wash.svg',
+  entertainment: '/static/icons/entertainment.svg',
+  female: '/static/icons/heart.svg',
+  rent: '/static/icons/home.svg',
+  parttime: '/static/icons/bag.svg'
+}
+
+function getServiceIcon(key: string): string {
+  return serviceIconMap[key] || '/static/icons/service.svg'
+}
 
 const activeCategory = computed(() => {
   if (!activeKey.value) return ''
@@ -234,8 +249,9 @@ function openMerchant(merchant: Merchant) {
   justify-content: center;
   background: $primary-bg;
 
-  &__text {
-    font-size: 36rpx;
+  &__img {
+    width: 40rpx;
+    height: 40rpx;
   }
 }
 

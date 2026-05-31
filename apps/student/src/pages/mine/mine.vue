@@ -28,16 +28,25 @@
       <!-- 统计卡片 -->
       <view class="stats-card">
         <view class="stat-item tap-active" @click="goTo('/pages/favorite/favorite')">
+          <view class="stat-icon stat-icon--heart">
+            <u-icon name="heart-fill" size="14" color="#FFFFFF" />
+          </view>
           <text class="stat-value">{{ favoriteCount }}</text>
           <text class="stat-label">收藏</text>
         </view>
         <view class="stat-divider" />
         <view class="stat-item tap-active" @click="goTo('/pages/history/history')">
+          <view class="stat-icon stat-icon--clock">
+            <u-icon name="clock-fill" size="14" color="#FFFFFF" />
+          </view>
           <text class="stat-value">{{ historyCount }}</text>
           <text class="stat-label">足迹</text>
         </view>
         <view class="stat-divider" />
         <view class="stat-item tap-active">
+          <view class="stat-icon stat-icon--thumb">
+            <u-icon name="thumb-up-fill" size="14" color="#FFFFFF" />
+          </view>
           <text class="stat-value">0</text>
           <text class="stat-label">点赞</text>
         </view>
@@ -275,8 +284,30 @@ function showAbout() {
   gap: $space-2;
 }
 
+.stat-icon {
+  width: 48rpx;
+  height: 48rpx;
+  border-radius: $radius-full;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: $space-1;
+
+  &--heart {
+    background: linear-gradient(135deg, #F87171 0%, #EF4444 100%);
+  }
+
+  &--clock {
+    background: linear-gradient(135deg, #60A5FA 0%, #3B82F6 100%);
+  }
+
+  &--thumb {
+    background: linear-gradient(135deg, #34D399 0%, #10B981 100%);
+  }
+}
+
 .stat-value {
-  font-size: $font-xl;
+  font-size: $font-2xl;
   font-weight: $font-bold;
   color: $primary;
 }

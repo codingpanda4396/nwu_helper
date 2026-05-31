@@ -263,6 +263,7 @@
     </view>
 
     <u-toast ref="uToast" />
+    <CustomTabbar />
   </view>
 </template>
 
@@ -272,6 +273,7 @@ import { publicApi, trackActivity } from '@/api/index'
 import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
+import CustomTabbar from '@/components/CustomTabbar.vue'
 
 interface Banner {
   id: string
@@ -718,9 +720,9 @@ function showWechatToast() {
   margin: 0 $space-4 $space-4;
   padding: 24rpx;
   border-radius: $radius-lg;
-  background: linear-gradient(135deg, #FFF7D6 0%, #FFE1A3 42%, #FF5A36 100%);
-  border: 2rpx solid #FFD16A;
-  box-shadow: 0 12rpx 28rpx rgba(255, 90, 54, 0.18);
+  background: linear-gradient(135deg, #FFF8E7 0%, #FFE8C4 50%, #FFD4A8 100%);
+  border: 2rpx solid #FFE0B2;
+  box-shadow: 0 12rpx 28rpx rgba(255, 183, 77, 0.15);
   overflow: hidden;
   position: relative;
 
