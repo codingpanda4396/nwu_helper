@@ -1,6 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
 import { prisma } from "./db.js";
+import { invalidateCache } from "./cache.js";
 import { fail, ok } from "./response.js";
 
 const categorySchema = z.object({
@@ -152,23 +153,39 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, await prisma.banner.findMany({ orderBy: [{ sortOrder: "asc" }, { createdAt: "desc" }] }));
   });
 
+  app.get("/api/admin/banners/:id", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const banner = await prisma.banner.findUnique({ where: { id } });
+    if (!banner) return fail(reply, "NOT_FOUND", "轮播图不存在", 404);
+    return ok(reply, banner);
+  });
+
   app.post("/api/admin/banners", async (request, reply) => {
     const parsed = bannerSchema.safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "轮播图参数错误");
-    return ok(reply, await prisma.banner.create({ data: parsed.data }));
+    const banner = await prisma.banner.create({ data: parsed.data });
+    invalidateCache("banners");
+    invalidateCache("home:data");
+    return ok(reply, banner);
   });
 
   app.patch("/api/admin/banners/:id", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const parsed = bannerSchema.partial().safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "轮播图参数错误");
-    return ok(reply, await prisma.banner.update({ where: { id }, data: parsed.data }));
+    const banner = await prisma.banner.update({ where: { id }, data: parsed.data });
+    invalidateCache("banners");
+    invalidateCache("home:data");
+    return ok(reply, banner);
   });
 
   app.patch("/api/admin/banners/:id/status", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const { isActive } = z.object({ isActive: z.boolean() }).parse(request.body);
-    return ok(reply, await prisma.banner.update({ where: { id }, data: { isActive } }));
+    const banner = await prisma.banner.update({ where: { id }, data: { isActive } });
+    invalidateCache("banners");
+    invalidateCache("home:data");
+    return ok(reply, banner);
   });
 
   app.get("/api/admin/wechat-entry", async (_request, reply) => {
@@ -219,6 +236,37 @@ export async function adminRoutes(app: FastifyInstance) {
     const parsed = serviceCategorySchema.partial().safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "服务分类参数错误");
     return ok(reply, await prisma.serviceCategory.update({ where: { id }, data: parsed.data }));
+  });
+
+  const drivingConfigSchema = z.object({
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    promoImages: z.array(z.string()).optional(),
+    qrImageUrl: z.string().nullable().optional(),
+    qrTitle: z.string().optional(),
+    qrDescription: z.string().optional(),
+    isActive: z.boolean().optional()
+  });
+
+  app.get("/api/admin/driving-config", async (_request, reply) => {
+    const item = await prisma.drivingPageConfig.upsert({
+      where: { id: "driving-page" },
+      update: {},
+      create: { id: "driving-page" }
+    });
+    return ok(reply, item);
+  });
+
+  app.patch("/api/admin/driving-config", async (request, reply) => {
+    const parsed = drivingConfigSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "驾校配置参数错误");
+    const item = await prisma.drivingPageConfig.upsert({
+      where: { id: "driving-page" },
+      update: parsed.data,
+      create: { id: "driving-page", ...parsed.data }
+    });
+    invalidateCache("driving-config");
+    return ok(reply, item);
   });
 
   app.get("/api/admin/community-posts", async (_request, reply) => {

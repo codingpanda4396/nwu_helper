@@ -157,6 +157,25 @@ export async function publicRoutes(app: FastifyInstance) {
     return ok(reply, wechatEntryCard(item));
   });
 
+  app.get("/api/public/driving-config", async (_request, reply) => {
+    const data = await getCached("driving-config", async () => {
+      const config = await prisma.drivingPageConfig.findUnique({ where: { id: "driving-page" } });
+      if (!config || !config.isActive) {
+        return { active: false, title: "", description: "", promoImages: [], qrImageUrl: null, qrTitle: "", qrDescription: "" };
+      }
+      return {
+        active: true,
+        title: config.title,
+        description: config.description,
+        promoImages: config.promoImages as string[],
+        qrImageUrl: config.qrImageUrl,
+        qrTitle: config.qrTitle,
+        qrDescription: config.qrDescription
+      };
+    }, 1800);
+    return ok(reply, data);
+  });
+
   app.get("/api/public/categories", async (_request, reply) => {
     const items = await getCached("categories", () =>
       prisma.category.findMany({

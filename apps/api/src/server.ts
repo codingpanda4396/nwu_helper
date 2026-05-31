@@ -35,6 +35,21 @@ await app.register(rateLimit, {
   timeWindow: '1 minute'
 });
 
+app.setErrorHandler((err, _request, reply) => {
+  const error = err as Error & { statusCode?: number };
+  const statusCode = error.statusCode || 500;
+  if (statusCode === 401) {
+    return reply.status(401).send({ success: false, error: { code: "UNAUTHORIZED", message: error.message || "请先登录" } });
+  }
+  if (statusCode === 403) {
+    return reply.status(403).send({ success: false, error: { code: "FORBIDDEN", message: error.message || "无权限" } });
+  }
+  if (statusCode === 429) {
+    return reply.status(429).send({ success: false, error: { code: "RATE_LIMIT", message: "请求过于频繁" } });
+  }
+  return reply.status(statusCode).send({ success: false, error: { code: "INTERNAL_ERROR", message: statusCode >= 500 ? "服务器内部错误" : error.message } });
+});
+
 app.get("/api/health", async () => ({ success: true, data: { status: "ok" } }));
 await app.register(authRoutes);
 await app.register(publicRoutes);

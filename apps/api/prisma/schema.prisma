@@ -173,6 +173,19 @@ model WechatEntryConfig {
   updatedAt   DateTime @updatedAt
 }
 
+model DrivingPageConfig {
+  id            String   @id @default("driving-page")
+  title         String   @default("严选驾校")
+  description   String   @default("课少也能稳稳学车，就近练车、灵活约课、流程透明。")
+  promoImages   Json     @default("[]")
+  qrImageUrl    String?
+  qrTitle       String   @default("扫码咨询班型")
+  qrDescription String   @default("报名优惠、练车时间和接送安排，以西大圈微信咨询为准。")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+}
+
 model ServiceCategory {
   id        String     @id @default(cuid())
   name      String

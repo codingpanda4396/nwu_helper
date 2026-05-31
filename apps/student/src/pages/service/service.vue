@@ -6,15 +6,17 @@
           <u-icon name="list" size="14" color="#10B981" />
           <text>西大圈</text>
         </view>
-        <text class="hero-title">驾校服务</text>
-        <text class="hero-desc">校园周边驾校，一键直达</text>
+        <text class="hero-title">生活服务</text>
+        <text class="hero-desc">校园周边生活服务，一键直达</text>
       </view>
     </view>
 
-    <view class="service-grid">
-      <view class="grid-item" v-for="item in serviceCategories" :key="item.key" @click="goToService(item.key)">
-        <view class="grid-icon" :style="{ background: item.bgColor }">
-          <u-icon :name="item.icon" size="24" color="#10B981" />
+    <Skeleton v-if="loading" type="grid" />
+
+    <view v-if="!loading && categories.length > 0" class="service-grid">
+      <view class="grid-item tap-active" v-for="item in categories" :key="item.key" @click="goToService(item.key)">
+        <view class="grid-icon">
+          <text class="grid-icon__text">{{ item.icon || '📌' }}</text>
         </view>
         <text class="grid-text">{{ item.name }}</text>
       </view>
@@ -22,14 +24,23 @@
 
     <view class="section">
       <view class="section-header">
-        <text class="section-title">热门驾校</text>
+        <view class="section-header__left">
+          <text class="section-title">生活服务商家</text>
+          <text v-if="activeCategory" class="section-desc">{{ activeCategory }}</text>
+        </view>
+        <view v-if="activeKey" class="section-header__clear tap-active" @click="clearFilter">
+          <text>全部</text>
+        </view>
       </view>
-      <view class="merchant-list">
-        <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card" @click="openMerchant(merchant)">
+
+      <Skeleton v-if="loading" type="list" :count="3" />
+
+      <view v-else-if="merchants.length > 0" class="merchant-list">
+        <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card tap-active" @click="openMerchant(merchant)">
           <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
           <view class="merchant-content">
             <text class="merchant-name">{{ merchant.name }}</text>
-            <text class="merchant-desc">{{ merchant.summary || '优质驾校' }}</text>
+            <text class="merchant-desc">{{ merchant.summary || '优质商家' }}</text>
             <view class="merchant-meta">
               <view class="meta-item">
                 <u-icon name="map-fill" size="12" color="#9CA3AF" />
@@ -38,12 +49,15 @@
             </view>
           </view>
         </view>
-
-        <view v-if="merchants.length === 0" class="empty-state">
-          <text class="empty-title">正在招募驾校商家</text>
-          <text class="empty-desc">更多驾校即将上线</text>
-        </view>
       </view>
+
+      <EmptyState
+        v-else
+        icon="shop"
+        title="暂无生活服务商家"
+        description="更多商家即将上线"
+        size="small"
+      />
     </view>
 
     <u-toast ref="uToast" />
@@ -51,9 +65,18 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
 import { useAppStore } from '@/store/index'
+import Skeleton from '@/components/Skeleton.vue'
+import EmptyState from '@/components/EmptyState.vue'
+
+interface ServiceCategory {
+  id: string
+  name: string
+  key: string
+  icon?: string
+}
 
 interface Merchant {
   id: string
@@ -65,53 +88,72 @@ interface Merchant {
 }
 
 const store = useAppStore()
+const categories = ref<ServiceCategory[]>([])
 const merchants = ref<Merchant[]>([])
-const uToast = ref<any>(null)
 const activeKey = ref('')
+const loading = ref(true)
+const uToast = ref<any>(null)
 
-const serviceCategories = [
-  { key: 'c1', name: '科一', icon: 'book-fill', bgColor: '#E8F5E9' },
-  { key: 'c2', name: '科二', icon: 'car-fill', bgColor: '#E3F2FD' },
-  { key: 'c3', name: '科三', icon: 'car-fill', bgColor: '#FFF3E0' },
-  { key: 'c4', name: '科四', icon: 'book-fill', bgColor: '#FCE4EC' },
-  { key: 'discount', name: '优惠', icon: 'gift-fill', bgColor: '#F3E5F5' },
-  { key: 'enroll', name: '报名', icon: 'edit-pen-fill', bgColor: '#E0F2F1' },
-  { key: 'review', name: '评价', icon: 'star-fill', bgColor: '#E8EAF6' },
-  { key: 'more', name: '更多', icon: 'grid-fill', bgColor: '#FAFAFA' }
-]
+const activeCategory = computed(() => {
+  if (!activeKey.value) return ''
+  const cat = categories.value.find(c => c.key === activeKey.value)
+  return cat ? cat.name : ''
+})
 
 onMounted(async () => {
-  trackActivity('page_view', '/driving')
+  trackActivity('page_view', '/service')
+
   if (store.selectedServiceKey) {
     activeKey.value = store.selectedServiceKey
     store.selectedServiceKey = ''
   }
+
+  try {
+    const cats = await publicApi<ServiceCategory[]>('/api/public/services/categories')
+    categories.value = cats || []
+  } catch (err) {
+    categories.value = []
+  }
+
+  await loadMerchants()
+  loading.value = false
+})
+
+async function loadMerchants() {
   try {
     const qs = activeKey.value ? `?serviceKey=${encodeURIComponent(activeKey.value)}` : ''
     const data = await publicApi<Merchant[]>(`/api/public/services/merchants${qs}`)
     merchants.value = data || []
     merchants.value.slice(0, 20).forEach((merchant) => {
-      trackActivity('merchant_impression', '/driving', merchant.id, {
+      trackActivity('merchant_impression', '/service', merchant.id, {
         merchantId: merchant.id,
         channelId: merchant.defaultChannelId,
-        source: 'driving_list'
+        source: 'service_list'
       })
     })
   } catch (err) {
     merchants.value = []
   }
-})
+}
 
-function goToService(key: string) {
-  if (key === 'more') return
+async function goToService(key: string) {
   activeKey.value = key
+  loading.value = true
+  await loadMerchants()
+  loading.value = false
+}
+
+function clearFilter() {
+  activeKey.value = ''
+  loading.value = true
+  loadMerchants().finally(() => { loading.value = false })
 }
 
 function openMerchant(merchant: Merchant) {
-  trackActivity('merchant_click', '/driving', merchant.id, {
+  trackActivity('merchant_click', '/service', merchant.id, {
     merchantId: merchant.id,
     channelId: merchant.defaultChannelId,
-    source: 'driving_list'
+    source: 'service_list'
   })
   const params = [`id=${encodeURIComponent(merchant.id)}`, 'source=service_list']
   if (merchant.defaultChannelId) params.push(`channelId=${encodeURIComponent(merchant.defaultChannelId)}`)
@@ -190,6 +232,11 @@ function openMerchant(merchant: Merchant) {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: $primary-bg;
+
+  &__text {
+    font-size: 36rpx;
+  }
 }
 
 .grid-text {
@@ -202,13 +249,34 @@ function openMerchant(merchant: Merchant) {
 }
 
 .section-header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
   margin-bottom: 24rpx;
+
+  &__left {
+    display: flex;
+    flex-direction: column;
+  }
+
+  &__clear {
+    text {
+      font-size: $font-sm;
+      color: $primary;
+    }
+  }
 }
 
 .section-title {
   font-size: $font-base;
   font-weight: bold;
   color: $text-primary;
+}
+
+.section-desc {
+  font-size: $font-xs;
+  color: $text-tertiary;
+  margin-top: 4rpx;
 }
 
 .merchant-list {
@@ -272,27 +340,5 @@ function openMerchant(merchant: Merchant) {
     font-size: 22rpx;
     color: $text-tertiary;
   }
-}
-
-.empty-state {
-  text-align: center;
-  padding: 60rpx 40rpx;
-  background: $bg-card;
-  border-radius: $radius-lg;
-  border: 1rpx solid $border-light;
-}
-
-.empty-title {
-  font-size: $font-base;
-  font-weight: bold;
-  color: $text-primary;
-  display: block;
-  margin-bottom: 12rpx;
-}
-
-.empty-desc {
-  font-size: $font-sm;
-  color: $text-tertiary;
-  display: block;
 }
 </style>

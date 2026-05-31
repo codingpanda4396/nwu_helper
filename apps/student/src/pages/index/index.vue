@@ -46,7 +46,7 @@
         </view>
         <text class="grid-text">美食</text>
       </view>
-      <view class="grid-item tap-active" @click="goToService('driving')">
+      <view class="grid-item tap-active" @click="goTo('/pages/driving/driving')">
         <view class="grid-icon grid-icon--driving">
           <image class="grid-icon__img" src="/static/icons/car.svg" mode="aspectFit" />
         </view>
@@ -82,8 +82,64 @@
       </view>
     </view>
 
+    <!-- 抽签吃饭 -->
+    <view class="food-draw slide-up stagger-2">
+      <view class="food-draw__header">
+        <view>
+          <view class="food-draw__badge">
+            <u-icon name="gift-fill" size="12" color="#B42318" />
+            <text>今天吃什么</text>
+          </view>
+          <text class="food-draw__title">抽一家校边美食</text>
+          <text class="food-draw__desc">奖池 {{ foodMerchants.length }} 家，点一下交给手气</text>
+        </view>
+        <view class="food-draw__pot">
+          <text>食</text>
+        </view>
+      </view>
+
+      <view :class="['food-draw__reel', { 'food-draw__reel--rolling': drawRolling }]">
+        <image
+          v-if="currentDrawMerchant?.image"
+          class="food-draw__image"
+          :src="currentDrawMerchant.image"
+          mode="aspectFill"
+        />
+        <view v-else class="food-draw__image food-draw__image--empty">
+          <u-icon name="photo" size="24" color="#F97316" />
+        </view>
+        <view class="food-draw__merchant">
+          <text class="food-draw__merchant-name">{{ currentDrawMerchant?.name || '正在收录校边美食' }}</text>
+          <text class="food-draw__merchant-desc">
+            {{ currentDrawMerchant?.summary || emptyDrawText }}
+          </text>
+          <view v-if="currentDrawMerchant" class="food-draw__meta">
+            <text v-if="currentDrawMerchant.avgPrice">人均 {{ currentDrawMerchant.avgPrice }} 元</text>
+            <text>{{ currentDrawMerchant.distance || '校边' }}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="food-draw__actions">
+        <button
+          class="food-draw__button"
+          :disabled="drawRolling || foodMerchants.length === 0"
+          @click="startFoodDraw"
+        >
+          {{ drawRolling ? '抽签中...' : selectedDrawMerchant ? '再抽一次' : '开始抽签' }}
+        </button>
+        <button
+          v-if="selectedDrawMerchant && !drawRolling"
+          class="food-draw__detail"
+          @click="openDrawMerchant"
+        >
+          去看看
+        </button>
+      </view>
+    </view>
+
     <!-- 今日活动 -->
-    <view class="section slide-up stagger-2">
+    <view class="section slide-up stagger-3">
       <view class="section-header">
         <view class="section-header__left">
           <text class="section-title">今日活动</text>
@@ -123,7 +179,7 @@
     </view>
 
     <!-- 热门商家推荐 -->
-    <view class="section slide-up stagger-3">
+    <view class="section slide-up stagger-4">
       <view class="section-header">
         <view class="section-header__left">
           <text class="section-title">热门商家</text>
@@ -162,7 +218,7 @@
     </view>
 
     <!-- 校园墙专区 -->
-    <view class="section slide-up stagger-4">
+    <view class="section slide-up stagger-5">
       <view class="campus-zone">
         <view class="zone-header">
           <view class="zone-badge">
@@ -211,7 +267,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
 import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
@@ -243,6 +299,7 @@ interface Merchant {
   image?: string
   summary?: string
   distance?: string
+  avgPrice?: number
   defaultChannelId?: string
 }
 
@@ -250,9 +307,14 @@ const store = useAppStore()
 const banners = ref<Banner[]>([])
 const activities = ref<Activity[]>([])
 const merchants = ref<Merchant[]>([])
+const foodMerchants = ref<Merchant[]>([])
 const showServices = ref(false)
 const loading = ref(true)
 const uToast = ref<any>(null)
+const drawRolling = ref(false)
+const drawCursor = ref(0)
+const selectedDrawMerchant = ref<Merchant | null>(null)
+let drawTimer: ReturnType<typeof setInterval> | undefined
 
 const tabPages = ['/pages/index/index', '/pages/food/food', '/pages/service/service', '/pages/community/community', '/pages/mine/mine']
 
@@ -274,6 +336,14 @@ const defaultBanners: Banner[] = [
   }
 ]
 
+const emptyDrawText = '美食商家上线后，就能一键抽出今天吃哪家'
+const currentDrawMerchant = computed(() => {
+  if (drawRolling.value && foodMerchants.value.length > 0) {
+    return foodMerchants.value[drawCursor.value % foodMerchants.value.length]
+  }
+  return selectedDrawMerchant.value || foodMerchants.value[0] || null
+})
+
 onMounted(async () => {
   trackActivity('page_view', '/index')
   try {
@@ -294,7 +364,13 @@ onMounted(async () => {
 
   try {
     const data = await publicApi<Merchant[]>('/api/public/food/merchants')
-    merchants.value = (data || []).slice(0, 4)
+    foodMerchants.value = data || []
+    merchants.value = foodMerchants.value.slice(0, 4)
+    if (foodMerchants.value.length > 0) {
+      trackActivity('food_draw_impression', '/index', undefined, {
+        source: 'food_draw'
+      })
+    }
     merchants.value.forEach((merchant) => {
       trackActivity('merchant_impression', '/index', merchant.id, {
         merchantId: merchant.id,
@@ -307,6 +383,10 @@ onMounted(async () => {
   } finally {
     loading.value = false
   }
+})
+
+onUnmounted(() => {
+  stopDrawTimer()
 })
 
 function goSearch() {
@@ -345,6 +425,50 @@ function handleBanner(banner: Banner) {
   } else if (banner.targetType === 'tab' && banner.targetId) {
     uni.switchTab({ url: `/pages/${banner.targetId}/${banner.targetId}` })
   }
+}
+
+function stopDrawTimer() {
+  if (!drawTimer) return
+  clearInterval(drawTimer)
+  drawTimer = undefined
+}
+
+function startFoodDraw() {
+  if (drawRolling.value || foodMerchants.value.length === 0) return
+  trackActivity('food_draw_start', '/index', undefined, {
+    source: 'food_draw'
+  })
+  drawRolling.value = true
+  selectedDrawMerchant.value = null
+  let ticks = 0
+  const maxTicks = 24 + Math.floor(Math.random() * 10)
+  const targetIndex = Math.floor(Math.random() * foodMerchants.value.length)
+  stopDrawTimer()
+  drawTimer = setInterval(() => {
+    ticks += 1
+    drawCursor.value = (drawCursor.value + 1) % foodMerchants.value.length
+    if (ticks >= maxTicks) {
+      stopDrawTimer()
+      drawCursor.value = targetIndex
+      const selected = foodMerchants.value[targetIndex]
+      selectedDrawMerchant.value = selected
+      drawRolling.value = false
+      trackActivity('food_draw_result', '/index', selected.id, {
+        merchantId: selected.id,
+        channelId: selected.defaultChannelId,
+        source: 'food_draw'
+      })
+    }
+  }, 70)
+}
+
+function openDrawMerchant() {
+  if (!selectedDrawMerchant.value) return
+  openMerchant(selectedDrawMerchant.value.id, {
+    channelId: selectedDrawMerchant.value.defaultChannelId,
+    source: 'food_draw',
+    action: 'merchant_click'
+  })
 }
 
 function openMerchant(id?: string, options: { activityId?: string; channelId?: string; source?: string; action?: string } = {}) {
@@ -586,6 +710,206 @@ function showWechatToast() {
     font-size: $font-xs;
     color: $text-primary;
     font-weight: $font-medium;
+  }
+}
+
+/* ========== 抽签吃饭 ========== */
+.food-draw {
+  margin: 0 $space-4 $space-4;
+  padding: 24rpx;
+  border-radius: $radius-lg;
+  background: linear-gradient(135deg, #FFF7D6 0%, #FFE1A3 42%, #FF5A36 100%);
+  border: 2rpx solid #FFD16A;
+  box-shadow: 0 12rpx 28rpx rgba(255, 90, 54, 0.18);
+  overflow: hidden;
+  position: relative;
+
+  &::before {
+    content: '';
+    position: absolute;
+    right: -60rpx;
+    top: -80rpx;
+    width: 220rpx;
+    height: 220rpx;
+    border-radius: $radius-full;
+    border: 24rpx solid rgba(255, 255, 255, 0.26);
+  }
+
+  &__header {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: $space-4;
+    margin-bottom: $space-5;
+  }
+
+  &__badge {
+    display: inline-flex;
+    align-items: center;
+    gap: $space-1;
+    padding: 6rpx 14rpx;
+    border-radius: $radius-full;
+    background: rgba(255, 255, 255, 0.86);
+    margin-bottom: $space-3;
+
+    text {
+      font-size: $font-xs;
+      color: #B42318;
+      font-weight: $font-semibold;
+    }
+  }
+
+  &__title {
+    display: block;
+    font-size: 40rpx;
+    line-height: 1.2;
+    color: #7A1F12;
+    font-weight: $font-bold;
+    margin-bottom: $space-2;
+  }
+
+  &__desc {
+    display: block;
+    font-size: $font-xs;
+    color: rgba(122, 31, 18, 0.78);
+  }
+
+  &__pot {
+    width: 86rpx;
+    height: 86rpx;
+    border-radius: $radius-full;
+    flex-shrink: 0;
+    background: #D92D20;
+    border: 6rpx solid #FFFFFF;
+    box-shadow: 0 8rpx 18rpx rgba(180, 35, 24, 0.26);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    text {
+      color: #FFFFFF;
+      font-size: $font-lg;
+      font-weight: $font-bold;
+    }
+  }
+
+  &__reel {
+    position: relative;
+    z-index: 1;
+    min-height: 184rpx;
+    display: flex;
+    align-items: center;
+    gap: $space-4;
+    padding: $space-4;
+    border-radius: $radius-md;
+    background: rgba(255, 255, 255, 0.94);
+    border: 2rpx solid rgba(255, 255, 255, 0.78);
+    box-shadow: inset 0 0 0 2rpx rgba(255, 209, 106, 0.42);
+    transition: transform $transition-fast;
+
+    &--rolling {
+      transform: scale(1.01);
+    }
+  }
+
+  &__image {
+    width: 148rpx;
+    height: 148rpx;
+    border-radius: $radius-md;
+    flex-shrink: 0;
+    background: #FFF1D6;
+
+    &--empty {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+  }
+
+  &__merchant {
+    min-width: 0;
+    flex: 1;
+  }
+
+  &__merchant-name {
+    display: block;
+    font-size: $font-md;
+    line-height: 1.25;
+    font-weight: $font-bold;
+    color: #25110C;
+    margin-bottom: $space-2;
+  }
+
+  &__merchant-desc {
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    font-size: $font-xs;
+    line-height: 1.45;
+    color: #755044;
+    margin-bottom: $space-3;
+  }
+
+  &__meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: $space-2;
+
+    text {
+      padding: 4rpx 12rpx;
+      border-radius: $radius-full;
+      background: #FFF4E6;
+      font-size: 20rpx;
+      color: #B54708;
+      font-weight: $font-medium;
+    }
+  }
+
+  &__actions {
+    position: relative;
+    z-index: 1;
+    display: flex;
+    gap: $space-3;
+    margin-top: $space-4;
+  }
+
+  &__button,
+  &__detail {
+    height: 76rpx;
+    min-width: 0;
+    margin: 0;
+    border-radius: $radius-full;
+    font-size: $font-base;
+    font-weight: $font-bold;
+    line-height: 76rpx;
+    border: none;
+
+    &::after {
+      border: none;
+    }
+  }
+
+  &__button {
+    flex: 1;
+    color: #FFFFFF;
+    background: linear-gradient(135deg, #F04438 0%, #B42318 100%);
+    box-shadow: 0 8rpx 18rpx rgba(180, 35, 24, 0.24);
+
+    &[disabled] {
+      color: rgba(255, 255, 255, 0.82);
+      background: #D0A99D;
+      box-shadow: none;
+    }
+  }
+
+  &__detail {
+    width: 176rpx;
+    flex-shrink: 0;
+    color: #B42318;
+    background: #FFFFFF;
   }
 }
 

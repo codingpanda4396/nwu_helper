@@ -12,6 +12,7 @@ import CommunityDetail from "./pages/CommunityDetail";
 import BannerList from "./pages/BannerList";
 import BannerForm from "./pages/BannerForm";
 import ServiceCategoryList from "./pages/ServiceCategoryList";
+import DrivingConfig from "./pages/DrivingConfig";
 import WechatEntry from "./pages/WechatEntry";
 import MerchantList from "./pages/MerchantList";
 import ActivityList from "./pages/ActivityList";
@@ -287,6 +288,7 @@ function AdminApp() {
             <Route path="banners/create" element={<BannerForm token={token} />} />
             <Route path="banners/:id/edit" element={<BannerForm token={token} />} />
             <Route path="services" element={<ServiceCategoryList token={token} />} />
+            <Route path="driving-config" element={<DrivingConfig token={token} />} />
             <Route path="feedbacks" element={<FeedbackList token={token} />} />
             <Route path="wechat-entry" element={<WechatEntry token={token} />} />
           </Route>

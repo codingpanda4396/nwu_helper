@@ -7,6 +7,7 @@ import {
   PictureOutlined,
   QrcodeOutlined,
   ToolOutlined,
+  CarOutlined,
   MessageOutlined,
   LogoutOutlined,
   UserOutlined,
@@ -108,7 +109,12 @@ const menuItems: MenuProps["items"] = [
   {
     key: "/services",
     icon: <ToolOutlined />,
-    label: "驾校管理",
+    label: "生活服务分类",
+  },
+  {
+    key: "/driving-config",
+    icon: <CarOutlined />,
+    label: "驾校配置",
   },
   {
     key: "/wechat-entry",

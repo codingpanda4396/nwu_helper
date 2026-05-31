@@ -15,7 +15,7 @@
     {
       "path": "pages/service/service",
       "style": {
-        "navigationBarTitleText": "驾校"
+        "navigationBarTitleText": "生活服务"
       }
     },
     {
@@ -27,7 +27,7 @@
     {
       "path": "pages/mine/mine",
       "style": {
-        "navigationBarTitleText": "服务"
+        "navigationBarTitleText": "我的"
       }
     },
     {
@@ -65,6 +65,12 @@
       "style": {
         "navigationBarTitleText": "意见反馈"
       }
+    },
+    {
+      "path": "pages/driving/driving",
+      "style": {
+        "navigationBarTitleText": "驾校"
+      }
     }
   ],
   "globalStyle": {
@@ -93,7 +99,7 @@
       },
       {
         "pagePath": "pages/service/service",
-        "text": "驾校",
+        "text": "生活服务",
         "iconPath": "static/tabbar/service.png",
         "selectedIconPath": "static/tabbar/service-active.png"
       },
@@ -105,7 +111,7 @@
       },
       {
         "pagePath": "pages/mine/mine",
-        "text": "服务",
+        "text": "我的",
         "iconPath": "static/tabbar/mine.png",
         "selectedIconPath": "static/tabbar/mine-active.png"
       }
