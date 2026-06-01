@@ -318,7 +318,7 @@ const drawCursor = ref(0)
 const selectedDrawMerchant = ref<Merchant | null>(null)
 let drawTimer: ReturnType<typeof setInterval> | undefined
 
-const tabPages = ['/pages/index/index', '/pages/food/food', '/pages/service/service', '/pages/community/community', '/pages/mine/mine']
+const tabPages = ['/pages/index/index', '/pages/food/food', '/pages/service/service', '/pages/community/community']
 
 const serviceList = [
   { key: 'print', name: '打印', icon: '/static/icons/print-green.svg' },

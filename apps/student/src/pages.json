@@ -25,12 +25,6 @@
       }
     },
     {
-      "path": "pages/mine/mine",
-      "style": {
-        "navigationBarTitleText": "我的"
-      }
-    },
-    {
       "path": "pages/merchant/merchant",
       "style": {
         "navigationBarTitleText": "商家详情"
