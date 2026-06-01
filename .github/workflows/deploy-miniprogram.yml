@@ -65,9 +65,6 @@ jobs:
           project-path: apps/student/dist/build/mp-weixin
           private-key-path: deploy/private.key
           robot: 1
-          setting:
-            es6: true
-            minify: true
-            autoPrefixWXSS: true
+          setting: '{"es6":true,"minify":true,"autoPrefixWXSS":true}'
           version: ${{ github.event.inputs.version || '1.0.0' }}
           desc: ${{ github.event.inputs.desc || format('Auto deploy from commit {0}', github.sha) }}

@@ -72,10 +72,3 @@ jobs:
 
       - name: Build
         run: pnpm build
-
-      - name: Build production Docker images
-        run: |
-          docker build --target api -t nwu-helper-api:${{ github.sha }} .
-          docker build --target admin -t nwu-helper-admin:${{ github.sha }} .
-          docker build --target student -t nwu-helper-student:${{ github.sha }} .
-          docker build --target gateway -t nwu-helper-gateway:${{ github.sha }} .
