@@ -36,7 +36,9 @@ const communityPostCreateSchema = z.object({
   content: z.string().trim().min(5).max(2000),
   authorNickname: z.string().trim().max(24).optional(),
   contact: z.string().trim().max(80).optional(),
-  source: z.string().trim().max(24).optional()
+  source: z.string().trim().max(24).optional(),
+  images: z.array(z.string()).default([]),
+  authorUserId: z.string().optional()
 });
 
 const communityLikeSchema = z.object({
@@ -100,10 +102,12 @@ function communityPostCard(item: any) {
     summary: item.summary,
     content: item.content || item.summary,
     authorNickname: item.authorNickname || "匿名同学",
+    authorUserId: item.authorUserId,
+    images: item.images || [],
     likeCount: item.likeCount,
     commentCount: item.commentCount,
     viewCount: item.viewCount,
-    time: item.publishedAt.toISOString().slice(0, 10)
+    time: item.publishedAt ? new Date(item.publishedAt).toISOString().slice(0, 10) : ""
   };
 }
 
@@ -371,8 +375,10 @@ export async function publicRoutes(app: FastifyInstance) {
         summary: content.length > 90 ? `${content.slice(0, 90)}...` : content,
         content,
         authorNickname: parsed.data.authorNickname,
+        authorUserId: parsed.data.authorUserId,
         contact: parsed.data.contact,
         source: parsed.data.source || "student",
+        images: parsed.data.images,
         status: "PENDING",
         sortOrder: 100
       }
@@ -393,17 +399,128 @@ export async function publicRoutes(app: FastifyInstance) {
 
   app.post("/api/public/community/posts/:id/like", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
-    const parsed = communityLikeSchema.safeParse(request.body);
-    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "点赞参数错误");
-    const sessionId = parsed.data.sessionId || request.headers["x-session-id"]?.toString() || request.ip;
+
+    let userId: string | null = null;
+    try {
+      await request.jwtVerify();
+      userId = (request.user as { sub: string }).sub;
+    } catch {
+      return fail(reply, "UNAUTHORIZED", "请先登录", 401);
+    }
+
     const post = await prisma.communityPost.findFirst({ where: { id, status: "VISIBLE" } });
     if (!post) return fail(reply, "NOT_FOUND", "帖子不存在或未审核", 404);
-    const likedSessionIds = Array.isArray(post.likedSessionIds) ? post.likedSessionIds.filter((item): item is string => typeof item === "string") : [];
-    if (likedSessionIds.includes(sessionId)) return ok(reply, { liked: true, likeCount: post.likeCount });
-    const updated = await prisma.communityPost.update({
-      where: { id },
-      data: { likeCount: { increment: 1 }, likedSessionIds: [...likedSessionIds, sessionId].slice(-500) }
+
+    const existing = await prisma.postLike.findUnique({
+      where: { postId_userId: { postId: id, userId: userId! } }
     });
-    return ok(reply, { liked: true, likeCount: updated.likeCount });
+
+    if (existing) {
+      await prisma.postLike.delete({ where: { id: existing.id } });
+      const updated = await prisma.communityPost.update({
+        where: { id },
+        data: { likeCount: { decrement: 1 } }
+      });
+      return ok(reply, { liked: false, likeCount: updated.likeCount });
+    } else {
+      await prisma.postLike.create({ data: { postId: id, userId: userId! } });
+      const updated = await prisma.communityPost.update({
+        where: { id },
+        data: { likeCount: { increment: 1 } }
+      });
+      return ok(reply, { liked: true, likeCount: updated.likeCount });
+    }
+  });
+
+  // 获取评论列表
+  app.get("/api/public/community/posts/:id/comments", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+
+    const comments = await prisma.comment.findMany({
+      where: { postId: id, status: "VISIBLE" },
+      orderBy: { createdAt: "asc" }
+    });
+
+    const topLevel: any[] = [];
+    const replies: Record<string, any[]> = {};
+
+    for (const c of comments) {
+      if (!c.parentId) {
+        topLevel.push({ ...c, replies: [] });
+      } else {
+        if (!replies[c.parentId]) replies[c.parentId] = [];
+        replies[c.parentId].push(c);
+      }
+    }
+
+    for (const c of topLevel) {
+      c.replies = replies[c.id] || [];
+    }
+
+    return ok(reply, topLevel.map((c) => ({
+      id: c.id,
+      parentId: c.parentId,
+      authorUserId: c.authorUserId,
+      authorNickname: c.authorNickname,
+      content: c.content,
+      likeCount: c.likeCount,
+      time: c.createdAt,
+      replies: (c.replies || []).map((r: any) => ({
+        id: r.id,
+        parentId: r.parentId,
+        authorUserId: r.authorUserId,
+        authorNickname: r.authorNickname,
+        content: r.content,
+        likeCount: r.likeCount,
+        time: r.createdAt
+      }))
+    })));
+  });
+
+  // 发表评论（需登录）
+  app.post("/api/public/community/posts/:id/comments", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = z.object({
+      content: z.string().trim().min(1).max(500),
+      parentId: z.string().optional()
+    }).safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "评论内容不能为空");
+
+    let userId: string | null = null;
+    try {
+      await request.jwtVerify();
+      userId = (request.user as { sub: string }).sub;
+    } catch {
+      return fail(reply, "UNAUTHORIZED", "请先登录", 401);
+    }
+
+    const user = await prisma.user.findUnique({ where: { id: userId! } });
+    const nickname = user?.nickname || user?.name || "匿名用户";
+
+    const comment = await prisma.comment.create({
+      data: {
+        postId: id,
+        parentId: parsed.data.parentId || null,
+        authorUserId: userId!,
+        authorNickname: nickname,
+        content: parsed.data.content,
+        status: "VISIBLE"
+      }
+    });
+
+    await prisma.communityPost.update({
+      where: { id },
+      data: { commentCount: { increment: 1 } }
+    });
+
+    return ok(reply, {
+      id: comment.id,
+      parentId: comment.parentId,
+      authorUserId: comment.authorUserId,
+      authorNickname: comment.authorNickname,
+      content: comment.content,
+      likeCount: comment.likeCount,
+      time: comment.createdAt
+    });
   });
 }

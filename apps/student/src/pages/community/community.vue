@@ -41,6 +41,7 @@
           </view>
         </view>
         <text class="post-title">{{ post.title }}</text>
+        <image v-if="post.images && post.images.length > 0" :src="post.images[0]" mode="aspectFill" class="post-thumb" />
         <text class="post-summary">{{ post.summary }}</text>
         <view class="post-footer">
           <view class="post-stat tap-active">
@@ -110,6 +111,22 @@
           <text class="form-label">昵称（选填）</text>
           <input class="form-input" v-model="newPost.nickname" placeholder="不填则匿名" />
         </view>
+
+        <view class="form-group">
+          <text class="form-label">图片（选填，最多9张）</text>
+          <view class="image-picker">
+            <view v-for="(img, idx) in uploadImages" :key="idx" class="image-preview">
+              <image :src="img" mode="aspectFill" class="preview-img" />
+              <view class="image-remove" @click="removeImage(idx)">
+                <u-icon name="close" size="12" color="#fff" />
+              </view>
+            </view>
+            <view v-if="uploadImages.length < 9" class="image-add tap-active" @click="chooseImage">
+              <u-icon :name="uploading ? 'clock' : 'plus'" :size="24" color="#D1D5DB" />
+              <text class="image-add-text">{{ uploading ? '上传中...' : '添加图片' }}</text>
+            </view>
+          </view>
+        </view>
         
         <button class="submit-btn tap-active" :disabled="!newPost.title || !newPost.content" @click="submitPost">
           <text>发布</text>
@@ -124,7 +141,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi, publicWrite, trackActivity } from '@/api/index'
+import { publicApi, publicWrite, userWrite, trackActivity, getToken } from '@/api/index'
+import { useAppStore } from '@/store/index'
 import EmptyState from '@/components/EmptyState.vue'
 import CustomTabbar from '@/components/CustomTabbar.vue'
 
@@ -134,14 +152,18 @@ interface Post {
   title: string
   summary: string
   authorNickname?: string
+  images?: string[]
   likeCount: number
   viewCount: number
   time: string
 }
 
+const store = useAppStore()
 const posts = ref<Post[]>([])
 const showPostForm = ref(false)
 const currentCategory = ref('全部')
+const uploadImages = ref<string[]>([])
+const uploading = ref(false)
 const uToast = ref<any>(null)
 
 const newPost = ref({
@@ -182,18 +204,58 @@ function openPost(id: string) {
   uni.navigateTo({ url: `/pages/post/post?id=${encodeURIComponent(id)}` })
 }
 
+async function chooseImage() {
+  const res = await uni.chooseImage({
+    count: 9 - uploadImages.value.length,
+    sizeType: ['compressed']
+  })
+  if (res.tempFilePaths && res.tempFilePaths.length > 0) {
+    uploading.value = true
+    try {
+      for (const tempPath of res.tempFilePaths) {
+        const uploadRes = await uni.uploadFile({
+          url: `${(import.meta.env.VITE_API_BASE || '')}/api/upload/image`,
+          filePath: tempPath,
+          name: 'file',
+          header: {
+            'Authorization': `Bearer ${getToken()}`
+          }
+        })
+        const data = JSON.parse(uploadRes.data)
+        if (data.success && data.data?.url) {
+          uploadImages.value.push(data.data.url)
+        }
+      }
+    } catch (e) {
+      uToast.value?.show({ title: '图片上传失败', type: 'error' })
+    } finally {
+      uploading.value = false
+    }
+  }
+}
+
+function removeImage(idx: number) {
+  uploadImages.value.splice(idx, 1)
+}
+
 async function submitPost() {
   if (!newPost.value.title || !newPost.value.content) return
   
   try {
-    await publicWrite('/api/public/community/posts', {
+    const body: any = {
       type: newPost.value.type,
       title: newPost.value.title,
       content: newPost.value.content,
-      authorNickname: newPost.value.nickname || '匿名同学'
-    })
+      authorNickname: newPost.value.nickname || '匿名同学',
+      images: uploadImages.value
+    }
+    if (store.isLogin && store.user) {
+      body.authorUserId = store.user.id
+    }
+    await publicWrite('/api/public/community/posts', body)
     uToast.value.show({ title: '发布成功，等待审核', type: 'success' })
     showPostForm.value = false
+    uploadImages.value = []
     newPost.value = { type: '校园讨论', title: '', content: '', nickname: '' }
     fetchPosts()
   } catch (err) {
@@ -560,5 +622,65 @@ async function submitPost() {
   &:active {
     transform: scale(0.98);
   }
+}
+
+/* ========== 图片选择 ========== */
+.image-picker {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+}
+
+.image-preview {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: $radius-md;
+  overflow: hidden;
+  position: relative;
+}
+
+.preview-img {
+  width: 100%;
+  height: 100%;
+}
+
+.image-remove {
+  position: absolute;
+  top: 4rpx;
+  right: 4rpx;
+  width: 32rpx;
+  height: 32rpx;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.image-add {
+  width: 140rpx;
+  height: 140rpx;
+  border-radius: $radius-md;
+  background: $bg-page;
+  border: 2rpx dashed $border;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4rpx;
+}
+
+.image-add-text {
+  font-size: 20rpx;
+  color: $text-tertiary;
+}
+
+/* ========== 帖子缩略图 ========== */
+.post-thumb {
+  width: 100%;
+  height: 200rpx;
+  border-radius: $radius-md;
+  margin-bottom: $space-2;
+  background: $bg-page;
 }
 </style>
