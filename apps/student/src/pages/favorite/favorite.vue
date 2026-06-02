@@ -26,6 +26,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { userApi } from '@/api/index'
+import { useAppStore } from '@/store/index'
 
 interface FavoriteItem {
   id: string
@@ -35,13 +37,27 @@ interface FavoriteItem {
   address?: string
 }
 
+const store = useAppStore()
 const favorites = ref<FavoriteItem[]>([])
+const loading = ref(true)
 const uToast = ref<any>(null)
 
-onMounted(() => {
-  const saved = uni.getStorageSync('favorites')
-  if (saved) {
-    favorites.value = JSON.parse(saved)
+onMounted(async () => {
+  if (!store.isLogin) {
+    loading.value = false
+    return
+  }
+  try {
+    const data = await userApi<FavoriteItem[]>('/api/user/favorites')
+    favorites.value = data
+  } catch (e) {
+    // fallback to localStorage
+    const saved = uni.getStorageSync('favorites')
+    if (saved) {
+      favorites.value = JSON.parse(saved)
+    }
+  } finally {
+    loading.value = false
   }
 })
 

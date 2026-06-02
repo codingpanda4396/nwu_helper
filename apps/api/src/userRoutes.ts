@@ -9,7 +9,56 @@ const feedbackSchema = z.object({
   type: z.enum(["SUGGESTION", "COMPLAINT", "COOPERATION", "OTHER"]).default("SUGGESTION")
 });
 
+const profileSchema = z.object({
+  nickname: z.string().max(50).optional(),
+  avatarUrl: z.string().max(500).optional()
+});
+
 export async function userRoutes(app: FastifyInstance) {
+  // 获取用户资料
+  app.get("/api/user/profile", async (request, reply) => {
+    const auth = request.user as { sub: string } | undefined;
+    if (!auth) return fail(reply, "UNAUTHORIZED", "请先登录", 401);
+
+    const user = await prisma.user.findUnique({ where: { id: auth.sub } });
+    if (!user) return fail(reply, "NOT_FOUND", "用户不存在", 404);
+
+    return ok(reply, {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      phone: user.phone,
+      role: user.role
+    });
+  });
+
+  // 更新用户资料
+  app.put("/api/user/profile", async (request, reply) => {
+    const auth = request.user as { sub: string } | undefined;
+    if (!auth) return fail(reply, "UNAUTHORIZED", "请先登录", 401);
+
+    const parsed = profileSchema.safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "参数错误");
+
+    const user = await prisma.user.update({
+      where: { id: auth.sub },
+      data: {
+        ...(parsed.data.nickname !== undefined && { nickname: parsed.data.nickname }),
+        ...(parsed.data.avatarUrl !== undefined && { avatarUrl: parsed.data.avatarUrl })
+      }
+    });
+
+    return ok(reply, {
+      id: user.id,
+      name: user.name,
+      nickname: user.nickname,
+      avatarUrl: user.avatarUrl,
+      phone: user.phone,
+      role: user.role
+    });
+  });
+
   // 收藏商家
   app.post("/api/user/favorites/:merchantId", async (request, reply) => {
     const auth = request.user as { sub: string } | undefined;

@@ -10,6 +10,7 @@ datasource db {
 enum UserRole {
   STUDENT
   ADMIN
+  MERCHANT
 }
 
 enum UserStatus {
@@ -46,6 +47,20 @@ enum CommunityPostStatus {
   REJECTED
 }
 
+enum CommentStatus {
+  VISIBLE
+  HIDDEN
+}
+
+enum OrderStatus {
+  PENDING
+  PAID
+  ACTIVE
+  EXPIRED
+  CANCELLED
+  REFUNDED
+}
+
 enum ImageType {
   MENU
   ENVIRONMENT
@@ -74,6 +89,8 @@ model User {
   role           UserRole   @default(STUDENT)
   passwordHash   String?
   status         UserStatus @default(ACTIVE)
+  nickname       String?
+  avatarUrl      String?
   lastLoginAt    DateTime?
   lastActiveAt   DateTime?
   loginCount     Int        @default(0)
@@ -112,6 +129,7 @@ model Merchant {
   wechatLabel      String?
   privateDomainNote String?
   defaultChannelId String?
+  ownerUserId      String?
   avgPrice         Float?
   latitude         Float?
   longitude        Float?
@@ -131,6 +149,7 @@ model Merchant {
   @@index([categoryId])
   @@index([serviceCategoryId])
   @@index([defaultChannelId])
+  @@index([ownerUserId])
   @@index([status, sortOrder])
 }
 
@@ -147,17 +166,18 @@ model MerchantImage {
 }
 
 model Banner {
-  id         String           @id @default(cuid())
-  title      String
-  subtitle   String?
-  imageUrl   String
-  targetType BannerTargetType @default(TAB)
-  targetId   String?
-  url        String?
-  sortOrder  Int              @default(100)
-  isActive   Boolean          @default(true)
-  createdAt  DateTime         @default(now())
-  updatedAt  DateTime         @updatedAt
+  id               String           @id @default(cuid())
+  title            String
+  subtitle         String?
+  imageUrl         String
+  targetType       BannerTargetType @default(TAB)
+  targetId         String?
+  url              String?
+  sortOrder        Int              @default(100)
+  isActive         Boolean          @default(true)
+  promotionOrderId String?
+  createdAt        DateTime         @default(now())
+  updatedAt        DateTime         @updatedAt
 
   @@index([isActive, sortOrder])
 }
@@ -207,15 +227,18 @@ model CommunityPost {
   summary        String
   content        String              @default("")
   authorNickname String?
+  authorUserId   String?
   contact        String?
   source         String              @default("student")
   viewCount      Int                 @default(0)
   likeCount      Int                 @default(0)
   commentCount   Int                 @default(0)
   likedSessionIds Json               @default("[]")
+  images         Json                @default("[]")
   status         CommunityPostStatus @default(PENDING)
   sortOrder      Int                 @default(100)
   publishedAt    DateTime            @default(now())
+  comments       Comment[]
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
 
@@ -223,20 +246,21 @@ model CommunityPost {
 }
 
 model Activity {
-  id          String         @id @default(cuid())
-  title       String
-  description String?
-  merchantId  String
-  channelId   String?
-  source      String?
-  coverImage  String?
-  sortOrder   Int            @default(100)
-  status      ActivityStatus @default(DRAFT)
-  startAt     DateTime
-  endAt       DateTime
-  merchant    Merchant       @relation(fields: [merchantId], references: [id])
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id               String         @id @default(cuid())
+  title            String
+  description      String?
+  merchantId       String
+  channelId        String?
+  source           String?
+  coverImage       String?
+  sortOrder        Int            @default(100)
+  status           ActivityStatus @default(DRAFT)
+  startAt          DateTime
+  endAt            DateTime
+  promotionOrderId String?
+  merchant         Merchant       @relation(fields: [merchantId], references: [id])
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
 
   @@index([status, startAt, endAt, sortOrder])
   @@index([merchantId])
@@ -365,4 +389,68 @@ model UserDailySnapshot {
 
   @@unique([date])
   @@index([date])
+}
+
+model SmsCode {
+  id        String   @id @default(cuid())
+  phone     String
+  code      String
+  expiresAt DateTime
+  consumed  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([phone, createdAt])
+}
+
+model Comment {
+  id             String        @id @default(cuid())
+  postId         String
+  parentId       String?
+  authorUserId   String?
+  authorNickname String?
+  content        String
+  status         CommentStatus @default(VISIBLE)
+  likeCount      Int           @default(0)
+  createdAt      DateTime      @default(now())
+  post           CommunityPost @relation(fields: [postId], references: [id])
+
+  @@index([postId, createdAt])
+}
+
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String
+  userId    String
+  createdAt DateTime @default(now())
+
+  @@unique([postId, userId])
+  @@index([postId])
+}
+
+model PromotionSlot {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  name        String
+  position    String
+  pricePerDay Int
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+}
+
+model PromotionOrder {
+  id         String      @id @default(cuid())
+  merchantId String
+  slotId     String
+  bannerId   String?
+  activityId String?
+  days       Int
+  amount     Int
+  status     OrderStatus @default(PENDING)
+  startAt    DateTime?
+  endAt      DateTime?
+  paidAt     DateTime?
+  createdAt  DateTime    @default(now())
+
+  @@index([merchantId])
+  @@index([status, endAt])
 }

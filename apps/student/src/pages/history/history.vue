@@ -26,6 +26,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
+import { userApi, userWrite } from '@/api/index'
+import { useAppStore } from '@/store/index'
 
 interface HistoryItem {
   id: string
@@ -34,29 +36,59 @@ interface HistoryItem {
   time: string
 }
 
+const store = useAppStore()
 const history = ref<HistoryItem[]>([])
+const loading = ref(true)
 const uToast = ref<any>(null)
 
-onMounted(() => {
-  const saved = uni.getStorageSync('viewHistory')
-  if (saved) {
-    history.value = JSON.parse(saved)
+onMounted(async () => {
+  if (!store.isLogin) {
+    loading.value = false
+    return
+  }
+  try {
+    const data = await userApi<any[]>('/api/user/history')
+    history.value = data.map((item: any) => ({
+      id: item.id,
+      name: item.name,
+      image: item.image,
+      time: item.viewedAt ? formatTime(item.viewedAt) : ''
+    }))
+  } catch (e) {
+    const saved = uni.getStorageSync('viewHistory')
+    if (saved) {
+      history.value = JSON.parse(saved)
+    }
+  } finally {
+    loading.value = false
   }
 })
+
+function formatTime(dateStr: string): string {
+  const d = new Date(dateStr)
+  const now = new Date()
+  const diff = now.getTime() - d.getTime()
+  if (diff < 3600000) return `${Math.floor(diff / 60000)}分钟前`
+  if (diff < 86400000) return `${Math.floor(diff / 3600000)}小时前`
+  return `${d.getMonth() + 1}月${d.getDate()}日`
+}
 
 function openMerchant(id: string) {
   uni.navigateTo({ url: `/pages/merchant/merchant?id=${encodeURIComponent(id)}` })
 }
 
-function clearHistory() {
+async function clearHistory() {
   uni.showModal({
     title: '提示',
     content: '确定清空浏览历史？',
-    success: (res) => {
+    success: async (res) => {
       if (res.confirm) {
+        try {
+          await userWrite('/api/user/history', {}, 'DELETE')
+        } catch (e) { /* ignore */ }
         history.value = []
         uni.removeStorageSync('viewHistory')
-        uToast.value.show({ title: '已清空', type: 'success' })
+        uToast.value?.show({ title: '已清空', type: 'success' })
       }
     }
   })

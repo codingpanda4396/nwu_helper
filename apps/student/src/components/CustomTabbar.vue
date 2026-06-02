@@ -48,11 +48,11 @@ const tabs: TabItem[] = [
     pagePath: 'pages/food/food'
   },
   {
-    key: 'driving',
-    label: '驾校',
+    key: 'mine',
+    label: '我的',
     icon: '/static/icons/car-inactive.svg',
     activeIcon: '/static/icons/car-active.svg',
-    pagePath: 'pages/driving/driving'
+    pagePath: 'pages/mine/mine'
   },
   {
     key: 'community',

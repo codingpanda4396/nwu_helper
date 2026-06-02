@@ -4,6 +4,10 @@ export const config = {
   jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   publicWebUrl: process.env.PUBLIC_WEB_URL ?? "http://localhost:5173",
+  wx: {
+    appId: process.env.WX_APPID ?? "",
+    appSecret: process.env.WX_APPSECRET ?? "",
+  },
   oss: {
     region: process.env.OSS_REGION ?? "oss-cn-hangzhou",
     accessKeyId: process.env.OSS_ACCESS_KEY_ID ?? "",
