@@ -48,13 +48,6 @@ const tabs: TabItem[] = [
     pagePath: 'pages/food/food'
   },
   {
-    key: 'mine',
-    label: '我的',
-    icon: '/static/icons/car-inactive.svg',
-    activeIcon: '/static/icons/car-active.svg',
-    pagePath: 'pages/mine/mine'
-  },
-  {
     key: 'community',
     label: '社区',
     icon: '/static/icons/chat-inactive.svg',
@@ -67,6 +60,13 @@ const tabs: TabItem[] = [
     icon: '/static/icons/service-inactive.svg',
     activeIcon: '/static/icons/service-active.svg',
     pagePath: 'pages/service/service'
+  },
+  {
+    key: 'mine',
+    label: '我的',
+    icon: '/static/icons/profile-inactive.svg',
+    activeIcon: '/static/icons/profile-active.svg',
+    pagePath: 'pages/mine/mine'
   }
 ]
 

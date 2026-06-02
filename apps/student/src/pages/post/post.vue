@@ -54,11 +54,11 @@
 
       <view class="post-actions">
         <view class="action-btn tap-active" @click="handleLike">
-          <u-icon :name="liked ? 'thumb-up-fill' : 'thumb-up'" :size="18" :color="liked ? '#16A873' : '#9CA3AF'" />
-          <text :style="{ color: liked ? '#16A873' : '#9CA3AF' }">{{ likeCount }}</text>
+          <u-icon :name="liked ? 'thumb-up-fill' : 'thumb-up'" :size="18" :color="liked ? '#16A873' : '#9AA1AA'" />
+          <text :style="{ color: liked ? '#16A873' : '#9AA1AA' }">{{ likeCount }}</text>
         </view>
-        <view class="action-btn tap-active" @click="focusComment">
-          <u-icon name="chat" size="18" color="#9CA3AF" />
+        <view class="action-item">
+          <u-icon name="chat" size="18" color="#9AA1AA" />
           <text>{{ comments.length }}</text>
         </view>
       </view>

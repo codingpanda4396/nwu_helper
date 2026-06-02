@@ -1,12 +1,7 @@
 <template>
   <view class="page">
     <!-- 搜索栏 -->
-    <view class="search-header" @click="goSearch">
-      <view class="search-bar">
-        <u-icon name="search" size="18" color="#9CA3AF" />
-        <text class="search-placeholder">搜帖子</text>
-      </view>
-    </view>
+    <SearchHeader placeholder="搜帖子" @click="goSearch" />
 
     <!-- 分类筛选 -->
     <view class="filter-bar">
@@ -45,15 +40,15 @@
         <text class="post-summary">{{ post.summary }}</text>
         <view class="post-footer">
           <view class="post-stat tap-active">
-            <u-icon name="thumb-up" size="14" color="#9CA3AF" />
+            <u-icon name="thumb-up" size="14" color="#9AA1AA" />
             <text>{{ post.likeCount }}</text>
           </view>
           <view class="post-stat">
-            <u-icon name="eye" size="14" color="#9CA3AF" />
+            <u-icon name="eye" size="14" color="#9AA1AA" />
             <text>{{ post.viewCount }}</text>
           </view>
           <view class="post-stat">
-            <u-icon name="chat" size="14" color="#9CA3AF" />
+            <u-icon name="chat" size="14" color="#9AA1AA" />
             <text>评论</text>
           </view>
         </view>
@@ -82,7 +77,7 @@
         <view class="modal-header">
           <text class="modal-title">发帖</text>
           <view class="modal-close tap-active" @click="showPostForm = false">
-            <u-icon name="close" size="16" color="#9CA3AF" />
+            <u-icon name="close" size="16" color="#9AA1AA" />
           </view>
         </view>
         
@@ -145,6 +140,7 @@ import { publicApi, publicWrite, userWrite, trackActivity, getToken } from '@/ap
 import { useAppStore } from '@/store/index'
 import EmptyState from '@/components/EmptyState.vue'
 import CustomTabbar from '@/components/CustomTabbar.vue'
+import SearchHeader from '@/components/SearchHeader.vue'
 
 interface Post {
   id: string
@@ -271,31 +267,6 @@ async function submitPost() {
   min-height: 100vh;
   background: $bg-page;
   padding-bottom: 120rpx;
-}
-
-/* ========== 搜索栏 ========== */
-.search-header {
-  background: $bg-card-soft;
-  padding: $space-4 $space-5;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  border-bottom: 1rpx solid $border-light;
-}
-
-.search-bar {
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  background: $bg-page;
-  border-radius: $radius-full;
-  padding: $space-3 $space-5;
-  border: 1rpx solid $border;
-}
-
-.search-placeholder {
-  font-size: $font-sm;
-  color: $text-placeholder;
 }
 
 /* ========== 分类筛选 ========== */
@@ -467,7 +438,7 @@ async function submitPost() {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 8rpx 24rpx rgba(16, 185, 129, 0.4);
+  box-shadow: $shadow-primary;
   z-index: 50;
 
   &:active {

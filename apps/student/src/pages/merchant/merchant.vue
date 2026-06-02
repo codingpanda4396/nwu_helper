@@ -15,30 +15,28 @@
       <!-- 基本信息 -->
       <view class="info-section">
         <view class="info-item" v-if="merchant.summary">
-          <u-icon name="info-circle" size="16" color="#10B981" />
+          <u-icon name="info-circle" size="16" color="#16A873" />
           <text>{{ merchant.summary }}</text>
         </view>
         <view class="info-item" @click="openLocation">
-          <u-icon name="map-fill" size="16" color="#10B981" />
+          <u-icon name="map-fill" size="16" color="#16A873" />
           <text>{{ merchant.address }}</text>
-          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
+          <u-icon name="arrow-right" size="14" color="#9AA1AA" />
         </view>
         <view class="info-item" v-if="merchant.phone" @click="callPhone">
-          <u-icon name="phone-fill" size="16" color="#10B981" />
+          <u-icon name="phone-fill" size="16" color="#16A873" />
           <text>{{ merchant.phone }}</text>
-          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
+          <u-icon name="arrow-right" size="14" color="#9AA1AA" />
         </view>
         <view class="info-item" v-if="merchant.businessHours">
-          <u-icon name="clock-fill" size="16" color="#10B981" />
+          <u-icon name="clock-fill" size="16" color="#16A873" />
           <text>{{ merchant.businessHours }}</text>
         </view>
       </view>
 
       <!-- 图片画廊 -->
       <view v-if="merchant.images?.length" class="section">
-        <view class="section-header">
-          <text class="section-title">店铺环境</text>
-        </view>
+        <SectionHeader title="店铺环境" />
         <scroll-view scroll-x class="gallery-scroll">
           <view class="gallery-list">
             <image v-for="img in merchant.images" :key="img.id" :src="img.imageUrl" mode="aspectFill" class="gallery-image" @click="previewImage(img.imageUrl)" />
@@ -48,9 +46,7 @@
 
       <!-- 当前活动 -->
       <view v-if="merchant.activities?.length" class="section">
-        <view class="section-header">
-          <text class="section-title">当前活动</text>
-        </view>
+        <SectionHeader title="当前活动" />
         <view class="activity-list">
           <view v-for="activity in merchant.activities" :key="activity.id" class="activity-card" @click="trackActivityClick(activity)">
             <image v-if="activity.image" class="activity-image" :src="activity.image" mode="aspectFill" />
@@ -79,11 +75,11 @@
     <!-- 底部操作栏 -->
     <view class="footer-bar">
       <view class="footer-btn" @click="toggleFavorite">
-        <u-icon :name="isFavorite ? 'heart-fill' : 'heart'" size="20" :color="isFavorite ? '#EF4444' : '#6B7280'" />
+        <u-icon :name="isFavorite ? 'heart-fill' : 'heart'" size="20" :color="isFavorite ? '#EF5B67' : '#656B73'" />
         <text>{{ isFavorite ? '已收藏' : '收藏' }}</text>
       </view>
       <view class="footer-btn" @click="callPhone" v-if="merchant?.phone">
-        <u-icon name="phone-fill" size="20" color="#10B981" />
+        <u-icon name="phone-fill" size="20" color="#16A873" />
         <text>联系</text>
       </view>
       <view class="footer-btn primary" @click="openLocation">
@@ -99,6 +95,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { publicApi, trackActivity } from '@/api/index'
+import SectionHeader from '@/components/SectionHeader.vue'
 
 interface MerchantDetail {
   id: string
@@ -359,16 +356,6 @@ function trackActivityClick(activity: { id: string; channelId?: string; source?:
   padding: 0 24rpx 24rpx;
 }
 
-.section-header {
-  margin-bottom: 20rpx;
-}
-
-.section-title {
-  font-size: $font-base;
-  font-weight: bold;
-  color: $text-primary;
-}
-
 .gallery-scroll {
   white-space: nowrap;
 }
@@ -422,7 +409,7 @@ function trackActivityClick(activity: { id: string; channelId?: string; source?:
 }
 
 .private-domain {
-  background: $bg-card;
+  background: $primary-soft;
   border-radius: $radius-lg;
   padding: 30rpx;
   text-align: center;
@@ -469,8 +456,10 @@ function trackActivityClick(activity: { id: string; channelId?: string; source?:
   left: 0;
   right: 0;
   display: flex;
-  background: rgba(255, 252, 248, 0.98);
+  background: $bg-card;
   padding: 20rpx 24rpx;
+  padding-bottom: calc(20rpx + env(safe-area-inset-bottom));
+  border-top: 1rpx solid $border-light;
   box-shadow: 0 -8rpx 24rpx rgba(46, 36, 22, 0.08);
   gap: 16rpx;
 }
@@ -489,14 +478,15 @@ function trackActivityClick(activity: { id: string; channelId?: string; source?:
   }
 
   &.primary {
-    background: $primary;
+    background: $primary-gradient;
     border-radius: 44rpx;
     flex-direction: row;
     justify-content: center;
     gap: 8rpx;
+    box-shadow: $shadow-primary;
 
     text {
-      color: #ffffff;
+      color: $text-inverse;
       font-size: 28rpx;
     }
   }

@@ -11,7 +11,7 @@
       <!-- #ifdef H5 -->
       <view class="login-form">
         <view class="input-group">
-          <u-icon name="phone" size="20" color="#9CA3AF" />
+          <u-icon name="phone" size="20" color="#9AA1AA" />
           <input
             class="input-field"
             v-model="phone"
@@ -21,7 +21,7 @@
           />
         </view>
         <view class="input-group">
-          <u-icon name="lock" size="20" color="#9CA3AF" />
+          <u-icon name="lock" size="20" color="#9AA1AA" />
           <input
             class="input-field input-code"
             v-model="code"

@@ -3,7 +3,7 @@
     <view class="page-hero">
       <view class="hero-content">
         <view class="hero-tag">
-          <u-icon name="list" size="14" color="#10B981" />
+          <u-icon name="list" size="14" color="#16A873" />
           <text>西大圈</text>
         </view>
         <text class="hero-title">生活服务</text>
@@ -23,11 +23,8 @@
     </view>
 
     <view class="section">
-      <view class="section-header">
-        <view class="section-header__left">
-          <text class="section-title">生活服务商家</text>
-          <text v-if="activeCategory" class="section-desc">{{ activeCategory }}</text>
-        </view>
+      <view class="section-top">
+        <SectionHeader title="生活服务商家" :desc="activeCategory || undefined" />
         <view v-if="activeKey" class="section-header__clear tap-active" @click="clearFilter">
           <text>全部</text>
         </view>
@@ -36,19 +33,7 @@
       <Skeleton v-if="loading" type="list" :count="3" />
 
       <view v-else-if="merchants.length > 0" class="merchant-list">
-        <view v-for="merchant in merchants" :key="merchant.id" class="merchant-card tap-active" @click="openMerchant(merchant)">
-          <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
-          <view class="merchant-content">
-            <text class="merchant-name">{{ merchant.name }}</text>
-            <text class="merchant-desc">{{ merchant.summary || '优质商家' }}</text>
-            <view class="merchant-meta">
-              <view class="meta-item">
-                <u-icon name="map-fill" size="12" color="#9CA3AF" />
-                <text>{{ merchant.distance || '校边' }}</text>
-              </view>
-            </view>
-          </view>
-        </view>
+        <MerchantCard v-for="merchant in merchants" :key="merchant.id" :merchant="merchant" @click="openMerchant(merchant)" />
       </view>
 
       <EmptyState
@@ -72,6 +57,8 @@ import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import CustomTabbar from '@/components/CustomTabbar.vue'
+import MerchantCard from '@/components/MerchantCard.vue'
+import SectionHeader from '@/components/SectionHeader.vue'
 
 interface ServiceCategory {
   id: string
@@ -264,97 +251,23 @@ function openMerchant(merchant: Merchant) {
   padding: 0 24rpx;
 }
 
-.section-header {
+.section-top {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
   margin-bottom: 24rpx;
-
-  &__left {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__clear {
-    text {
-      font-size: $font-sm;
-      color: $primary;
-    }
-  }
 }
 
-.section-title {
-  font-size: $font-base;
-  font-weight: bold;
-  color: $text-primary;
-}
-
-.section-desc {
-  font-size: $font-xs;
-  color: $text-tertiary;
-  margin-top: 4rpx;
+.section-header__clear {
+  text {
+    font-size: $font-sm;
+    color: $primary;
+  }
 }
 
 .merchant-list {
   display: flex;
   flex-direction: column;
   gap: 20rpx;
-}
-
-.merchant-card {
-  background: $bg-card;
-  border-radius: $radius-lg;
-  overflow: hidden;
-  border: 1rpx solid $border-light;
-  box-shadow: $shadow-sm;
-  display: flex;
-  flex-direction: row;
-}
-
-.merchant-image {
-  width: 200rpx;
-  height: 200rpx;
-  flex-shrink: 0;
-}
-
-.merchant-content {
-  flex: 1;
-  padding: 20rpx;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-}
-
-.merchant-name {
-  font-size: $font-base;
-  font-weight: bold;
-  color: $text-primary;
-  margin-bottom: 12rpx;
-}
-
-.merchant-desc {
-  font-size: $font-xs;
-  color: $text-secondary;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: 12rpx;
-}
-
-.merchant-meta {
-  display: flex;
-  align-items: center;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: 6rpx;
-
-  text {
-    font-size: 22rpx;
-    color: $text-tertiary;
-  }
 }
 </style>

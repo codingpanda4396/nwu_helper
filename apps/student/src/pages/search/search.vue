@@ -3,7 +3,7 @@
     <!-- 搜索栏 -->
     <view class="search-header">
       <view class="search-bar">
-        <u-icon name="search" size="18" color="#9CA3AF" />
+        <u-icon name="search" size="18" color="#9AA1AA" />
         <input class="search-input" v-model="keyword" placeholder="搜美食、驾校、活动" @confirm="doSearch" focus />
         <view v-if="keyword" class="search-clear tap-active" @click="clearSearch">
           <u-icon name="close-circle-fill" size="16" color="#D1D5DB" />
@@ -33,10 +33,10 @@
       <!-- 搜索历史 -->
       <view v-if="searchHistory.length > 0" class="tip-section">
         <view class="tip-section__header">
-          <u-icon name="clock-fill" size="16" color="#6B7280" />
+          <u-icon name="clock-fill" size="16" color="#656B73" />
           <text class="tip-title">搜索历史</text>
           <view class="tip-clear tap-active" @click="clearHistory">
-            <u-icon name="trash" size="14" color="#9CA3AF" />
+            <u-icon name="trash" size="14" color="#9AA1AA" />
             <text>清空</text>
           </view>
         </view>
@@ -71,7 +71,7 @@
             <text class="result-name">{{ item.name }}</text>
             <text v-if="item.summary" class="result-desc">{{ item.summary }}</text>
             <view v-if="item.address" class="result-address">
-              <u-icon name="map-fill" size="12" color="#10B981" />
+              <u-icon name="map-fill" size="12" color="#16A873" />
               <text>{{ item.address }}</text>
             </view>
           </view>
@@ -286,7 +286,7 @@ function openMerchant(id: string) {
     }
 
     &--2 {
-      background: linear-gradient(135deg, #9CA3AF 0%, #6B7280 100%);
+      background: linear-gradient(135deg, $text-tertiary 0%, $text-secondary 100%);
     }
 
     &--3 {

@@ -33,7 +33,7 @@ interface Props {
 
 withDefaults(defineProps<Props>(), {
   icon: 'info-circle',
-  iconColor: '#10B981',
+  iconColor: '#16A873',
   iconBg: 'linear-gradient(135deg, #F2FBF6 0%, #DFF8EC 100%)',
   iconSize: 48,
   size: 'default'

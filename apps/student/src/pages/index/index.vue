@@ -1,17 +1,13 @@
 <template>
   <view class="page">
     <!-- 搜索栏 -->
-    <view class="search-header" @click="goSearch">
-      <view class="search-header__inner">
-        <view class="search-bar">
-          <u-icon name="search" size="18" color="#9CA3AF" />
-          <text class="search-placeholder">搜美食、驾校、活动</text>
-        </view>
+    <SearchHeader placeholder="搜美食、驾校、活动" @click="goSearch">
+      <template #extra>
         <view class="search-header__brand">
           <text class="brand-text">西大圈</text>
         </view>
-      </view>
-    </view>
+      </template>
+    </SearchHeader>
 
     <!-- 骨架屏 -->
     <Skeleton v-if="loading" type="banner" />
@@ -71,7 +67,7 @@
       <view class="service-expand__header">
         <text class="service-expand__title">生活服务</text>
         <view class="service-expand__close" @click="showServices = false">
-          <u-icon name="close" size="16" color="#9CA3AF" />
+          <u-icon name="close" size="16" color="#9AA1AA" />
         </view>
       </view>
       <view class="service-grid">
@@ -87,7 +83,7 @@
       <view class="food-draw__header">
         <view>
           <view class="food-draw__badge">
-            <u-icon name="gift-fill" size="12" color="#B42318" />
+            <u-icon name="gift-fill" size="12" color="#16A873" />
             <text>今天吃什么</text>
           </view>
           <text class="food-draw__title">抽一家校边美食</text>
@@ -106,7 +102,7 @@
           mode="aspectFill"
         />
         <view v-else class="food-draw__image food-draw__image--empty">
-          <u-icon name="photo" size="24" color="#F97316" />
+          <u-icon name="photo" size="24" color="#16A873" />
         </view>
         <view class="food-draw__merchant">
           <text class="food-draw__merchant-name">{{ currentDrawMerchant?.name || '正在收录校边美食' }}</text>
@@ -140,16 +136,7 @@
 
     <!-- 今日活动 -->
     <view class="section slide-up stagger-3">
-      <view class="section-header">
-        <view class="section-header__left">
-          <text class="section-title">今日活动</text>
-          <text class="section-desc">校园福利和周边好店</text>
-        </view>
-        <view v-if="activities.length > 0" class="section-header__more" @click="goTo('/pages/food/food')">
-          <text>更多</text>
-          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
-        </view>
-      </view>
+      <SectionHeader title="今日活动" desc="校园福利和周边好店" :show-more="activities.length > 0" @more="goTo('/pages/food/food')" />
       <view v-if="activities.length > 0" class="activity-list">
         <view v-for="(activity, index) in activities" :key="activity.id" 
           :class="['activity-card', 'tap-active', `stagger-${index + 1}`]" 
@@ -164,7 +151,7 @@
             <text v-if="activity.description" class="activity-desc">{{ activity.description }}</text>
             <view class="activity-action">
               <text>去看看</text>
-              <u-icon name="arrow-right" size="12" color="#10B981" />
+              <u-icon name="arrow-right" size="12" color="#16A873" />
             </view>
           </view>
         </view>
@@ -180,32 +167,11 @@
 
     <!-- 热门商家推荐 -->
     <view class="section slide-up stagger-4">
-      <view class="section-header">
-        <view class="section-header__left">
-          <text class="section-title">热门商家</text>
-          <text class="section-desc">同学都在逛</text>
-        </view>
-        <view v-if="merchants.length > 0" class="section-header__more" @click="goTo('/pages/food/food')">
-          <text>更多</text>
-          <u-icon name="arrow-right" size="14" color="#9CA3AF" />
-        </view>
-      </view>
+      <SectionHeader title="热门商家" desc="同学都在逛" :show-more="merchants.length > 0" @more="goTo('/pages/food/food')" />
       <Skeleton v-if="loading" type="merchant" :count="2" />
       <view v-else-if="merchants.length > 0" class="merchant-grid">
-        <view v-for="(merchant, index) in merchants" :key="merchant.id" 
-          :class="['merchant-card', 'tap-active', `stagger-${index + 1}`]" 
-          @click="openMerchant(merchant.id, { channelId: merchant.defaultChannelId, source: 'home_hot', action: 'merchant_click' })">
-          <image class="merchant-image" :src="merchant.image || '/static/images/banner-campus.jpg'" mode="aspectFill" />
-          <view class="merchant-content">
-            <text class="merchant-name">{{ merchant.name }}</text>
-            <text class="merchant-desc">{{ merchant.summary || '优质商家' }}</text>
-            <view class="merchant-meta">
-              <view class="meta-item">
-                <u-icon name="map-fill" size="12" color="#10B981" />
-                <text>{{ merchant.distance || '校边' }}</text>
-              </view>
-            </view>
-          </view>
+        <view v-for="(merchant, index) in merchants" :key="merchant.id" :class="`stagger-${index + 1}`">
+          <MerchantCard :merchant="merchant" @click="openMerchant(merchant.id, { channelId: merchant.defaultChannelId, source: 'home_hot', action: 'merchant_click' })" />
         </view>
       </view>
       <EmptyState 
@@ -255,7 +221,7 @@
     <view class="section slide-up stagger-5">
       <view class="feedback-entry tap-active" @click="goTo('/pages/feedback/feedback')">
         <view class="feedback-entry__icon">
-          <u-icon name="edit-pen-fill" size="20" color="#10B981" />
+          <u-icon name="edit-pen-fill" size="20" color="#16A873" />
         </view>
         <text class="feedback-text">同学希望学校周边有什么？</text>
         <u-icon name="arrow-right" size="16" color="#D1D5DB" />
@@ -274,6 +240,9 @@ import { useAppStore } from '@/store/index'
 import Skeleton from '@/components/Skeleton.vue'
 import EmptyState from '@/components/EmptyState.vue'
 import CustomTabbar from '@/components/CustomTabbar.vue'
+import SearchHeader from '@/components/SearchHeader.vue'
+import MerchantCard from '@/components/MerchantCard.vue'
+import SectionHeader from '@/components/SectionHeader.vue'
 
 interface Banner {
   id: string
@@ -506,37 +475,6 @@ function showWechatToast() {
 }
 
 /* ========== 搜索栏 ========== */
-.search-header {
-  background: $bg-card-soft;
-  padding: 20rpx 24rpx 26rpx;
-  position: sticky;
-  top: 0;
-  z-index: 100;
-  border-bottom: 1rpx solid $border-light;
-
-  &__inner {
-    display: flex;
-    align-items: center;
-    gap: $space-4;
-  }
-}
-
-.search-bar {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  gap: $space-3;
-  background: $bg-page;
-  border-radius: $radius-full;
-  padding: $space-3 $space-4;
-  border: 1rpx solid $border;
-}
-
-.search-placeholder {
-  font-size: $font-sm;
-  color: $text-placeholder;
-}
-
 .search-header__brand {
   .brand-text {
     font-size: $font-sm;
@@ -718,11 +656,11 @@ function showWechatToast() {
 /* ========== 抽签吃饭 ========== */
 .food-draw {
   margin: 0 $space-4 $space-4;
-  padding: 24rpx;
+  padding: $space-5;
   border-radius: $radius-lg;
-  background: linear-gradient(135deg, #FFF8E7 0%, #FFE8C4 50%, #FFD4A8 100%);
-  border: 2rpx solid #FFE0B2;
-  box-shadow: 0 12rpx 28rpx rgba(255, 183, 77, 0.15);
+  background: linear-gradient(135deg, $primary-soft 0%, $primary-bg 100%);
+  border: 1rpx solid rgba(22,168,115,0.18);
+  box-shadow: $shadow-sm;
   overflow: hidden;
   position: relative;
 
@@ -731,10 +669,10 @@ function showWechatToast() {
     position: absolute;
     right: -60rpx;
     top: -80rpx;
-    width: 220rpx;
-    height: 220rpx;
+    width: 160rpx;
+    height: 160rpx;
     border-radius: $radius-full;
-    border: 24rpx solid rgba(255, 255, 255, 0.26);
+    border: 24rpx solid rgba(22,168,115,0.10);
   }
 
   &__header {
@@ -758,16 +696,16 @@ function showWechatToast() {
 
     text {
       font-size: $font-xs;
-      color: #B42318;
+      color: $primary;
       font-weight: $font-semibold;
     }
   }
 
   &__title {
     display: block;
-    font-size: 40rpx;
+    font-size: $font-md;
     line-height: 1.2;
-    color: #7A1F12;
+    color: $text-primary;
     font-weight: $font-bold;
     margin-bottom: $space-2;
   }
@@ -775,17 +713,17 @@ function showWechatToast() {
   &__desc {
     display: block;
     font-size: $font-xs;
-    color: rgba(122, 31, 18, 0.78);
+    color: $text-secondary;
   }
 
   &__pot {
-    width: 86rpx;
-    height: 86rpx;
+    width: 72rpx;
+    height: 72rpx;
     border-radius: $radius-full;
     flex-shrink: 0;
-    background: #D92D20;
+    background: $primary;
     border: 6rpx solid #FFFFFF;
-    box-shadow: 0 8rpx 18rpx rgba(180, 35, 24, 0.26);
+    box-shadow: 0 8rpx 18rpx rgba(22, 168, 115, 0.26);
     display: flex;
     align-items: center;
     justify-content: center;
@@ -800,7 +738,7 @@ function showWechatToast() {
   &__reel {
     position: relative;
     z-index: 1;
-    min-height: 184rpx;
+    min-height: 150rpx;
     display: flex;
     align-items: center;
     gap: $space-4;
@@ -808,7 +746,7 @@ function showWechatToast() {
     border-radius: $radius-md;
     background: rgba(255, 255, 255, 0.94);
     border: 2rpx solid rgba(255, 255, 255, 0.78);
-    box-shadow: inset 0 0 0 2rpx rgba(255, 209, 106, 0.42);
+    box-shadow: inset 0 0 0 2rpx rgba(22, 168, 115, 0.18);
     transition: transform $transition-fast;
 
     &--rolling {
@@ -817,11 +755,11 @@ function showWechatToast() {
   }
 
   &__image {
-    width: 148rpx;
-    height: 148rpx;
+    width: 120rpx;
+    height: 120rpx;
     border-radius: $radius-md;
     flex-shrink: 0;
-    background: #FFF1D6;
+    background: $primary-soft;
 
     &--empty {
       display: flex;
@@ -840,7 +778,7 @@ function showWechatToast() {
     font-size: $font-md;
     line-height: 1.25;
     font-weight: $font-bold;
-    color: #25110C;
+    color: $text-primary;
     margin-bottom: $space-2;
   }
 
@@ -851,7 +789,7 @@ function showWechatToast() {
     overflow: hidden;
     font-size: $font-xs;
     line-height: 1.45;
-    color: #755044;
+    color: $text-secondary;
     margin-bottom: $space-3;
   }
 
@@ -863,9 +801,9 @@ function showWechatToast() {
     text {
       padding: 4rpx 12rpx;
       border-radius: $radius-full;
-      background: #FFF4E6;
+      background: $primary-bg;
       font-size: 20rpx;
-      color: #B54708;
+      color: $primary;
       font-weight: $font-medium;
     }
   }
@@ -897,12 +835,12 @@ function showWechatToast() {
   &__button {
     flex: 1;
     color: #FFFFFF;
-    background: linear-gradient(135deg, #F04438 0%, #B42318 100%);
-    box-shadow: 0 8rpx 18rpx rgba(180, 35, 24, 0.24);
+    background: $primary-gradient;
+    box-shadow: $shadow-primary;
 
     &[disabled] {
       color: rgba(255, 255, 255, 0.82);
-      background: #D0A99D;
+      background: #B0C9BD;
       box-shadow: none;
     }
   }
@@ -910,7 +848,7 @@ function showWechatToast() {
   &__detail {
     width: 176rpx;
     flex-shrink: 0;
-    color: #B42318;
+    color: $primary;
     background: #FFFFFF;
   }
 }
@@ -918,43 +856,6 @@ function showWechatToast() {
 /* ========== 区块通用 ========== */
 .section {
   padding: $space-2 $space-4 $space-4;
-}
-
-.section-header {
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  margin-bottom: $space-5;
-
-  &__left {
-    display: flex;
-    flex-direction: column;
-  }
-
-  &__more {
-    display: flex;
-    align-items: center;
-    gap: $space-1;
-
-    text {
-      font-size: $font-sm;
-      color: $text-tertiary;
-    }
-  }
-}
-
-.section-title {
-  font-size: $font-base;
-  font-weight: $font-bold;
-  color: $text-primary;
-  display: block;
-}
-
-.section-desc {
-  font-size: $font-xs;
-  color: $text-tertiary;
-  margin-top: $space-1;
-  display: block;
 }
 
 /* ========== 活动卡片 ========== */
@@ -1036,63 +937,6 @@ function showWechatToast() {
   display: grid;
   grid-template-columns: repeat(2, 1fr);
   gap: $space-4;
-}
-
-.merchant-card {
-  background: $bg-card;
-  border-radius: $radius-lg;
-  overflow: hidden;
-  border: 1rpx solid $border-light;
-  box-shadow: $shadow-sm;
-  transition: all $transition-base;
-
-  &:active {
-    transform: scale(0.98);
-    box-shadow: $shadow-sm;
-  }
-}
-
-.merchant-image {
-  width: 100%;
-  height: 220rpx;
-}
-
-.merchant-content {
-  padding: $space-4;
-}
-
-.merchant-name {
-  font-size: $font-base;
-  font-weight: $font-semibold;
-  color: $text-primary;
-  display: block;
-  margin-bottom: $space-2;
-}
-
-.merchant-desc {
-  font-size: $font-xs;
-  color: $text-secondary;
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-  margin-bottom: $space-3;
-}
-
-.merchant-meta {
-  display: flex;
-  align-items: center;
-}
-
-.meta-item {
-  display: flex;
-  align-items: center;
-  gap: $space-1;
-
-  text {
-    font-size: $font-xs;
-    color: $text-tertiary;
-  }
 }
 
 /* ========== 校园墙专区 ========== */

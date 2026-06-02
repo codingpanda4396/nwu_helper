@@ -2,12 +2,15 @@
   <view class="page">
     <!-- 未登录 -->
     <view v-if="!store.isLogin" class="not-login">
-      <view class="login-prompt" @click="goLogin">
+      <view class="login-prompt">
         <view class="avatar-placeholder">
-          <u-icon name="account" size="48" color="#D1D5DB" />
+          <u-icon name="account" size="48" color="#9AA1AA" />
         </view>
         <text class="prompt-text">点击登录</text>
         <text class="prompt-desc">登录后同步收藏和历史记录</text>
+        <view class="login-btn tap-active" @click="goLogin">
+          <text>点击登录</text>
+        </view>
       </view>
     </view>
 
@@ -24,29 +27,45 @@
             <text class="profile-name">{{ store.user?.nickname || store.user?.name || '用户' }}</text>
             <text class="profile-phone">{{ store.user?.phone || '' }}</text>
           </view>
+          <view class="profile-edit tap-active" @click="editProfile">
+            <u-icon name="edit-pen" size="16" color="#9AA1AA" />
+            <text>编辑资料</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="quick-grid">
+        <view class="quick-item tap-active" @click="goFavorite">
+          <view class="quick-item__icon quick-item__icon--favorite">
+            <u-icon name="heart-fill" size="24" color="#16A873" />
+          </view>
+          <text class="quick-item__label">我的收藏</text>
+        </view>
+        <view class="quick-item tap-active" @click="goHistory">
+          <view class="quick-item__icon quick-item__icon--history">
+            <u-icon name="clock-fill" size="24" color="#4F8EDB" />
+          </view>
+          <text class="quick-item__label">浏览历史</text>
+        </view>
+        <view class="quick-item tap-active" @click="goFeedback">
+          <view class="quick-item__icon quick-item__icon--feedback">
+            <u-icon name="edit-pen-fill" size="24" color="#8B5CF6" />
+          </view>
+          <text class="quick-item__label">意见反馈</text>
         </view>
       </view>
 
       <view class="menu-section">
-        <view class="menu-item" @click="goFavorite">
-          <u-icon name="heart" size="22" color="#F59E0B" />
-          <text class="menu-text">我的收藏</text>
-          <u-icon name="arrow-right" size="16" color="#D1D5DB" />
+        <view class="menu-item" @click="goAbout">
+          <u-icon name="info-circle" size="22" color="#656B73" />
+          <text class="menu-text">关于西大圈</text>
+          <u-icon name="arrow-right" size="16" color="#9AA1AA" />
         </view>
-        <view class="menu-item" @click="goHistory">
-          <u-icon name="clock" size="22" color="#3B82F6" />
-          <text class="menu-text">浏览历史</text>
-          <u-icon name="arrow-right" size="16" color="#D1D5DB" />
+        <view class="menu-item menu-item--danger" @click="handleLogout">
+          <u-icon name="close-circle" size="22" color="#EF5B67" />
+          <text class="menu-text menu-text--danger">退出登录</text>
+          <u-icon name="arrow-right" size="16" color="#9AA1AA" />
         </view>
-        <view class="menu-item" @click="goFeedback">
-          <u-icon name="edit-pen" size="22" color="#8B5CF6" />
-          <text class="menu-text">意见反馈</text>
-          <u-icon name="arrow-right" size="16" color="#D1D5DB" />
-        </view>
-      </view>
-
-      <view class="logout-wrap">
-        <button class="logout-btn" @click="handleLogout">退出登录</button>
       </view>
     </template>
 
@@ -77,6 +96,14 @@ function goHistory() {
 
 function goFeedback() {
   uni.navigateTo({ url: '/pages/feedback/feedback' })
+}
+
+function editProfile() {
+  uToast.value?.show({ title: '敬请期待', type: 'info' })
+}
+
+function goAbout() {
+  uToast.value?.show({ title: '敬请期待', type: 'info' })
 }
 
 function handleLogout() {
@@ -137,13 +164,31 @@ function handleLogout() {
 .prompt-desc {
   font-size: $font-sm;
   color: $text-tertiary;
+  margin-bottom: $space-8;
+}
+
+.login-btn {
+  background: $primary-gradient;
+  border-radius: $radius-full;
+  padding: $space-4 $space-12;
+  box-shadow: $shadow-primary;
+
+  text {
+    font-size: $font-base;
+    color: $text-inverse;
+    font-weight: $font-semibold;
+  }
+
+  &:active {
+    opacity: 0.85;
+  }
 }
 
 .profile-card {
-  background: $bg-card;
-  margin: 24rpx;
+  background: $primary-gradient-light;
+  margin: $space-6;
   border-radius: $radius-lg;
-  padding: 40rpx;
+  padding: $space-8;
   box-shadow: $shadow-sm;
 }
 
@@ -158,12 +203,14 @@ function handleLogout() {
   height: 100rpx;
   border-radius: 50%;
   background: $bg-page;
+  border: 3rpx solid $primary;
 }
 
 .profile-info {
   display: flex;
   flex-direction: column;
   gap: 8rpx;
+  flex: 1;
 }
 
 .profile-name {
@@ -177,9 +224,76 @@ function handleLogout() {
   color: $text-tertiary;
 }
 
+.profile-edit {
+  display: flex;
+  align-items: center;
+  gap: $space-2;
+  padding: $space-2 $space-4;
+  border-radius: $radius-full;
+  border: 1rpx solid $border;
+
+  text {
+    font-size: $font-xs;
+    color: $text-tertiary;
+  }
+
+  &:active {
+    background: $bg-page;
+  }
+}
+
+.quick-grid {
+  display: flex;
+  gap: $space-4;
+  padding: 0 $space-6 $space-6;
+}
+
+.quick-item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: $space-3;
+  padding: $space-6 $space-4;
+  background: $bg-card;
+  border-radius: $radius-lg;
+  box-shadow: $shadow-sm;
+  border: 1rpx solid $border-light;
+
+  &:active {
+    background: $bg-page;
+  }
+
+  &__icon {
+    width: 72rpx;
+    height: 72rpx;
+    border-radius: $radius-full;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+
+    &--favorite {
+      background: rgba(22, 168, 115, 0.10);
+    }
+
+    &--history {
+      background: rgba(79, 142, 219, 0.10);
+    }
+
+    &--feedback {
+      background: rgba(139, 92, 246, 0.10);
+    }
+  }
+
+  &__label {
+    font-size: $font-xs;
+    color: $text-secondary;
+  }
+}
+
 .menu-section {
   background: $bg-card;
-  margin: 0 24rpx 24rpx;
+  margin: 0 $space-6 $space-6;
   border-radius: $radius-lg;
   overflow: hidden;
   box-shadow: $shadow-sm;
@@ -199,25 +313,21 @@ function handleLogout() {
   &:active {
     background: $bg-page;
   }
+
+  &--danger {
+    .menu-text--danger {
+      color: $error;
+    }
+  }
 }
 
 .menu-text {
   flex: 1;
   font-size: $font-base;
   color: $text-primary;
-}
 
-.logout-wrap {
-  padding: 24rpx;
-}
-
-.logout-btn {
-  height: 88rpx;
-  line-height: 88rpx;
-  font-size: $font-base;
-  color: #EF4444;
-  background: $bg-card;
-  border-radius: $radius-lg;
-  border: 1rpx solid $border-light;
+  &--danger {
+    color: $error;
+  }
 }
 </style>

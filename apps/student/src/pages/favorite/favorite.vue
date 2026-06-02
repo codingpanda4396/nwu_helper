@@ -13,7 +13,7 @@
           <text class="favorite-name">{{ item.name }}</text>
           <text class="favorite-desc">{{ item.summary || '' }}</text>
           <view class="favorite-meta">
-            <u-icon name="map-fill" size="12" color="#9CA3AF" />
+            <u-icon name="map-fill" size="12" color="#9AA1AA" />
             <text>{{ item.address || '校边' }}</text>
           </view>
         </view>
