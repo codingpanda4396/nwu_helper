@@ -366,6 +366,28 @@ export async function adminRoutes(app: FastifyInstance) {
     return ok(reply, { deleted: true });
   });
 
+  app.post("/api/admin/merchants/:id/assign-owner", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const parsed = z.object({ phone: z.string().min(1) }).safeParse(request.body);
+    if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "手机号不能为空");
+
+    const user = await prisma.user.upsert({
+      where: { phone: parsed.data.phone },
+      create: { phone: parsed.data.phone, name: parsed.data.phone, role: "MERCHANT", registerSource: "admin" },
+      update: { role: "MERCHANT" }
+    });
+
+    const merchant = await prisma.merchant.update({
+      where: { id },
+      data: { ownerUserId: user.id }
+    });
+
+    return ok(reply, {
+      merchant: { id: merchant.id, name: merchant.name },
+      owner: { id: user.id, phone: user.phone, role: user.role }
+    }, "商家绑定成功");
+  });
+
   // ── 活动管理 ──
 
   const activitySchema = z.object({
@@ -588,5 +610,76 @@ export async function adminRoutes(app: FastifyInstance) {
     reply.header("content-type", "text/csv; charset=utf-8");
     reply.header("content-disposition", 'attachment; filename="attribution-export.csv"');
     return lines.join("\n");
+  });
+
+  // ── 推广订单管理 ──
+
+  app.get("/api/admin/promotion/orders", async (request, reply) => {
+    const query = z.object({ status: z.string().optional() }).safeParse(request.query);
+    const where: any = {};
+    if (query.success && query.data.status) {
+      where.status = query.data.status;
+    }
+    const orders = await prisma.promotionOrder.findMany({
+      where,
+      orderBy: { createdAt: "desc" }
+    });
+    return ok(reply, orders);
+  });
+
+  app.post("/api/admin/promotion/orders/:id/confirm", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+    const body = z.object({ startAt: z.string().optional() }).safeParse(request.body);
+
+    const order = await prisma.promotionOrder.findUnique({ where: { id } });
+    if (!order) return fail(reply, "NOT_FOUND", "订单不存在", 404);
+
+    const startAt = body.success && body.data.startAt ? new Date(body.data.startAt) : new Date();
+
+    const now = new Date();
+    const banner = await prisma.banner.create({
+      data: {
+        title: `推广 #${id.slice(0, 8)}`,
+        imageUrl: "",
+        targetType: "URL",
+        isActive: true,
+        promotionOrderId: id,
+        sortOrder: 0
+      }
+    });
+
+    const updated = await prisma.promotionOrder.update({
+      where: { id },
+      data: {
+        status: "ACTIVE",
+        paidAt: now,
+        startAt,
+        endAt: new Date(startAt.getTime() + order.days * 24 * 3600_000),
+        bannerId: banner.id
+      }
+    });
+
+    return ok(reply, updated, "已确认开通");
+  });
+
+  app.post("/api/admin/promotion/orders/:id/cancel", async (request, reply) => {
+    const { id } = z.object({ id: z.string() }).parse(request.params);
+
+    const order = await prisma.promotionOrder.findUnique({ where: { id } });
+    if (!order) return fail(reply, "NOT_FOUND", "订单不存在", 404);
+
+    if (order.bannerId) {
+      await prisma.banner.update({
+        where: { id: order.bannerId },
+        data: { isActive: false }
+      });
+    }
+
+    const updated = await prisma.promotionOrder.update({
+      where: { id },
+      data: { status: "CANCELLED" }
+    });
+
+    return ok(reply, updated, "已取消");
   });
 }

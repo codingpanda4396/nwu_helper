@@ -25,8 +25,8 @@ export default function Login({ onLogin }: LoginProps) {
       if (!res.ok || body.success === false) {
         throw new Error(body.message || "登录失败");
       }
-      if (body.data.user.role !== "ADMIN") {
-        throw new Error("当前账号不是平台管理员");
+      if (body.data.user.role !== "ADMIN" && body.data.user.role !== "MERCHANT") {
+        throw new Error("当前账号无后台权限");
       }
       onLogin(body.data.token, body.data.user);
     } catch (err) {

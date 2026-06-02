@@ -26,6 +26,10 @@ import {
   UserRetention,
   UserFunnel,
 } from "./analytics/pages";
+import MerchantDashboard from "./pages/MerchantDashboard";
+import MerchantProfile from "./pages/MerchantProfile";
+import MerchantPromotion from "./pages/MerchantPromotion";
+import AdminPromotionOrders from "./pages/AdminPromotionOrders";
 
 // 品牌主题配置
 const brandTheme = {
@@ -268,7 +272,7 @@ function AdminApp() {
             path="/"
             element={<AdminLayout user={user} onLogout={logout} />}
           >
-            <Route index element={<Navigate to="/overview" replace />} />
+            <Route index element={<Navigate to={user?.role === "MERCHANT" ? "/merchant/dashboard" : "/overview"} replace />} />
             <Route path="overview" element={<Overview token={token} />} />
             <Route path="analytics">
               <Route index element={<Navigate to="overview" replace />} />
@@ -291,6 +295,12 @@ function AdminApp() {
             <Route path="driving-config" element={<DrivingConfig token={token} />} />
             <Route path="feedbacks" element={<FeedbackList token={token} />} />
             <Route path="wechat-entry" element={<WechatEntry token={token} />} />
+            <Route path="merchant">
+              <Route path="dashboard" element={<MerchantDashboard token={token} />} />
+              <Route path="profile" element={<MerchantProfile token={token} />} />
+              <Route path="promotion" element={<MerchantPromotion token={token} />} />
+            </Route>
+            <Route path="admin/promotion-orders" element={<AdminPromotionOrders token={token} />} />
           </Route>
         </Routes>
       </BrowserRouter>

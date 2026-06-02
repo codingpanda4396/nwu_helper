@@ -12,6 +12,8 @@ import { prisma } from "./db.js";
 import { publicRoutes } from "./publicRoutes.js";
 import { uploadRoutes } from "./uploadRoutes.js";
 import { userRoutes, publicFeedbackRoute } from "./userRoutes.js";
+import { merchantRoutes, requireMerchant } from "./merchantRoutes.js";
+import { promotionRoutes } from "./promotionRoutes.js";
 
 const app = Fastify({
   logger: true,
@@ -62,6 +64,42 @@ await app.register(async (privateApp) => {
   await privateApp.register(uploadRoutes);
   await privateApp.register(userRoutes);
 });
+
+await app.register(async (merchantApp) => {
+  merchantApp.addHook("preHandler", requireMerchant);
+  await merchantApp.register(merchantRoutes);
+  await merchantApp.register(promotionRoutes);
+});
+
+// 推广订单到期自动下架定时任务 (每小时执行)
+const runExpiration = async () => {
+  try {
+    const expiredOrders = await prisma.promotionOrder.findMany({
+      where: { status: "ACTIVE", endAt: { lt: new Date() } }
+    });
+    for (const order of expiredOrders) {
+      await prisma.promotionOrder.update({
+        where: { id: order.id },
+        data: { status: "EXPIRED" }
+      });
+      if (order.bannerId) {
+        await prisma.banner.update({
+          where: { id: order.bannerId },
+          data: { isActive: false }
+        });
+      }
+    }
+  } catch (e) {
+    app.log.error(e, "推广订单到期处理失败");
+  }
+};
+
+// 只有主 worker(或单进程) 跑定时任务
+const isPrimaryWorker = !process.env.NODE_APP_INSTANCE || process.env.NODE_APP_INSTANCE === "0";
+if (isPrimaryWorker) {
+  setInterval(runExpiration, 60 * 60 * 1000);
+  runExpiration(); // 启动时也执行一次
+}
 
 const shutdown = async () => {
   await prisma.$disconnect();

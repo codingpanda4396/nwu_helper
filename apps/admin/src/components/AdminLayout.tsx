@@ -18,6 +18,9 @@ import {
   TeamOutlined,
   RiseOutlined,
   FundProjectionScreenOutlined,
+  ProfileOutlined,
+  IdcardOutlined,
+  NotificationOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -26,11 +29,11 @@ const { Header, Sider, Content } = Layout;
 const { Text } = Typography;
 
 interface AdminLayoutProps {
-  user: { name?: string; phone?: string } | null;
+  user: { name?: string; phone?: string; role?: string } | null;
   onLogout: () => void;
 }
 
-const menuItems: MenuProps["items"] = [
+const adminMenuItems: MenuProps["items"] = [
   {
     key: "/overview",
     icon: <DashboardOutlined />,
@@ -121,6 +124,29 @@ const menuItems: MenuProps["items"] = [
     icon: <QrcodeOutlined />,
     label: "西大圈入口",
   },
+  {
+    key: "/admin/promotion-orders",
+    icon: <NotificationOutlined />,
+    label: "推广订单",
+  },
+];
+
+const merchantMenuItems: MenuProps["items"] = [
+  {
+    key: "/merchant/dashboard",
+    icon: <DashboardOutlined />,
+    label: "数据看板",
+  },
+  {
+    key: "/merchant/profile",
+    icon: <IdcardOutlined />,
+    label: "店铺信息",
+  },
+  {
+    key: "/merchant/promotion",
+    icon: <NotificationOutlined />,
+    label: "推广",
+  },
 ];
 
 export default function AdminLayout({ user, onLogout }: AdminLayoutProps) {
@@ -130,6 +156,8 @@ export default function AdminLayout({ user, onLogout }: AdminLayoutProps) {
   const selectedKey = location.pathname.startsWith("/")
     ? location.pathname
     : "/overview";
+
+  const menuItems = user?.role === "MERCHANT" ? merchantMenuItems : adminMenuItems;
 
   return (
     <Layout style={{ minHeight: "100vh" }}>
