@@ -111,8 +111,7 @@
 <script setup lang="ts">
 import { ref, onMounted, nextTick } from 'vue'
 import { onLoad } from '@dcloudio/uni-app'
-import { publicApi, userWrite, getToken } from '@/api/index'
-import { useAppStore } from '@/store/index'
+import { publicApi, userWrite } from '@/api/index'
 
 interface CommentItem {
   id: string
@@ -139,7 +138,6 @@ interface Post {
   time?: string
 }
 
-const store = useAppStore()
 const post = ref<Post | null>(null)
 const comments = ref<CommentItem[]>([])
 const loading = ref(true)
@@ -181,11 +179,6 @@ async function loadComments(id: string) {
 
 async function handleLike() {
   if (!post.value) return
-  if (!getToken() || !store.isLogin) {
-    uToast.value?.show({ title: '请先登录', type: 'warning' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 500)
-    return
-  }
   try {
     const result = await userWrite<{ liked: boolean; likeCount: number }>(
       `/api/public/community/posts/${encodeURIComponent(post.value.id)}/like`,
@@ -194,21 +187,12 @@ async function handleLike() {
     liked.value = result.liked
     likeCount.value = result.likeCount
   } catch (err: any) {
-    if (err.message?.includes('登录')) {
-      uToast.value?.show({ title: '请先登录', type: 'warning' })
-    } else {
-      uToast.value?.show({ title: '操作失败', type: 'error' })
-    }
+    uToast.value?.show({ title: '操作失败', type: 'error' })
   }
 }
 
 async function submitComment() {
   if (!commentText.value.trim() || !post.value) return
-  if (!getToken() || !store.isLogin) {
-    uToast.value?.show({ title: '请先登录', type: 'warning' })
-    setTimeout(() => uni.navigateTo({ url: '/pages/login/login' }), 500)
-    return
-  }
   try {
     await userWrite(
       `/api/public/community/posts/${encodeURIComponent(post.value.id)}/comments`,
@@ -218,11 +202,7 @@ async function submitComment() {
     uToast.value?.show({ title: '评论成功', type: 'success' })
     loadComments(post.value.id)
   } catch (err: any) {
-    if (err.message?.includes('登录')) {
-      uToast.value?.show({ title: '请先登录', type: 'warning' })
-    } else {
-      uToast.value?.show({ title: '评论失败', type: 'error' })
-    }
+    uToast.value?.show({ title: '评论失败', type: 'error' })
   }
 }
 

@@ -1,7 +1,6 @@
 export const config = {
   nodeEnv: process.env.NODE_ENV ?? "development",
   port: Number(process.env.PORT ?? 4000),
-  jwtSecret: process.env.JWT_SECRET ?? "dev-secret-change-me",
   webOrigin: process.env.WEB_ORIGIN ?? "http://localhost:5173",
   publicWebUrl: process.env.PUBLIC_WEB_URL ?? "http://localhost:5173",
   wx: {
@@ -15,5 +14,11 @@ export const config = {
     bucket: process.env.OSS_BUCKET ?? "nwu-helper",
     endpoint: process.env.OSS_ENDPOINT ?? "https://oss-cn-hangzhou.aliyuncs.com",
     cdnDomain: process.env.OSS_CDN_DOMAIN ?? ""
+  },
+  // 默认用户（登录功能已移除，所有请求自动以此用户身份执行）
+  defaultUser: {
+    sub: "",
+    role: "ADMIN" as string,
+    name: "平台管理员",
   }
 };

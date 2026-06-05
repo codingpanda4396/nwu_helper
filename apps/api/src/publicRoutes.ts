@@ -399,20 +399,13 @@ export async function publicRoutes(app: FastifyInstance) {
 
   app.post("/api/public/community/posts/:id/like", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
-
-    let userId: string | null = null;
-    try {
-      await request.jwtVerify();
-      userId = (request.user as { sub: string }).sub;
-    } catch {
-      return fail(reply, "UNAUTHORIZED", "请先登录", 401);
-    }
+    const userId = (request.user as { sub: string }).sub;
 
     const post = await prisma.communityPost.findFirst({ where: { id, status: "VISIBLE" } });
     if (!post) return fail(reply, "NOT_FOUND", "帖子不存在或未审核", 404);
 
     const existing = await prisma.postLike.findUnique({
-      where: { postId_userId: { postId: id, userId: userId! } }
+      where: { postId_userId: { postId: id, userId } }
     });
 
     if (existing) {
@@ -423,7 +416,7 @@ export async function publicRoutes(app: FastifyInstance) {
       });
       return ok(reply, { liked: false, likeCount: updated.likeCount });
     } else {
-      await prisma.postLike.create({ data: { postId: id, userId: userId! } });
+      await prisma.postLike.create({ data: { postId: id, userId } });
       const updated = await prisma.communityPost.update({
         where: { id },
         data: { likeCount: { increment: 1 } }
@@ -477,7 +470,7 @@ export async function publicRoutes(app: FastifyInstance) {
     })));
   });
 
-  // 发表评论（需登录）
+  // 发表评论
   app.post("/api/public/community/posts/:id/comments", async (request, reply) => {
     const { id } = z.object({ id: z.string() }).parse(request.params);
     const parsed = z.object({
@@ -486,22 +479,15 @@ export async function publicRoutes(app: FastifyInstance) {
     }).safeParse(request.body);
     if (!parsed.success) return fail(reply, "VALIDATION_ERROR", "评论内容不能为空");
 
-    let userId: string | null = null;
-    try {
-      await request.jwtVerify();
-      userId = (request.user as { sub: string }).sub;
-    } catch {
-      return fail(reply, "UNAUTHORIZED", "请先登录", 401);
-    }
-
-    const user = await prisma.user.findUnique({ where: { id: userId! } });
+    const userId = (request.user as { sub: string }).sub;
+    const user = await prisma.user.findUnique({ where: { id: userId } });
     const nickname = user?.nickname || user?.name || "匿名用户";
 
     const comment = await prisma.comment.create({
       data: {
         postId: id,
         parentId: parsed.data.parentId || null,
-        authorUserId: userId!,
+        authorUserId: userId,
         authorNickname: nickname,
         content: parsed.data.content,
         status: "VISIBLE"

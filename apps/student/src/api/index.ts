@@ -73,12 +73,6 @@ export function getToken() {
   return uni.getStorageSync('nwu_token') || ''
 }
 
-function redirectToLogin() {
-  uni.removeStorageSync('nwu_token')
-  uni.removeStorageSync('nwu_user')
-  uni.navigateTo({ url: '/pages/login/login' })
-}
-
 export async function userApi<T>(path: string): Promise<T> {
   return new Promise((resolve, reject) => {
     uni.request({
@@ -90,11 +84,6 @@ export async function userApi<T>(path: string): Promise<T> {
       },
       success: (res) => {
         const body = res.data as ApiResponse<T>
-        if (res.statusCode === 401) {
-          redirectToLogin()
-          reject(new Error('请先登录'))
-          return
-        }
         if (res.statusCode !== 200 || body.success === false) {
           reject(new Error(body.message || body.error?.message || '请求失败'))
         } else {
@@ -121,11 +110,6 @@ export async function userWrite<T>(path: string, data: Record<string, any>, meth
       },
       success: (res) => {
         const body = res.data as ApiResponse<T>
-        if (res.statusCode === 401) {
-          redirectToLogin()
-          reject(new Error('请先登录'))
-          return
-        }
         if (res.statusCode !== 200 || body.success === false) {
           reject(new Error(body.error?.message || body.message || '请求失败'))
         } else {

@@ -27,7 +27,6 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { userApi, userWrite } from '@/api/index'
-import { useAppStore } from '@/store/index'
 
 interface HistoryItem {
   id: string
@@ -36,16 +35,11 @@ interface HistoryItem {
   time: string
 }
 
-const store = useAppStore()
 const history = ref<HistoryItem[]>([])
 const loading = ref(true)
 const uToast = ref<any>(null)
 
 onMounted(async () => {
-  if (!store.isLogin) {
-    loading.value = false
-    return
-  }
   try {
     const data = await userApi<any[]>('/api/user/history')
     history.value = data.map((item: any) => ({

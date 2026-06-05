@@ -5,7 +5,6 @@ import { ConfigProvider, theme } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { useAdmin } from "./hooks/useAdmin";
 import AdminLayout from "./components/AdminLayout";
-import Login from "./pages/Login";
 import Overview from "./pages/Overview";
 import CommunityList from "./pages/CommunityList";
 import CommunityDetail from "./pages/CommunityDetail";
@@ -258,15 +257,7 @@ const brandTheme = {
 };
 
 function AdminApp() {
-  const { token, user, login, logout, isAuthenticated } = useAdmin();
-
-  if (!isAuthenticated) {
-    return (
-      <ConfigProvider locale={zhCN} theme={brandTheme}>
-        <Login onLogin={login} />
-      </ConfigProvider>
-    );
-  }
+  const { token, user, logout } = useAdmin();
 
   return (
     <ConfigProvider locale={zhCN} theme={brandTheme}>

@@ -1,5 +1,4 @@
 import cors from "@fastify/cors";
-import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
@@ -9,13 +8,13 @@ import { academicUserRoutes } from "./academicUserRoutes.js";
 import { activityTrackingRoutes } from "./activityTrackingRoutes.js";
 import { adminRoutes } from "./adminRoutes.js";
 import { analyticsRoutes } from "./analyticsRoutes.js";
-import { authRoutes, requireAuth } from "./auth.js";
+import { requireAuth } from "./auth.js";
 import { config } from "./config.js";
 import { prisma } from "./db.js";
 import { publicRoutes } from "./publicRoutes.js";
 import { uploadRoutes } from "./uploadRoutes.js";
 import { userRoutes, publicFeedbackRoute } from "./userRoutes.js";
-import { merchantRoutes, requireMerchant } from "./merchantRoutes.js";
+import { merchantRoutes } from "./merchantRoutes.js";
 import { promotionRoutes } from "./promotionRoutes.js";
 
 const app = Fastify({
@@ -25,11 +24,18 @@ const app = Fastify({
   keepAliveTimeout: 65000,
 });
 
+// 启动时从数据库查找默认用户（seed 中 phone: 18800000000 的管理员）
+const defaultDbUser = await prisma.user.findFirst({
+  where: { phone: "18800000000" }
+});
+if (defaultDbUser) {
+  config.defaultUser = { sub: defaultDbUser.id, role: defaultDbUser.role, name: defaultDbUser.name };
+}
+
 await app.register(cors, {
   origin: [config.webOrigin, "http://localhost:5173"],
   credentials: true
 });
-await app.register(jwt, { secret: config.jwtSecret });
 await app.register(multipart, {
   limits: {
     fileSize: 5 * 1024 * 1024 // 5MB
@@ -40,12 +46,15 @@ await app.register(rateLimit, {
   timeWindow: '1 minute'
 });
 
+// 全局注入默认用户，所有后续 handler 可直接读取 request.user
+app.decorateRequest("user", { sub: "", role: "", name: "" });
+app.addHook("onRequest", async (request) => {
+  request.user = config.defaultUser;
+});
+
 app.setErrorHandler((err, _request, reply) => {
   const error = err as Error & { statusCode?: number };
   const statusCode = error.statusCode || 500;
-  if (statusCode === 401) {
-    return reply.status(401).send({ success: false, error: { code: "UNAUTHORIZED", message: error.message || "请先登录" } });
-  }
   if (statusCode === 403) {
     return reply.status(403).send({ success: false, error: { code: "FORBIDDEN", message: error.message || "无权限" } });
   }
@@ -56,7 +65,6 @@ app.setErrorHandler((err, _request, reply) => {
 });
 
 app.get("/api/health", async () => ({ success: true, data: { status: "ok" } }));
-await app.register(authRoutes);
 await app.register(publicRoutes);
 await app.register(academicPublicRoutes);
 await app.register(publicFeedbackRoute);
@@ -71,8 +79,11 @@ await app.register(async (privateApp) => {
   await privateApp.register(academicAdminRoutes);
 });
 
+// 商家子应用：原 requireMerchant 改为注入默认用户（默认用户为 ADMIN，通过商家角色检查）
 await app.register(async (merchantApp) => {
-  merchantApp.addHook("preHandler", requireMerchant);
+  merchantApp.addHook("preHandler", async (request) => {
+    request.user = config.defaultUser;
+  });
   await merchantApp.register(merchantRoutes);
   await merchantApp.register(promotionRoutes);
 });

@@ -1,5 +1,5 @@
 import React from "react";
-import { Layout, Menu, Button, Typography, Avatar, Dropdown } from "antd";
+import { Layout, Menu, Typography } from "antd";
 import {
   DashboardOutlined,
   ShopOutlined,
@@ -9,7 +9,6 @@ import {
   ToolOutlined,
   CarOutlined,
   MessageOutlined,
-  LogoutOutlined,
   UserOutlined,
   LineChartOutlined,
   BarChartOutlined,
@@ -33,7 +32,7 @@ const { Text } = Typography;
 
 interface AdminLayoutProps {
   user: { name?: string; phone?: string; role?: string } | null;
-  onLogout: () => void;
+  onLogout?: () => void;
 }
 
 const adminMenuItems: MenuProps["items"] = [
@@ -180,7 +179,7 @@ const merchantMenuItems: MenuProps["items"] = [
   },
 ];
 
-export default function AdminLayout({ user, onLogout }: AdminLayoutProps) {
+export default function AdminLayout({ user }: AdminLayoutProps) {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -227,26 +226,6 @@ export default function AdminLayout({ user, onLogout }: AdminLayoutProps) {
           onClick={({ key }) => navigate(key)}
           style={{ borderRight: 0, padding: "8px 0" }}
         />
-        <div
-          style={{
-            position: "absolute",
-            bottom: 0,
-            left: 0,
-            right: 0,
-            padding: "16px 24px",
-            borderTop: "1px solid #f0f0f0",
-          }}
-        >
-          <Button
-            type="text"
-            icon={<LogoutOutlined />}
-            onClick={onLogout}
-            block
-            style={{ textAlign: "left" }}
-          >
-            退出登录
-          </Button>
-        </div>
       </Sider>
       <Layout style={{ marginLeft: 220 }}>
         <Content style={{ padding: 24, minHeight: "100vh", background: "#f5f5f5" }}>

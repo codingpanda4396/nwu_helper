@@ -10,17 +10,22 @@ export interface UserInfo {
   role: string
 }
 
+const DEFAULT_TOKEN = 'default-mock-token'
+const DEFAULT_USER: UserInfo = { id: 'default', name: '同学', role: 'STUDENT' }
+
 export const useAppStore = defineStore('app', () => {
   const sessionId = ref('')
   const toast = ref('')
   const selectedServiceKey = ref('')
-  const token = ref(uni.getStorageSync('nwu_token') || '')
+  // 登录功能已移除，始终使用默认用户
+  const token = ref(uni.getStorageSync('nwu_token') || DEFAULT_TOKEN)
   const user = ref<UserInfo | null>(() => {
     const saved = uni.getStorageSync('nwu_user')
-    return saved ? JSON.parse(saved) : null
+    return saved ? JSON.parse(saved) : { ...DEFAULT_USER }
   })
 
-  const isLogin = computed(() => !!token.value)
+  // 始终处于已登录状态
+  const isLogin = computed(() => true)
 
   function getSessionId() {
     if (!sessionId.value) {
@@ -30,17 +35,18 @@ export const useAppStore = defineStore('app', () => {
   }
 
   function setAuth(newToken: string, newUser: UserInfo) {
-    token.value = newToken
-    user.value = newUser
-    uni.setStorageSync('nwu_token', newToken)
-    uni.setStorageSync('nwu_user', JSON.stringify(newUser))
+    token.value = newToken || DEFAULT_TOKEN
+    user.value = newUser || { ...DEFAULT_USER }
+    uni.setStorageSync('nwu_token', token.value)
+    uni.setStorageSync('nwu_user', JSON.stringify(user.value))
   }
 
   function logout() {
-    token.value = ''
-    user.value = null
-    uni.removeStorageSync('nwu_token')
-    uni.removeStorageSync('nwu_user')
+    // 重置为默认用户而非清空
+    token.value = DEFAULT_TOKEN
+    user.value = { ...DEFAULT_USER }
+    uni.setStorageSync('nwu_token', DEFAULT_TOKEN)
+    uni.setStorageSync('nwu_user', JSON.stringify(DEFAULT_USER))
   }
 
   function showToast(message: string, duration = 2600) {

@@ -47,10 +47,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
-import { publicApi, userWrite, trackActivity, getToken } from '@/api/index'
-import { useAppStore } from '@/store/index'
+import { publicApi, userWrite, trackActivity } from '@/api/index'
 
-const store = useAppStore()
 const title = ref('')
 const description = ref('')
 const submitting = ref(false)
@@ -98,11 +96,6 @@ async function submitMaterial() {
     uToast.value?.show({ title: '请选择所属课程', type: 'warning' })
     return
   }
-  if (!store.isLogin) {
-    uToast.value?.show({ title: '请先登录', type: 'warning' })
-    return
-  }
-
   submitting.value = true
   try {
     await userWrite('/api/user/materials', {

@@ -245,7 +245,7 @@ async function submitPost() {
       authorNickname: newPost.value.nickname || '匿名同学',
       images: uploadImages.value
     }
-    if (store.isLogin && store.user) {
+    if (store.user) {
       body.authorUserId = store.user.id
     }
     await publicWrite('/api/public/community/posts', body)

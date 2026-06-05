@@ -31,9 +31,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import { userWrite, trackActivity } from '@/api/index'
-import { useAppStore } from '@/store/index'
 
-const store = useAppStore()
 const name = ref('')
 const college = ref('')
 const department = ref('')
@@ -47,10 +45,6 @@ onMounted(() => {
 async function submitTeacher() {
   if (!name.value.trim()) {
     uToast.value?.show({ title: '请输入教师姓名', type: 'warning' })
-    return
-  }
-  if (!store.isLogin) {
-    uToast.value?.show({ title: '请先登录', type: 'warning' })
     return
   }
   submitting.value = true

@@ -18,32 +18,37 @@ export async function adminApi<T>(token: string, path: string, options: RequestI
   return body.data;
 }
 
+const DEFAULT_TOKEN = "default-admin-mock-token";
+const DEFAULT_USER: Dict = { id: "admin-default", name: "平台管理员", phone: "18800000000", role: "ADMIN" };
+
 export function useAdmin() {
-  const [token, setToken] = useState(localStorage.getItem("adminToken") || "");
+  const [token, setToken] = useState(localStorage.getItem("adminToken") || DEFAULT_TOKEN);
   const [user, setUser] = useState<Dict | null>(() => {
     try {
-      return JSON.parse(localStorage.getItem("adminUser") || "null");
+      const saved = localStorage.getItem("adminUser");
+      return saved ? JSON.parse(saved) : { ...DEFAULT_USER };
     } catch {
-      return null;
+      return { ...DEFAULT_USER };
     }
   });
 
   const logout = useCallback(() => {
-    localStorage.removeItem("adminToken");
-    localStorage.removeItem("adminUser");
-    setToken("");
-    setUser(null);
-    window.location.href = "/admin";
+    // 重置为默认用户而非清空
+    localStorage.setItem("adminToken", DEFAULT_TOKEN);
+    localStorage.setItem("adminUser", JSON.stringify(DEFAULT_USER));
+    setToken(DEFAULT_TOKEN);
+    setUser({ ...DEFAULT_USER });
   }, []);
 
   const login = useCallback((newToken: string, newUser: Dict) => {
-    localStorage.setItem("adminToken", newToken);
-    localStorage.setItem("adminUser", JSON.stringify(newUser));
-    setToken(newToken);
-    setUser(newUser);
+    localStorage.setItem("adminToken", newToken || DEFAULT_TOKEN);
+    localStorage.setItem("adminUser", JSON.stringify(newUser || DEFAULT_USER));
+    setToken(newToken || DEFAULT_TOKEN);
+    setUser(newUser || DEFAULT_USER);
   }, []);
 
-  return { token, user, login, logout, isAuthenticated: !!token };
+  // 登录功能已移除，始终已认证
+  return { token, user, login, logout, isAuthenticated: true };
 }
 
 export function useAdminData<T>(token: string, path: string, deps: any[] = []) {

@@ -3,16 +3,6 @@ import { z } from "zod";
 import { prisma } from "./db.js";
 import { fail, ok } from "./response.js";
 
-export async function requireMerchant(request: FastifyRequest) {
-  await request.jwtVerify();
-  const role = (request.user as { role?: string }).role;
-  if (role !== "MERCHANT" && role !== "ADMIN") {
-    const err = new Error("无权限") as Error & { statusCode?: number };
-    err.statusCode = 403;
-    throw err;
-  }
-}
-
 function parseDateQuery(query: any) {
   const now = new Date();
   const from = query.from ? new Date(query.from) : new Date(now.getTime() - 30 * 24 * 3600_000);
