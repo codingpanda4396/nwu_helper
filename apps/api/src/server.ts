@@ -47,9 +47,17 @@ await app.register(rateLimit, {
 });
 
 // 全局注入默认用户，所有后续 handler 可直接读取 request.user
-app.decorateRequest("user", { sub: "", role: "", name: "" });
-app.addHook("onRequest", async (request) => {
-  request.user = config.defaultUser;
+// Fastify 5 要求引用类型装饰器使用 getter/setter 模式
+app.decorateRequest("user", {
+  getter(this: any) {
+    return this._nwuUser ?? config.defaultUser;
+  },
+  setter(this: any, val: any) {
+    this._nwuUser = val;
+  }
+});
+app.addHook("onRequest", async (request: any) => {
+  request._nwuUser = config.defaultUser;
 });
 
 app.setErrorHandler((err, _request, reply) => {
