@@ -3,8 +3,17 @@ import { uploadToOss, getOssUrl, generateOssKey } from "./oss.js";
 import { fail, ok } from "./response.js";
 import { config } from "./config.js";
 
-const ALLOWED_MIME_TYPES = ["image/jpeg", "image/png", "image/gif", "image/webp"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME_TYPES = [
+  "image/jpeg", "image/png", "image/gif", "image/webp",
+  "application/pdf",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-powerpoint",
+  "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  "text/plain",
+  "application/zip",
+];
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
 
 export async function uploadRoutes(app: FastifyInstance) {
   app.post("/api/upload/image", async (request, reply) => {
@@ -19,7 +28,7 @@ export async function uploadRoutes(app: FastifyInstance) {
     }
 
     if (!ALLOWED_MIME_TYPES.includes(file.mimetype)) {
-      return fail(reply, "VALIDATION_ERROR", "仅支持 JPG、PNG、GIF、WebP 格式");
+      return fail(reply, "VALIDATION_ERROR", "不支持的文件格式，仅支持图片、PDF、Word、PPT、文本和压缩包");
     }
 
     const chunks: Buffer[] = [];
@@ -29,7 +38,7 @@ export async function uploadRoutes(app: FastifyInstance) {
     const buffer = Buffer.concat(chunks);
 
     if (buffer.length > MAX_FILE_SIZE) {
-      return fail(reply, "VALIDATION_ERROR", "文件大小不能超过5MB");
+      return fail(reply, "VALIDATION_ERROR", "文件大小不能超过10MB");
     }
 
     try {

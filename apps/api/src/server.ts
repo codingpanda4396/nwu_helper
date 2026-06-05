@@ -3,6 +3,9 @@ import jwt from "@fastify/jwt";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import Fastify from "fastify";
+import { academicAdminRoutes } from "./academicAdminRoutes.js";
+import { academicPublicRoutes } from "./academicPublicRoutes.js";
+import { academicUserRoutes } from "./academicUserRoutes.js";
 import { activityTrackingRoutes } from "./activityTrackingRoutes.js";
 import { adminRoutes } from "./adminRoutes.js";
 import { analyticsRoutes } from "./analyticsRoutes.js";
@@ -55,6 +58,7 @@ app.setErrorHandler((err, _request, reply) => {
 app.get("/api/health", async () => ({ success: true, data: { status: "ok" } }));
 await app.register(authRoutes);
 await app.register(publicRoutes);
+await app.register(academicPublicRoutes);
 await app.register(publicFeedbackRoute);
 await app.register(activityTrackingRoutes);
 await app.register(async (privateApp) => {
@@ -63,6 +67,8 @@ await app.register(async (privateApp) => {
   await privateApp.register(analyticsRoutes);
   await privateApp.register(uploadRoutes);
   await privateApp.register(userRoutes);
+  await privateApp.register(academicUserRoutes);
+  await privateApp.register(academicAdminRoutes);
 });
 
 await app.register(async (merchantApp) => {

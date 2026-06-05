@@ -100,6 +100,8 @@ model User {
   feedbacks      Feedback[]
   loginLogs      UserLoginLog[]
   activities     UserActivity[]
+  teacherReviews TeacherReview[]
+  materials      StudyMaterial[]
   createdAt      DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
 }
@@ -453,4 +455,116 @@ model PromotionOrder {
 
   @@index([merchantId])
   @@index([status, endAt])
+}
+
+// ── 学业服务 ──
+
+enum TeacherStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum ReviewStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+enum MaterialStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  HIDDEN
+}
+
+model Teacher {
+  id            String          @id @default(cuid())
+  name          String
+  college       String          @default("")
+  department    String          @default("")
+  avatarUrl     String?
+  addedByUserId String?
+  status        TeacherStatus   @default(PENDING)
+  avgGrading    Float           @default(0)
+  avgAttendance Float           @default(0)
+  avgDifficulty Float           @default(0)
+  avgRecommend  Float           @default(0)
+  avgExamFocus  Float           @default(0)
+  reviewCount   Int             @default(0)
+  reviews       TeacherReview[]
+  courses       Course[]
+  createdAt     DateTime        @default(now())
+  updatedAt     DateTime        @updatedAt
+
+  @@index([status, name])
+  @@index([college, name])
+}
+
+model TeacherReview {
+  id         String       @id @default(cuid())
+  teacherId  String
+  userId     String
+  courseName String       @default("")
+  grading    Int
+  attendance Int
+  difficulty Int
+  recommend  Int
+  examFocus  Int
+  comment    String       @default("")
+  status     ReviewStatus @default(PENDING)
+  teacher    Teacher      @relation(fields: [teacherId], references: [id])
+  user       User         @relation(fields: [userId], references: [id])
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+
+  @@index([teacherId, status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model Course {
+  id        String          @id @default(cuid())
+  name      String
+  teacherId String
+  teacher   Teacher         @relation(fields: [teacherId], references: [id])
+  materials StudyMaterial[]
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+
+  @@unique([name, teacherId])
+  @@index([teacherId, name])
+}
+
+model StudyMaterial {
+  id            String         @id @default(cuid())
+  title         String
+  description   String         @default("")
+  courseId      String
+  userId        String
+  status        MaterialStatus @default(PENDING)
+  viewCount     Int            @default(0)
+  downloadCount Int            @default(0)
+  course        Course         @relation(fields: [courseId], references: [id])
+  user          User           @relation(fields: [userId], references: [id])
+  files         MaterialFile[]
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  @@index([courseId, status, createdAt])
+  @@index([userId, createdAt])
+}
+
+model MaterialFile {
+  id         String        @id @default(cuid())
+  materialId String
+  fileName   String
+  fileKey    String
+  fileUrl    String
+  fileSize   Int           @default(0)
+  mimeType   String        @default("")
+  material   StudyMaterial @relation(fields: [materialId], references: [id])
+  createdAt  DateTime      @default(now())
+
+  @@index([materialId])
 }

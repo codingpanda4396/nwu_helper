@@ -77,6 +77,48 @@
       "style": {
         "navigationBarTitleText": "我的"
       }
+    },
+    {
+      "path": "pages/academic/academic",
+      "style": {
+        "navigationBarTitleText": "学业"
+      }
+    },
+    {
+      "path": "pages/academic/teacher-detail",
+      "style": {
+        "navigationBarTitleText": "教师详情"
+      }
+    },
+    {
+      "path": "pages/academic/review-form",
+      "style": {
+        "navigationBarTitleText": "写评价"
+      }
+    },
+    {
+      "path": "pages/academic/add-teacher",
+      "style": {
+        "navigationBarTitleText": "添加教师"
+      }
+    },
+    {
+      "path": "pages/academic/material-list",
+      "style": {
+        "navigationBarTitleText": "复习资料"
+      }
+    },
+    {
+      "path": "pages/academic/material-detail",
+      "style": {
+        "navigationBarTitleText": "资料详情"
+      }
+    },
+    {
+      "path": "pages/academic/material-upload",
+      "style": {
+        "navigationBarTitleText": "上传资料"
+      }
     }
   ],
   "globalStyle": {
@@ -109,6 +151,12 @@
         "text": "社区",
         "iconPath": "static/tabbar/community.png",
         "selectedIconPath": "static/tabbar/community-active.png"
+      },
+      {
+        "pagePath": "pages/academic/academic",
+        "text": "学业",
+        "iconPath": "static/tabbar/academic.png",
+        "selectedIconPath": "static/tabbar/academic-active.png"
       },
       {
         "pagePath": "pages/service/service",

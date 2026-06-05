@@ -21,3 +21,13 @@ export type ApiFailure = {
 };
 
 export type ApiResponse<T> = ApiSuccess<T> | ApiFailure;
+
+// ── 学业服务 ──
+
+export const teacherStatuses = ["PENDING", "APPROVED", "REJECTED"] as const;
+export const reviewStatuses = ["PENDING", "APPROVED", "REJECTED", "HIDDEN"] as const;
+export const materialStatuses = ["PENDING", "APPROVED", "REJECTED", "HIDDEN"] as const;
+
+export type TeacherStatus = (typeof teacherStatuses)[number];
+export type ReviewStatus = (typeof reviewStatuses)[number];
+export type MaterialStatus = (typeof materialStatuses)[number];

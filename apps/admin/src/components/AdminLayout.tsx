@@ -21,6 +21,9 @@ import {
   ProfileOutlined,
   IdcardOutlined,
   NotificationOutlined,
+  StarOutlined,
+  BookOutlined,
+  FileTextOutlined,
 } from "@ant-design/icons";
 import type { MenuProps } from "antd";
 import { Outlet, useNavigate, useLocation } from "react-router-dom";
@@ -128,6 +131,34 @@ const adminMenuItems: MenuProps["items"] = [
     key: "/admin/promotion-orders",
     icon: <NotificationOutlined />,
     label: "推广订单",
+  },
+  { type: "divider" },
+  {
+    key: "/academic",
+    icon: <BookOutlined />,
+    label: "学业管理",
+    children: [
+      {
+        key: "/academic/teachers",
+        icon: <TeamOutlined />,
+        label: "教师管理",
+      },
+      {
+        key: "/academic/reviews",
+        icon: <StarOutlined />,
+        label: "评价审核",
+      },
+      {
+        key: "/academic/courses",
+        icon: <BookOutlined />,
+        label: "课程管理",
+      },
+      {
+        key: "/academic/materials",
+        icon: <FileTextOutlined />,
+        label: "资料审核",
+      },
+    ],
   },
 ];
 

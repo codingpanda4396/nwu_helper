@@ -103,3 +103,25 @@ export const activityStatusSteps: StatusStep[] = [
   { key: "PAUSED", label: "已暂停", color: "warning", description: "活动已暂停展示" },
   { key: "ENDED", label: "已结束", color: "default", description: "活动已结束" },
 ];
+
+// ── 学业服务 status steps ──
+
+export const teacherStatusSteps: StatusStep[] = [
+  { key: "PENDING", label: "待审核", color: "warning", description: "等待管理员审核" },
+  { key: "APPROVED", label: "已通过", color: "success", description: "教师已上线" },
+  { key: "REJECTED", label: "已拒绝", color: "error", description: "教师审核未通过" },
+];
+
+export const reviewStatusSteps: StatusStep[] = [
+  { key: "PENDING", label: "待审核", color: "warning", description: "等待管理员审核" },
+  { key: "APPROVED", label: "已通过", color: "success", description: "评价已公开" },
+  { key: "REJECTED", label: "已拒绝", color: "error", description: "评价审核未通过" },
+  { key: "HIDDEN", label: "已隐藏", color: "default", description: "评价已隐藏" },
+];
+
+export const materialStatusSteps: StatusStep[] = [
+  { key: "PENDING", label: "待审核", color: "warning", description: "等待管理员审核" },
+  { key: "APPROVED", label: "已通过", color: "success", description: "资料已公开" },
+  { key: "REJECTED", label: "已拒绝", color: "error", description: "资料审核未通过" },
+  { key: "HIDDEN", label: "已隐藏", color: "default", description: "资料已隐藏" },
+];

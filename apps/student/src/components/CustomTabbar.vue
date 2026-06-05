@@ -55,6 +55,13 @@ const tabs: TabItem[] = [
     pagePath: 'pages/community/community'
   },
   {
+    key: 'academic',
+    label: '学业',
+    icon: '/static/icons/academic-inactive.svg',
+    activeIcon: '/static/icons/academic-active.svg',
+    pagePath: 'pages/academic/academic'
+  },
+  {
     key: 'service',
     label: '生活服务',
     icon: '/static/icons/service-inactive.svg',

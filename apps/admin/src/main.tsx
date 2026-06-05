@@ -30,6 +30,10 @@ import MerchantDashboard from "./pages/MerchantDashboard";
 import MerchantProfile from "./pages/MerchantProfile";
 import MerchantPromotion from "./pages/MerchantPromotion";
 import AdminPromotionOrders from "./pages/AdminPromotionOrders";
+import TeacherList from "./pages/TeacherList";
+import ReviewList from "./pages/ReviewList";
+import CourseList from "./pages/CourseList";
+import MaterialList from "./pages/MaterialList";
 
 // 品牌主题配置
 const brandTheme = {
@@ -301,6 +305,12 @@ function AdminApp() {
               <Route path="promotion" element={<MerchantPromotion token={token} />} />
             </Route>
             <Route path="admin/promotion-orders" element={<AdminPromotionOrders token={token} />} />
+            <Route path="academic">
+              <Route path="teachers" element={<TeacherList token={token} />} />
+              <Route path="reviews" element={<ReviewList token={token} />} />
+              <Route path="courses" element={<CourseList token={token} />} />
+              <Route path="materials" element={<MaterialList token={token} />} />
+            </Route>
           </Route>
         </Routes>
       </BrowserRouter>
